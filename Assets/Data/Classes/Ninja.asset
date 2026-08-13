@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 165aaa8d5e99a8e48be057ae7bdaaf0b, type: 3}
+  m_Name: Ninja
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterClass
+  className: Ninja
+  classColor: {r: 0.35, g: 0.4, b: 0.52, a: 1}
+  baseStrength: 4
+  baseMana: 4
+  baseAgility: 9
+  baseHealth: 4
+  baseMoveSpeed: 8
+  baseDamage: 9
