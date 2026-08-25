@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f21c76840e55ad4e96dc05b3a3d50b9, type: 3}
+  m_Name: Castillo_Nuevo
+  m_EditorClassIdentifier: Assembly-CSharp::DungeonConfig
+  dungeonId: castillo_1
+  dungeonName: Castillo
+  floors: 3
+  roomsMin: 6
+  roomsMax: 9
+  roomSizeMin: {x: 3, y: 3}
+  roomSizeMax: {x: 8, y: 8}
+  gridExtent: 28
+  roomGap: 2
+  extraLinks: 2
+  cellSize: 4
+  wallHeight: 4
+  corridorWidthCells: 1
