@@ -9,7 +9,7 @@ using System.IO;
 
 public static class SetupMainMenu
 {
-    private const string ScenePath = "Assets/Scenes/MainMenu.unity";
+    private const string ScenePath = "Assets/Scenes/Main menu.unity";
     private const string GameScenePath = "Assets/Scenes/SampleScene.unity";
 
     private static readonly Color MenuBlue = new Color(0.09f, 0.16f, 0.26f);
@@ -137,7 +137,7 @@ public static class SetupMainMenu
         };
 
         EditorUtility.DisplayDialog("Frostbound",
-            "Menú principal creado en Assets/Scenes/MainMenu.unity.\n\n" +
+            "Menú principal creado en Assets/Scenes/Main menu.unity.\n\n" +
             "Los botones ya funcionan (Nuevo juego, Cargar, Opciones, Salir).\n" +
             "Build Settings actualizado: MainMenu = índice 0.", "OK");
     }

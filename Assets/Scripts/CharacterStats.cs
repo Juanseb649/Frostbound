@@ -59,8 +59,8 @@ public class CharacterStats : MonoBehaviour
 
     // ----- Derivados -----
 
-    public float MaxHealth => baseMaxHealth + ((characterClass != null ? characterClass.baseHealth : 0) + health) * healthPerPoint;
-    public float MaxMana => baseMaxMana + ((characterClass != null ? characterClass.baseMana : 0) + mana) * manaPerPoint;
+    public float MaxHealth => baseMaxHealth + health * healthPerPoint;
+    public float MaxMana => baseMaxMana + mana * manaPerPoint;
     public float MoveSpeed => (characterClass != null ? characterClass.baseMoveSpeed : 6f) + agility * agilitySpeedPerPoint;
     public float Damage => (characterClass != null ? characterClass.baseDamage : 10f) + strength * strengthDamagePerPoint;
     public float ManaRegenPerSecond => 0.5f + mana * 0.15f;

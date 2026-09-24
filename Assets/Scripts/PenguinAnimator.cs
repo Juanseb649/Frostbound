@@ -22,6 +22,7 @@ public class PenguinAnimator : MonoBehaviour
 
     private Rigidbody _rb;
     private PlayerController _controller;
+    private CharacterStats _stats;
     private Vector3 _basePos;
     private Quaternion _baseRot;
 
@@ -36,6 +37,7 @@ public class PenguinAnimator : MonoBehaviour
 
         _rb = GetComponent<Rigidbody>();
         _controller = GetComponent<PlayerController>();
+        _stats = GetComponent<CharacterStats>();
 
         if (model != null)
         {
@@ -54,8 +56,7 @@ public class PenguinAnimator : MonoBehaviour
 
         // Normaliza con la velocidad real de la clase (stats), no el campo fijo.
         float referenceSpeed = _controller != null ? _controller.moveSpeed : 6f;
-        CharacterStats stats = GetComponent<CharacterStats>();
-        if (stats != null) referenceSpeed = stats.MoveSpeed;
+        if (_stats != null) referenceSpeed = _stats.MoveSpeed;
 
         if (referenceSpeed > 0.01f) speed /= referenceSpeed;
         speed = Mathf.Clamp01(speed);

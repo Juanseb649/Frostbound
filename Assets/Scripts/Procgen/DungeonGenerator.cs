@@ -99,8 +99,12 @@ public class DungeonGenerator : MonoBehaviour
         foreach (var path in corridors)
         {
             // Tramo horizontal (From -> Mid) y tramo vertical (Mid -> To).
-            CarveLine(Mathf.RoundToInt(path.From.x), Mathf.RoundToInt(path.From.y), Mathf.RoundToInt(path.Mid.x), Mathf.RoundToInt(path.From.y));
-            CarveLine(Mathf.RoundToInt(path.To.x), Mathf.RoundToInt(path.To.y), Mathf.RoundToInt(path.Mid.x), Mathf.RoundToInt(path.To.y));
+            int fx = Mathf.RoundToInt(path.From.x);
+            int fz = Mathf.RoundToInt(path.From.y);
+            int mx = Mathf.RoundToInt(path.Mid.x);
+            int tz = Mathf.RoundToInt(path.To.y);
+            CarveLine(fx, fz, mx, fz);
+            CarveLine(mx, fz, mx, tz);
         }
     }
 
