@@ -23,4 +23,8 @@ public class CharacterClass : ScriptableObject
     public float baseMoveSpeed = 6f;
     [Tooltip("Daño base de ataque.")]
     public float baseDamage = 10f;
+
+    [Header("Ropa inicial")]
+    [Tooltip("Prendas que se pone el pingüino al empezar con esta clase.")]
+    public OutfitItem[] startingOutfit = new OutfitItem[0];
 }

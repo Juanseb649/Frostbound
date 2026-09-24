@@ -20,3 +20,5 @@ MonoBehaviour:
   baseHealth: 4
   baseMoveSpeed: 8
   baseDamage: 9
+  startingOutfit:
+  - {fileID: 11400000, guid: 11ba90690b9ece4469ecaeffafd7a8fe, type: 2}
