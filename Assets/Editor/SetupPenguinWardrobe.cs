@@ -34,13 +34,13 @@ public static class SetupPenguinWardrobe
     {
         if (AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath) == null)
         {
-            EditorUtility.DisplayDialog("Frostbound", "No se encontró " + ModelPath + ".\nGenera el modelo con Blender/frostbound_penguin_rig.py.", "OK");
+            FrostboundBridge.Dialog("Frostbound", "No se encontró " + ModelPath + ".\nGenera el modelo con Blender/frostbound_penguin_rig.py.", "OK");
             return;
         }
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        if (!FrostboundBridge.ConfirmSave()) return;
 
         ConfigureImporters();
-        Material penguinMat = ToonMaterial("Toon_Penguin", 1f, new Color(0.10f, 0.16f, 0.42f));
+        Material penguinMat = ToonMaterial("Toon_Penguin", 3f, new Color(0.10f, 0.16f, 0.42f));
         Material outfitMat = ToonMaterial("Toon_Outfit", 2f, Color.white);
         Dictionary<string, OutfitItem> items = CreateOutfitItems(outfitMat);
         GameObject prefab = BuildPrefab(penguinMat, out string orientationNote, out float height);
@@ -48,14 +48,52 @@ public static class SetupPenguinWardrobe
         ReplacePlayerModel(prefab, items);
         SetupVillage.BuildScene(false);
 
-        EditorUtility.DisplayDialog("Frostbound",
+        FrostboundBridge.Dialog("Frostbound",
             "Pingüino vestible listo.\n\n" +
             "• Prefab: " + PrefabPath + " (altura " + height.ToString("0.00") + " m" + orientationNote + ")\n" +
             "• Shader: Frostbound/Toon (materiales en " + ToonMatDir + ")\n" +
             "• Prendas: " + OutfitDataDir + "\n" +
             "• Clases: Caballero→Armadura, Mago→Sombrero, Vikingo→Casco, Ninja→Capucha\n" +
-            "• Campamento reconstruido con pingüinos vestidos.\n\n" +
+            "• Poblado reconstruido con pingüinos vestidos.\n\n" +
             "En Play: teclas 1-4 ponen/quitan prendas, 0 quita todo.", "OK");
+    }
+
+    [MenuItem("Tools/Frostbound/Actualizar materiales toon")]
+    public static void RefreshToonMaterials()
+    {
+        foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { "Assets/Models" }))
+            AssetDatabase.ImportAsset(AssetDatabase.GUIDToAssetPath(guid), ImportAssetOptions.ForceUpdate);
+
+        Shader shader = Shader.Find("Frostbound/Toon");
+        int updated = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Material", new[] { ToonMatDir }))
+        {
+            Material m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+            if (m == null) continue;
+            m.shader = shader;
+            if (m.name.StartsWith("Toon_Penguin")) m.SetFloat("_VertexColorMode", 3f);
+            m.SetColor("_BellyColor", new Color(0.97f, 0.97f, 0.96f));
+            m.SetColor("_AccentColor", new Color(1f, 0.62f, 0.12f));
+            m.SetColor("_PupilColor", new Color(0.03f, 0.03f, 0.05f));
+            m.SetColor("_ShadowColor", new Color(0.8f, 0.82f, 0.9f));
+            m.SetFloat("_ShadowThreshold", 0f);
+            m.SetFloat("_ShadowSoftness", 0.02f);
+            m.SetFloat("_AmbientStrength", 0.3f);
+            m.SetFloat("_RimStrength", 0.15f);
+            m.SetFloat("_RimThreshold", 0.72f);
+            m.SetColor("_OutlineColor", new Color(0.04f, 0.05f, 0.1f));
+            m.SetFloat("_OutlineWidth", 2.2f);
+            m.SetVector("_EyeCenter", new Vector4(0.043f, 0.84f, 0f, 0f));
+            m.SetVector("_EyeSize", new Vector4(0.042f, 0.055f, 0f, 0f));
+            m.SetVector("_PupilSize", new Vector4(0.021f, 0.025f, 0.012f, -0.006f));
+            m.SetVector("_BellyShape", new Vector4(0.35f, 0.27f, 0.28f, 0.28f));
+            m.SetVector("_BeakShape", new Vector4(0.205f, 0.23f, 0.012f, 0.145f));
+            m.SetVector("_BeakRange", new Vector4(0.625f, 0.815f, 0f, 0f));
+            EditorUtility.SetDirty(m);
+            updated++;
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Wardrobe] Materiales toon actualizados: " + updated);
     }
 
     private static void ConfigureImporters()
@@ -112,7 +150,7 @@ public static class SetupPenguinWardrobe
             AssetDatabase.CreateAsset(m, path);
         }
         if (baseMat != null) m.CopyPropertiesFromMaterial(baseMat);
-        m.SetFloat("_VertexColorMode", 1f);
+        m.SetFloat("_VertexColorMode", 3f);
         m.SetColor("_BaseColor", plumage);
         EditorUtility.SetDirty(m);
         return m;

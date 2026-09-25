@@ -29,21 +29,29 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientStrength: 0.35
+    - _AmbientStrength: 0.3
+    - _Cull: 2
     - _MaskThreshold: 0.5
-    - _OutlineWidth: 2.5
-    - _RimStrength: 0.2
-    - _RimThreshold: 0.7
-    - _ShadowSoftness: 0.03
-    - _ShadowThreshold: 0.05
-    - _VertexColorMode: 1
+    - _OutlineWidth: 2.2
+    - _RimStrength: 0.15
+    - _RimThreshold: 0.72
+    - _ShadowSoftness: 0.02
+    - _ShadowThreshold: 0
+    - _VertexColorMode: 3
     m_Colors:
-    - _AccentColor: {r: 1, g: 0.54999995, b: 0.09999997, a: 1}
+    - _AccentColor: {r: 1, g: 0.62, b: 0.12, a: 1}
     - _BaseColor: {r: 1, g: 0.85, b: 0.2, a: 1}
-    - _BellyColor: {r: 0.96999997, g: 0.96999997, b: 0.96999997, a: 1}
-    - _OutlineColor: {r: 0.049999982, g: 0.06999998, b: 0.11999995, a: 1}
-    - _PupilColor: {r: 0.03, g: 0.03, b: 0.049999982, a: 1}
+    - _BeakRange: {r: 0.625, g: 0.815, b: 0, a: 0}
+    - _BeakShape: {r: 0.205, g: 0.23, b: 0.012, a: 0.145}
+    - _BellyColor: {r: 0.97, g: 0.97, b: 0.96, a: 1}
+    - _BellyShape: {r: 0.35, g: 0.27, b: 0.28, a: 0.28}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EyeCenter: {r: 0.043, g: 0.84, b: 0, a: 0}
+    - _EyeSize: {r: 0.042, g: 0.055, b: 0, a: 0}
+    - _OutlineColor: {r: 0.04, g: 0.05, b: 0.1, a: 1}
+    - _PupilColor: {r: 0.03, g: 0.03, b: 0.05, a: 1}
+    - _PupilSize: {r: 0.021, g: 0.025, b: 0.012, a: -0.006}
     - _RimColor: {r: 1, g: 1, b: 1, a: 1}
-    - _ShadowColor: {r: 0.54999995, g: 0.62, b: 0.85, a: 1}
+    - _ShadowColor: {r: 0.8, g: 0.82, b: 0.9, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

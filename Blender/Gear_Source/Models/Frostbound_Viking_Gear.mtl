@@ -1,0 +1,63 @@
+newmtl Barb_Iron
+Kd 0.4235 0.4627 0.5176
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_Bronze
+Kd 0.7176 0.4745 0.1843
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_Horn
+Kd 0.9373 0.8863 0.7686
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_Fur
+Kd 0.4314 0.2902 0.1804
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_FurLight
+Kd 0.6588 0.5137 0.3608
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_Leather
+Kd 0.2902 0.1843 0.1137
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_Kilt
+Kd 0.1843 0.3529 0.2039
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_Wood
+Kd 0.5412 0.3529 0.2039
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Barb_Ice
+Kd 0.7843 0.9647 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.2471 0.7216 1.0000

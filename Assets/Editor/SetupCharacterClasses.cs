@@ -26,7 +26,7 @@ public static class SetupCharacterClasses
             strength: 3, mana: 9, agility: 5, health: 3, speed: 6f, damage: 8f);
 
         AssetDatabase.SaveAssets();
-        EditorUtility.DisplayDialog("Clases",
+        FrostboundBridge.Dialog("Clases",
             "Se crearon las 4 clases en " + Folder + ":\n" +
             "Caballero (estable), Vikingo (fuerza), Ninja (agilidad), Mago (mana).\n\n" +
             "Ahora ejecuta Tools/Penguin/Setup Penguin as Player.", "OK");

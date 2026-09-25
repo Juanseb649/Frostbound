@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 6061441277677029864}
   - component: {fileID: 5396689365864368754}
   - component: {fileID: 523127186360440686}
+  - component: {fileID: 8307915250689772115}
+  - component: {fileID: 4769064743056091376}
   m_Layer: 0
   m_Name: Penguin_Rigged
   m_TagString: Untagged
@@ -61,12 +63,49 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PenguinRigAnimator
   referenceSpeed: 4
-  stepFrequency: 9
-  flipperFlap: 28
-  footLift: 22
+  stepRate: 2.4
+  strideLength: 0.07
+  stepHeight: 0.05
+  footPitch: 18
+  flipperSwing: 24
+  flipperOut: 10
+  spineTwist: 5
   headBob: 4
+  breathFrequency: 1.2
   idleFlipperSway: 5
-  idleFrequency: 1.4
+  enableIdleActions: 1
+  idleActionDelay: 10
+  idleActionInterval: {x: 8, y: 14}
+--- !u!114 &8307915250689772115
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7111708989700444059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9341c6e66a78f584f852b45ff6b63f1f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PenguinAppearance
+--- !u!114 &4769064743056091376
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7111708989700444059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 861286d5b5d960c4b8b08a2fa705c867, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeroGearEquipper
+  classes:
+  - {fileID: 11400000, guid: f79dabe22ceb0cc4fb50208582ea1be6, type: 2}
+  - {fileID: 11400000, guid: f87917e00fed2114aa1f876fb38dd867, type: 2}
+  - {fileID: 11400000, guid: 69cb01101ffd47242a0df112884d0726, type: 2}
+  - {fileID: 11400000, guid: 14123b47b71c1504798ef09bfbaa3b99, type: 2}
+  startingClass: 
 --- !u!1001 &8884635691179727691
 PrefabInstance:
   m_ObjectHideFlags: 0

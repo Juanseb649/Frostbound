@@ -22,7 +22,7 @@ public static class SetupMainMenu
     [MenuItem("Tools/Frostbound/Setup Main Menu")]
     public static void Setup()
     {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        if (!FrostboundBridge.ConfirmSave()) return;
 
         Scene scene;
         if (File.Exists(ScenePath))
@@ -136,7 +136,7 @@ public static class SetupMainMenu
             new EditorBuildSettingsScene(GameScenePath, true),
         };
 
-        EditorUtility.DisplayDialog("Frostbound",
+        FrostboundBridge.Dialog("Frostbound",
             "Menú principal creado en Assets/Scenes/Main menu.unity.\n\n" +
             "Los botones ya funcionan (Nuevo juego, Cargar, Opciones, Salir).\n" +
             "Build Settings actualizado: MainMenu = índice 0.", "OK");

@@ -32,12 +32,55 @@ public static class FrostboundCapture
         l.type = LightType.Directional;
         l.intensity = 1.2f;
         l.shadows = LightShadows.Soft;
-        lightGo.transform.rotation = Quaternion.Euler(40f, 150f, 0f);
+        lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
         temp.Add(lightGo);
 
         Render(origin + new Vector3(0f, 1.6f, -7f), origin + new Vector3(0f, 0.6f, 0f), 30f, "wardrobe_front.png", new Color(0.8f, 0.87f, 0.95f));
         foreach (GameObject g in temp) g.transform.Rotate(0f, 180f, 0f);
         Render(origin + new Vector3(0f, 1.6f, -7f), origin + new Vector3(0f, 0.6f, 0f), 30f, "wardrobe_back.png", new Color(0.8f, 0.87f, 0.95f));
+        foreach (GameObject g in temp) Object.DestroyImmediate(g);
+    }
+
+    [MenuItem("Tools/Frostbound/Debug/Capturar animaciones")]
+    public static void CaptureAnimations()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(SetupPenguinWardrobe.PrefabPath);
+        if (prefab == null) return;
+        Vector3 origin = new Vector3(1000f, 0f, 1000f);
+        var temp = new List<GameObject>();
+
+        var poses = new List<(float phase, float walk, PenguinRigAnimator.IdleAction action, float t)>
+        {
+            (0f, 0f, PenguinRigAnimator.IdleAction.None, 0f),
+            (Mathf.PI * 0.5f, 1f, PenguinRigAnimator.IdleAction.None, 0f),
+            (Mathf.PI * 1.5f, 1f, PenguinRigAnimator.IdleAction.None, 0f),
+            (0f, 0f, PenguinRigAnimator.IdleAction.Search, 0.6f),
+            (0f, 0f, PenguinRigAnimator.IdleAction.Search, 1.2f),
+            (0f, 0f, PenguinRigAnimator.IdleAction.Search, 2.6f),
+            (0f, 0f, PenguinRigAnimator.IdleAction.Search, 4.2f),
+            (0f, 0f, PenguinRigAnimator.IdleAction.FootTap, 1.1f),
+        };
+
+        for (int i = 0; i < poses.Count; i++)
+        {
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.position = origin + new Vector3((i - (poses.Count - 1) * 0.5f) * 1.25f, 0f, 0f);
+            go.transform.rotation = Quaternion.Euler(0f, 160f, 0f);
+            PenguinRigAnimator rig = go.GetComponent<PenguinRigAnimator>();
+            rig.DebugPose(poses[i].phase, poses[i].walk, poses[i].action, poses[i].t);
+            temp.Add(go);
+        }
+
+        var lightGo = new GameObject("CaptureLight");
+        Light l = lightGo.AddComponent<Light>();
+        l.type = LightType.Directional;
+        l.intensity = 1.2f;
+        lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+        temp.Add(lightGo);
+
+        Render(origin + new Vector3(0f, 1.4f, -10f), origin + new Vector3(0f, 0.55f, 0f), 30f, "anim_front.png", new Color(0.8f, 0.87f, 0.95f));
+        foreach (GameObject g in temp) g.transform.Rotate(0f, 90f, 0f);
+        Render(origin + new Vector3(0f, 1.4f, -10f), origin + new Vector3(0f, 0.55f, 0f), 30f, "anim_side.png", new Color(0.8f, 0.87f, 0.95f));
         foreach (GameObject g in temp) Object.DestroyImmediate(g);
     }
 

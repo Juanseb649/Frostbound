@@ -1,0 +1,42 @@
+newmtl Ninja_Black
+Kd 0.0863 0.0902 0.1098
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Ninja_Charcoal
+Kd 0.1725 0.1804 0.2157
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Ninja_Cord
+Kd 0.2314 0.2431 0.2902
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Ninja_Steel
+Kd 0.7216 0.7647 0.8118
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Ninja_DarkSteel
+Kd 0.3529 0.3843 0.4392
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Ninja_IceEdge
+Kd 0.7843 0.9647 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.2471 0.7216 1.0000

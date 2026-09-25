@@ -1,0 +1,56 @@
+newmtl Mage_Robe
+Kd 0.1373 0.2510 0.4941
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Mage_Cloak
+Kd 0.0902 0.1647 0.3216
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Mage_Patch
+Kd 0.2275 0.3725 0.6588
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Mage_Beard
+Kd 0.9333 0.9412 0.9490
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Mage_Silver
+Kd 0.7882 0.8235 0.8627
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Mage_Leather
+Kd 0.4196 0.2588 0.1490
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Mage_Wood
+Kd 0.4314 0.2941 0.1804
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Mage_Crystal
+Kd 0.8745 0.9765 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.4353 0.8627 1.0000

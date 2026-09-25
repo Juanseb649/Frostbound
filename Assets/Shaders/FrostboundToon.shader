@@ -4,26 +4,38 @@ Shader "Frostbound/Toon"
     {
         [MainTexture] _BaseMap ("Textura", 2D) = "white" {}
         [MainColor] _BaseColor ("Color base (plumaje / prenda)", Color) = (0.12, 0.2, 0.5, 1)
-        [Enum(Ninguno,0,Mascaras de pinguino,1,Color de vertice,2)] _VertexColorMode ("Uso del color de vértice", Float) = 0
-        _BellyColor ("Barriga y ojos (canal R)", Color) = (0.97, 0.97, 0.97, 1)
-        _AccentColor ("Pico y patas (canal G)", Color) = (1, 0.55, 0.1, 1)
-        _PupilColor ("Pupilas (canal B)", Color) = (0.03, 0.03, 0.05, 1)
-        _MaskThreshold ("Corte de máscara", Range(0.05, 0.95)) = 0.5
+        [Enum(Ninguno,0,Mascaras de vertice,1,Color de vertice,2,Pinguino procedural,3)] _VertexColorMode ("Modo de color", Float) = 0
+        _BellyColor ("Barriga y ojos", Color) = (0.97, 0.97, 0.96, 1)
+        _AccentColor ("Pico y patas", Color) = (1, 0.62, 0.12, 1)
+        _PupilColor ("Pupilas y borde de ojos", Color) = (0.03, 0.03, 0.05, 1)
+        _MaskThreshold ("Corte de máscara (modo 1)", Range(0.05, 0.95)) = 0.5
+
+        [Header(Ojos y barriga (modo procedural))]
+        _EyeCenter ("Ojo: lateral, altura", Vector) = (0.043, 0.84, 0, 0)
+        _EyeSize ("Ojo: ancho, alto, borde", Vector) = (0.042, 0.055, 0, 0)
+        _PupilSize ("Pupila: ancho, alto, hacia el centro, hacia arriba", Vector) = (0.021, 0.025, 0.012, -0.006)
+        _BellyShape ("Barriga: centro altura, ancho, alto, normal mínima", Vector) = (0.35, 0.27, 0.28, 0.28)
+        _BeakShape ("Pico: radio cabeza, radio lateral, margen, ancho máx", Vector) = (0.205, 0.23, 0.012, 0.145)
+        _BeakRange ("Pico: altura mín, altura máx", Vector) = (0.625, 0.815, 0, 0)
 
         [Header(Sombreado)]
-        _ShadowColor ("Color de sombra", Color) = (0.55, 0.62, 0.85, 1)
-        _ShadowThreshold ("Umbral de sombra", Range(-1, 1)) = 0.05
-        _ShadowSoftness ("Suavidad del corte", Range(0.001, 0.5)) = 0.03
-        _AmbientStrength ("Luz ambiente", Range(0, 1)) = 0.35
+        _ShadowColor ("Color de sombra", Color) = (0.8, 0.82, 0.9, 1)
+        _ShadowThreshold ("Umbral de sombra", Range(-1, 1)) = 0.0
+        _ShadowSoftness ("Suavidad del corte", Range(0.001, 0.5)) = 0.02
+        _AmbientStrength ("Luz ambiente", Range(0, 1)) = 0.3
 
         [Header(Brillo de borde)]
         _RimColor ("Color", Color) = (1, 1, 1, 1)
-        _RimStrength ("Intensidad", Range(0, 1)) = 0.2
-        _RimThreshold ("Ancho", Range(0.3, 0.95)) = 0.7
+        _RimStrength ("Intensidad", Range(0, 1)) = 0.15
+        _RimThreshold ("Ancho", Range(0.3, 0.95)) = 0.72
+
+        [Header(Emision y caras)]
+        [HDR] _EmissionColor ("Emisión", Color) = (0, 0, 0, 1)
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Caras (Off = doble cara para telas)", Float) = 2
 
         [Header(Contorno)]
-        _OutlineColor ("Color de contorno", Color) = (0.05, 0.07, 0.12, 1)
-        _OutlineWidth ("Grosor (px)", Range(0, 8)) = 2.5
+        _OutlineColor ("Color de contorno", Color) = (0.04, 0.05, 0.1, 1)
+        _OutlineWidth ("Grosor (px)", Range(0, 8)) = 2.2
     }
 
     SubShader
@@ -41,6 +53,12 @@ Shader "Frostbound/Toon"
             half4 _AccentColor;
             half4 _PupilColor;
             half _MaskThreshold;
+            float4 _EyeCenter;
+            float4 _EyeSize;
+            float4 _PupilSize;
+            float4 _BellyShape;
+            float4 _BeakShape;
+            float4 _BeakRange;
             half4 _ShadowColor;
             half _ShadowThreshold;
             half _ShadowSoftness;
@@ -50,6 +68,8 @@ Shader "Frostbound/Toon"
             half _RimThreshold;
             half4 _OutlineColor;
             half _OutlineWidth;
+            half4 _EmissionColor;
+            float _Cull;
         CBUFFER_END
         ENDHLSL
 
@@ -57,7 +77,7 @@ Shader "Frostbound/Toon"
         {
             Name "ForwardToon"
             Tags { "LightMode" = "UniversalForward" }
-            Cull Back
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma target 3.0
@@ -83,6 +103,7 @@ Shader "Frostbound/Toon"
                 float3 normalOS : NORMAL;
                 float4 color : COLOR;
                 float2 uv : TEXCOORD0;
+                float4 rest : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -93,7 +114,8 @@ Shader "Frostbound/Toon"
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
                 half4 color : TEXCOORD3;
-                half fogFactor : TEXCOORD4;
+                float4 rest : TEXCOORD4;
+                half fogFactor : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -108,8 +130,16 @@ Shader "Frostbound/Toon"
                 o.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 o.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 o.color = input.color;
+                o.rest = input.rest;
                 o.fogFactor = ComputeFogFactor(pos.positionCS.z);
                 return o;
+            }
+
+            // Corte con antialias: 1 dentro (d < 0), 0 fuera. Nítido a cualquier distancia.
+            half Inside(float d)
+            {
+                float aa = max(fwidth(d), 1e-5);
+                return 1.0h - smoothstep(-aa, aa, d);
             }
 
             half MaskStep(half value)
@@ -118,10 +148,60 @@ Shader "Frostbound/Toon"
                 return smoothstep(_MaskThreshold - aa, _MaskThreshold + aa, value);
             }
 
+            // Distancia con signo a una elipse (aproximación suficiente para radios pequeños).
+            float EllipseSD(float2 p, float2 radii)
+            {
+                float k = length(p / radii);
+                return (k - 1.0) * min(radii.x, radii.y);
+            }
+
+            half3 ProceduralPenguin(half3 albedo, float4 rest)
+            {
+                float lat = rest.x;
+                float h = rest.y;
+                float fwd = rest.z;
+                float nFwd = rest.w;
+                if (h < -1.0) return albedo;
+
+                float bellySD = max(EllipseSD(float2(lat, h - _BellyShape.x), _BellyShape.yz), (_BellyShape.w - nFwd) * 0.1);
+                albedo = lerp(albedo, _BellyColor.rgb, Inside(bellySD));
+
+                if (fwd > 0.05)
+                {
+                    float2 eye = float2(abs(lat) - _EyeCenter.x, h - _EyeCenter.y);
+                    float eyeSD = EllipseSD(eye, _EyeSize.xy);
+                    float ringSD = EllipseSD(eye, _EyeSize.xy + _EyeSize.zz);
+                    float2 pupil = eye + float2(_PupilSize.z, -_PupilSize.w);
+                    float pupilSD = EllipseSD(pupil, _PupilSize.xy);
+                    albedo = lerp(albedo, _PupilColor.rgb, Inside(ringSD));
+                    albedo = lerp(albedo, _BellyColor.rgb, Inside(eyeSD));
+                    albedo = lerp(albedo, _PupilColor.rgb, Inside(pupilSD));
+                }
+                return albedo;
+            }
+
+            // El pico es todo lo que sobresale de la curva de la cabeza: se pinta igual que su forma 3D.
+            half BeakMask(float4 rest)
+            {
+                float lat = rest.x;
+                float h = rest.y;
+                float fwd = rest.z;
+                if (h < -1.0) return 0;
+                float t = lat / _BeakShape.y;
+                float headFront = _BeakShape.x * sqrt(max(0.0, 1.0 - t * t)) + _BeakShape.z;
+                float sd = max(max(headFront - fwd, abs(lat) - _BeakShape.w), max(_BeakRange.x - h, h - _BeakRange.y));
+                return Inside(sd);
+            }
+
             half3 Albedo(Varyings i)
             {
                 half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv).rgb * _BaseColor.rgb;
-                if (_VertexColorMode > 1.5)
+                if (_VertexColorMode > 2.5)
+                {
+                    albedo = ProceduralPenguin(albedo, i.rest);
+                    albedo = lerp(albedo, _AccentColor.rgb, max(MaskStep(i.color.g), BeakMask(i.rest)));
+                }
+                else if (_VertexColorMode > 1.5)
                 {
                     half3 vc = i.color.rgb;
                     #if !defined(UNITY_COLORSPACE_GAMMA)
@@ -144,10 +224,11 @@ Shader "Frostbound/Toon"
                 return lit * smoothstep(0.35h, 0.65h, shadow);
             }
 
-            half4 Frag(Varyings i) : SV_Target
+            half4 Frag(Varyings i, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 half3 n = normalize(i.normalWS);
+                n = IS_FRONT_VFACE(face, n, -n);
                 half3 v = GetWorldSpaceNormalizeViewDir(i.positionWS);
                 half3 albedo = Albedo(i);
                 half4 shadowMask = half4(1, 1, 1, 1);
@@ -155,7 +236,8 @@ Shader "Frostbound/Toon"
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light mainLight = GetMainLight(shadowCoord, i.positionWS, shadowMask);
                 half mainLit = Band(dot(n, mainLight.direction), mainLight.shadowAttenuation);
-                half3 color = albedo * mainLight.color * lerp(_ShadowColor.rgb, half3(1, 1, 1), mainLit);
+                half3 lightColor = min(mainLight.color, half3(1.2h, 1.2h, 1.2h));
+                half3 color = albedo * lightColor * lerp(_ShadowColor.rgb, half3(1, 1, 1), mainLit);
                 color += albedo * SampleSH(n) * _AmbientStrength;
 
                 #if defined(_ADDITIONAL_LIGHTS)
@@ -183,6 +265,7 @@ Shader "Frostbound/Toon"
                 half rim = 1.0h - saturate(dot(n, v));
                 color += _RimColor.rgb * _RimStrength * smoothstep(_RimThreshold, _RimThreshold + 0.02h, rim) * mainLit;
 
+                color += _EmissionColor.rgb;
                 color = MixFog(color, i.fogFactor);
                 return half4(color, 1);
             }
@@ -207,6 +290,7 @@ Shader "Frostbound/Toon"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float4 tangentOS : TANGENT;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -220,8 +304,10 @@ Shader "Frostbound/Toon"
             {
                 Varyings o;
                 UNITY_SETUP_INSTANCE_ID(input);
+                // El importador guarda en la tangente una normal suavizada: el contorno no se rompe en pliegues ni bultos pequeños.
+                float3 outlineNormal = dot(input.tangentOS.xyz, input.tangentOS.xyz) > 0.25 ? input.tangentOS.xyz : input.normalOS;
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                float3 normalWS = TransformObjectToWorldNormal(outlineNormal);
                 float4 positionCS = TransformWorldToHClip(positionWS);
                 float2 normalCS = mul((float3x3)UNITY_MATRIX_VP, normalWS).xy;
                 float len = max(length(normalCS), 1e-4);
@@ -247,7 +333,7 @@ Shader "Frostbound/Toon"
             ZWrite On
             ZTest LEqual
             ColorMask 0
-            Cull Back
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma target 3.0

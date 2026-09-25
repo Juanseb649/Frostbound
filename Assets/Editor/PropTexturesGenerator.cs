@@ -13,7 +13,7 @@ public static class PropTexturesGenerator
         GenerateIceWall();
         GeneratePineTree();
         GenerateWoodenFence();
-        EditorUtility.DisplayDialog("Nieve Club Penguin", "Las 4 texturas de props se generaron en Assets/Textures.", "OK");
+        FrostboundBridge.Dialog("Nieve Club Penguin", "Las 4 texturas de props se generaron en Assets/Textures.", "OK");
     }
 
     // TEXTURE 1 - Snow mound / rock prop
@@ -311,6 +311,6 @@ public static class PropTexturesGenerator
         AssetDatabase.Refresh();
 
         Debug.Log("Textura generada: " + path + " (" + label + ")");
-        EditorUtility.DisplayDialog("Nieve Club Penguin", "Textura generada: " + label + "\n" + path, "OK");
+        FrostboundBridge.Dialog("Nieve Club Penguin", "Textura generada: " + label + "\n" + path, "OK");
     }
 }
