@@ -100,6 +100,7 @@ public class PenguinOutfit : MonoBehaviour
 
         var equipped = new Equipped { item = item };
         if (item.attachMode == OutfitAttachMode.Skinned) SpawnSkinned(item, equipped);
+        else if (item.attachMode == OutfitAttachMode.FitToBones) SpawnFitted(item, equipped);
         else SpawnAnchored(item, equipped);
 
         _equipped[item.slot] = equipped;
@@ -127,6 +128,7 @@ public class PenguinOutfit : MonoBehaviour
         GameObject instance = Instantiate(item.prefab);
         foreach (SkinnedMeshRenderer smr in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
         {
+            if (!item.UsesPart(smr.name)) continue;
             Transform[] source = smr.bones;
             var mapped = new Transform[source.Length];
             for (int i = 0; i < source.Length; i++)
@@ -147,7 +149,7 @@ public class PenguinOutfit : MonoBehaviour
             smr.transform.localPosition = Vector3.zero;
             smr.transform.localRotation = Quaternion.identity;
             smr.transform.localScale = Vector3.one;
-            smr.gameObject.name = "Outfit_" + item.name;
+            smr.gameObject.name = "Outfit_" + item.name + "_" + smr.name;
             if (_bodyRenderer != null) smr.gameObject.layer = _bodyRenderer.gameObject.layer;
             ApplyMaterial(smr, item);
             equipped.spawned.Add(smr.gameObject);
@@ -166,6 +168,53 @@ public class PenguinOutfit : MonoBehaviour
         foreach (Renderer r in instance.GetComponentsInChildren<Renderer>(true)) ApplyMaterial(r, item);
         foreach (Collider c in instance.GetComponentsInChildren<Collider>(true)) c.enabled = false;
         equipped.spawned.Add(instance);
+    }
+
+    // Coloca una copia en cada hueso, del tamaño de la parte del cuerpo que mueve ese hueso
+    // (Penguin_Foot_L para Foot_L). Queda alineada con el pingüino y sigue la animación del hueso.
+    private void SpawnFitted(OutfitItem item, Equipped equipped)
+    {
+        foreach (string boneName in item.fitBones)
+        {
+            if (!_bones.TryGetValue(boneName, out Transform bone)) continue;
+            Bounds part = PartBounds(boneName, out bool found);
+            if (!found) part = new Bounds(transform.InverseTransformPoint(bone.position), Vector3.one * 0.15f);
+
+            Vector3 size = Vector3.Scale(part.size, item.scale);
+            Vector3 local = new Vector3(part.center.x, part.min.y, part.center.z) + Vector3.Scale(item.positionOffset, part.size);
+
+            GameObject instance = Instantiate(item.prefab);
+            instance.name = "Outfit_" + item.name + "_" + boneName;
+            instance.transform.SetPositionAndRotation(transform.TransformPoint(local), transform.rotation * Quaternion.Euler(item.rotationOffset));
+            instance.transform.localScale = Vector3.Scale(size, transform.lossyScale);
+            instance.transform.SetParent(bone, true);
+            foreach (Renderer r in instance.GetComponentsInChildren<Renderer>(true)) ApplyMaterial(r, item);
+            foreach (Collider c in instance.GetComponentsInChildren<Collider>(true)) c.enabled = false;
+            equipped.spawned.Add(instance);
+        }
+    }
+
+    // Caja de la parte del cuerpo en el espacio del pingüino (pose actual).
+    private Bounds PartBounds(string boneName, out bool found)
+    {
+        found = false;
+        var bounds = new Bounds();
+        foreach (SkinnedMeshRenderer smr in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            if (!smr.name.EndsWith(boneName) || smr.name.StartsWith("Outfit_") || smr.sharedMesh == null) continue;
+            var baked = new Mesh();
+            smr.BakeMesh(baked, true);
+            Transform t = smr.transform;
+            foreach (Vector3 v in baked.vertices)
+            {
+                Vector3 p = transform.InverseTransformPoint(t.position + t.rotation * v);
+                if (!found) { bounds = new Bounds(p, Vector3.zero); found = true; }
+                else bounds.Encapsulate(p);
+            }
+            DestroySafe(baked);
+            if (found) break;
+        }
+        return bounds;
     }
 
     private static void ApplyMaterial(Renderer r, OutfitItem item)
