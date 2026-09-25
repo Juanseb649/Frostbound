@@ -12,7 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 165aaa8d5e99a8e48be057ae7bdaaf0b, type: 3}
   m_Name: Mage_Mago
   m_EditorClassIdentifier: Assembly-CSharp::CharacterClass
-  className: Mago
+  className: Mage
+  displayName: Mago Errante
+  role: "A distancia \xB7 Magia"
+  primaryAttribute: "Man\xE1"
+  description: "Viajero que lleva a\xF1os estudiando el primer sellado del Frost.
+    Canaliza el fr\xEDo a trav\xE9s de su bast\xF3n y castiga a los corruptos desde
+    lejos."
+  startingGear:
+  - Sombrero de ala ancha
+  - "Bast\xF3n nudoso con cristal"
+  - Capa de viaje
+  - Bolsa del caminante
+  defaultPlumageId: verde
+  gearPrefab: {fileID: 919132149155446097, guid: 57511c8d36c357841892f4e8d378bdc9, type: 3}
   classColor: {r: 0.65, g: 0.45, b: 0.8, a: 1}
   baseStrength: 3
   baseMana: 9
@@ -21,4 +34,14 @@ MonoBehaviour:
   baseMoveSpeed: 6
   baseDamage: 8
   startingOutfit:
-  - {fileID: 11400000, guid: cda8910c3e126ec42a71e6ccc9646503, type: 2}
+  - {fileID: 11400000, guid: a9a5f68a484cd84479d06f186980c191, type: 2}
+  startingItems:
+  - {fileID: 11400000, guid: df928604184cde046ba7f3cd3fa78b65, type: 2}
+  - {fileID: 11400000, guid: d59a56d5a30ac82418216601a6b0ec0f, type: 2}
+  - {fileID: 11400000, guid: f6cb344eebd78144ba8792558bf623db, type: 2}
+  - {fileID: 11400000, guid: 4a6c2d8685a7d5a4b8cb7a49fdc6f444, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: f03ada1f7aa1f3a418a589fd9a3f0dcd, type: 2}
+  - {fileID: 11400000, guid: f03ada1f7aa1f3a418a589fd9a3f0dcd, type: 2}
+  - {fileID: 11400000, guid: f03ada1f7aa1f3a418a589fd9a3f0dcd, type: 2}

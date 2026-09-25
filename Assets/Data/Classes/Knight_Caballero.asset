@@ -12,7 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 165aaa8d5e99a8e48be057ae7bdaaf0b, type: 3}
   m_Name: Knight_Caballero
   m_EditorClassIdentifier: Assembly-CSharp::CharacterClass
-  className: Caballero
+  className: Knight
+  displayName: Caballero de la Escarcha
+  role: "Cuerpo a cuerpo \xB7 Defensa"
+  primaryAttribute: Fuerza
+  description: "\xDAltimo guardi\xE1n de la aldea. Su armadura se forj\xF3 con el
+    hierro de las ruinas del Frostspire. Aguanta en primera l\xEDnea y abre paso
+    con su mandoble de escarcha."
+  startingGear:
+  - Yelmo cerrado con penacho
+  - Mandoble de filo de escarcha
+  - Hombreras y guanteletes
+  - Capa y sobreveste desgarradas
+  defaultPlumageId: azul
+  gearPrefab: {fileID: 919132149155446097, guid: 8a045dfdef9014f4db0b8b555d2aa3c6, type: 3}
   classColor: {r: 0.72, g: 0.78, b: 0.9, a: 1}
   baseStrength: 5
   baseMana: 5
@@ -21,4 +34,13 @@ MonoBehaviour:
   baseMoveSpeed: 5.5
   baseDamage: 10
   startingOutfit:
-  - {fileID: 11400000, guid: 6c94c1a5a66a3784ab0a5b7e00ca03c0, type: 2}
+  - {fileID: 11400000, guid: d482b2fce42135243bae054b348eeef8, type: 2}
+  startingItems:
+  - {fileID: 11400000, guid: b953925c4d50e2c4f999f85476578dfe, type: 2}
+  - {fileID: 11400000, guid: 5219a63326a982a488378450661fa33f, type: 2}
+  - {fileID: 11400000, guid: 19e7d05b06488ef4bae684c94337bc17, type: 2}
+  - {fileID: 11400000, guid: 29320fb7d5f55934d952b687adf639b8, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: f03ada1f7aa1f3a418a589fd9a3f0dcd, type: 2}

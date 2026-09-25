@@ -12,7 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 165aaa8d5e99a8e48be057ae7bdaaf0b, type: 3}
   m_Name: Viking_Vikingo
   m_EditorClassIdentifier: Assembly-CSharp::CharacterClass
-  className: Vikingo
+  className: Viking
+  displayName: "B\xE1rbaro del Glaciar"
+  role: "Cuerpo a cuerpo \xB7 Aguante"
+  primaryAttribute: Salud
+  description: "Asaltante de las tierras altas que no le teme al fr\xEDo. Resiste
+    m\xE1s castigo que nadie y parte el hielo corrupto de un hachazo."
+  startingGear:
+  - Yelmo de cuernos
+  - Hacha del glaciar
+  - Escudo redondo
+  - Manto de piel
+  defaultPlumageId: rojo
+  gearPrefab: {fileID: 919132149155446097, guid: 8045a07e081678942aac81d9d5e39eea, type: 3}
   classColor: {r: 0.8, g: 0.55, b: 0.35, a: 1}
   baseStrength: 9
   baseMana: 3
@@ -21,4 +33,14 @@ MonoBehaviour:
   baseMoveSpeed: 5
   baseDamage: 14
   startingOutfit:
-  - {fileID: 11400000, guid: 27a465fbac03a5b4d9cd10763e6c4d4d, type: 2}
+  - {fileID: 11400000, guid: bcd13a05777945e4a9830ec08ade5fbd, type: 2}
+  startingItems:
+  - {fileID: 11400000, guid: 8c240258932b1a540bfe0eccc34e4a39, type: 2}
+  - {fileID: 11400000, guid: 81d0a390ab1b71a428132dc4b3410a14, type: 2}
+  - {fileID: 11400000, guid: d819034679b417d4d89d1a22a9fdbe98, type: 2}
+  - {fileID: 11400000, guid: a41fe5af5775d584aae0d2bba30597c9, type: 2}
+  - {fileID: 11400000, guid: 29fda3202687d8643b1e3e7501c62efe, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: f03ada1f7aa1f3a418a589fd9a3f0dcd, type: 2}

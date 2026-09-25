@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: badeab548b415df4d88442622e91e4eb, type: 3}
+  m_Name: UISkin
+  m_EditorClassIdentifier: Assembly-CSharp::UISkin
+  cinzel600: {fileID: 11400000, guid: ec1e8d78780961741aa97690d2195971, type: 2}
+  cinzel800: {fileID: 11400000, guid: cd38d79818071dc49b41284893a86582, type: 2}
+  nunito500: {fileID: 11400000, guid: 3b7ccb5120dc65b4981819deb3edf6fd, type: 2}
+  nunito700: {fileID: 11400000, guid: 11ca8cf9e6bec2b40b47a98f7f5f13e3, type: 2}
+  nunito800: {fileID: 11400000, guid: b1b54099d10cf924583df2b065e3e7e3, type: 2}
+  round10: {fileID: 21300000, guid: 939e4c700787e2d4fbb6d839c7b2f02a, type: 3}
+  round12: {fileID: 21300000, guid: a7e07f24e01e8994d9c3a12baaf3ece2, type: 3}
+  round16: {fileID: 21300000, guid: e87e5a70be317f940b6559b5b2b88c18, type: 3}
+  round20: {fileID: 21300000, guid: 03e86669b6e0141469774d7ffc919c2f, type: 3}
+  pill: {fileID: 21300000, guid: d35d44205f9506247a284f5b59ccd984, type: 3}
+  circle: {fileID: 21300000, guid: 417f040baebd4ee45ba8e8bfe14fbeff, type: 3}
+  diamond: {fileID: 21300000, guid: 031e54bb1a035494395a5a09a79f2546, type: 3}
+  iconStrength: {fileID: 21300000, guid: defd3eb056e22634f800ed4ec93ac29a, type: 3}
+  iconMana: {fileID: 21300000, guid: be878b4b34aea134d83540d5b396ad4c, type: 3}
+  iconAgility: {fileID: 21300000, guid: a074fd58807e0074eb17d7905bca5bc2, type: 3}
+  iconHealth: {fileID: 21300000, guid: 5982ec913c7aa7c47b4e4aadf86c3f4c, type: 3}
+  slotHead: {fileID: 21300000, guid: 2b613e4293990a34c9d33b2483e63708, type: 3}
+  slotChest: {fileID: 21300000, guid: c7e5dcd234d009f4e83d3a95b616ff2d, type: 3}
+  slotFeet: {fileID: 21300000, guid: 309ce91c80b10b040a2f8d8dcdbdef94, type: 3}
+  slotWeapon: {fileID: 21300000, guid: 7653893832176c74eaafb26524b30183, type: 3}
+  slotOffhand: {fileID: 21300000, guid: 6d35409ce0951ea4ab6b1eb7397a1251, type: 3}
+  slotAmulet: {fileID: 21300000, guid: b9d94e92d29dae84f855972b04b45110, type: 3}

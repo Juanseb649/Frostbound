@@ -13,6 +13,18 @@ MonoBehaviour:
   m_Name: Ninja
   m_EditorClassIdentifier: Assembly-CSharp::CharacterClass
   className: Ninja
+  displayName: Shinobi de la Escarcha
+  role: "\xC1gil \xB7 Golpes r\xE1pidos"
+  primaryAttribute: Agilidad
+  description: 'Explorador silencioso de las laderas. Nadie lo ve llegar: golpea
+    con kunai y shuriken, y esquiva antes de que el hielo oscuro lo alcance.'
+  startingGear:
+  - "Capucha y m\xE1scara"
+  - Kunai de filo helado
+  - Shuriken
+  - Katana a la espalda
+  defaultPlumageId: negro
+  gearPrefab: {fileID: 919132149155446097, guid: b4989170d464a1f418b77e8af397ab3e, type: 3}
   classColor: {r: 0.35, g: 0.4, b: 0.52, a: 1}
   baseStrength: 4
   baseMana: 4
@@ -21,4 +33,14 @@ MonoBehaviour:
   baseMoveSpeed: 8
   baseDamage: 9
   startingOutfit:
-  - {fileID: 11400000, guid: 11ba90690b9ece4469ecaeffafd7a8fe, type: 2}
+  - {fileID: 11400000, guid: d0288a504b5c15545833bcd1b7adfd47, type: 2}
+  startingItems:
+  - {fileID: 11400000, guid: 4fb36f935f0335247bcebb20f0f1707c, type: 2}
+  - {fileID: 11400000, guid: cca4213d23ac147459320539ea20ea41, type: 2}
+  - {fileID: 11400000, guid: d4b2f2162a1c5a745b8954acbe87c128, type: 2}
+  - {fileID: 11400000, guid: f12982507c3baff49a1f97d50c096b75, type: 2}
+  - {fileID: 11400000, guid: 323e788f0cc8c954695104527710c091, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: 1e14d302cb1ea7945a3eb1e4853fdb35, type: 2}
+  - {fileID: 11400000, guid: f03ada1f7aa1f3a418a589fd9a3f0dcd, type: 2}
