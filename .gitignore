@@ -109,3 +109,7 @@ InitTestScene*.unity*
 # Renders de prueba y archivos temporales de Claude
 /Captures/
 /Claude outputs/
+
+# Canal de comandos del editor (local)
+/FrostboundBridge/
+/Captures/
