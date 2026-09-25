@@ -10,14 +10,14 @@ public static class SetupPenguinPlayer
     [MenuItem("Tools/Penguin/Setup Penguin as Player")]
     public static void Setup()
     {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        if (!FrostboundBridge.ConfirmSave()) return;
 
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
         GameObject penguinPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Penguin.obj");
         if (penguinPrefab == null)
         {
-            EditorUtility.DisplayDialog("Penguin", "No se encontró Assets/Penguin.obj en el proyecto.", "OK");
+            FrostboundBridge.Dialog("Penguin", "No se encontró Assets/Penguin.obj en el proyecto.", "OK");
             return;
         }
 
@@ -70,7 +70,7 @@ public static class SetupPenguinPlayer
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
 
-        EditorUtility.DisplayDialog("Penguin",
+        FrostboundBridge.Dialog("Penguin",
             "¡Listo! Revertido al pingüino .obj descargado con animación procedural.\n" +
             "Pulsa Play (▶) para probarlo.", "OK");
     }

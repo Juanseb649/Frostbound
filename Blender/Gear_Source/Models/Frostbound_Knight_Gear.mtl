@@ -1,0 +1,49 @@
+newmtl Knight_Steel
+Kd 0.4235 0.4627 0.5098
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Knight_Iron
+Kd 0.2275 0.2510 0.2902
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Knight_Gold
+Kd 0.7216 0.5686 0.2275
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Knight_Cloth
+Kd 0.1412 0.2078 0.3255
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Knight_Leather
+Kd 0.2431 0.1647 0.1098
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Knight_Slit
+Kd 0.0431 0.0471 0.0627
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Knight_Frost
+Kd 0.6235 0.9098 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.2471 0.7216 1.0000

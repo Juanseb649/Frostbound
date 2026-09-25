@@ -96,7 +96,7 @@ public static class SnowTextureGenerator
             mat.SetTexture("_MainTex", savedTex);
             EditorUtility.SetDirty(mat);
             AssetDatabase.SaveAssets();
-            EditorUtility.DisplayDialog("Snow Texture Generada",
+            FrostboundBridge.Dialog("Snow Texture Generada",
                 "Se generó snow_seamless.png en Assets/Textures y se asignó a Ground.mat.",
                 "OK");
         }

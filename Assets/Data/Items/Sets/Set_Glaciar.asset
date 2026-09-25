@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bcb4553d60e9d54fb601fc1879ab796, type: 3}
+  m_Name: Set_Glaciar
+  m_EditorClassIdentifier: Assembly-CSharp::ArmorSet
+  displayName: "Set del B\xE1rbaro del Glaciar"
+  pieces:
+  - {fileID: 11400000, guid: 8c240258932b1a540bfe0eccc34e4a39, type: 2}
+  - {fileID: 11400000, guid: 81d0a390ab1b71a428132dc4b3410a14, type: 2}
+  - {fileID: 11400000, guid: d819034679b417d4d89d1a22a9fdbe98, type: 2}
+  bonuses:
+  - piecesRequired: 2
+    stats:
+    - stat: 3
+      value: 2
+    armor: 0
+  - piecesRequired: 3
+    stats:
+    - stat: 3
+      value: 3
+    - stat: 0
+      value: 1
+    armor: 4

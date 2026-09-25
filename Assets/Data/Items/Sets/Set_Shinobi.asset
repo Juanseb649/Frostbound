@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bcb4553d60e9d54fb601fc1879ab796, type: 3}
+  m_Name: Set_Shinobi
+  m_EditorClassIdentifier: Assembly-CSharp::ArmorSet
+  displayName: Set del Shinobi
+  pieces:
+  - {fileID: 11400000, guid: 4fb36f935f0335247bcebb20f0f1707c, type: 2}
+  - {fileID: 11400000, guid: cca4213d23ac147459320539ea20ea41, type: 2}
+  - {fileID: 11400000, guid: d4b2f2162a1c5a745b8954acbe87c128, type: 2}
+  bonuses:
+  - piecesRequired: 2
+    stats:
+    - stat: 2
+      value: 2
+    armor: 0
+  - piecesRequired: 3
+    stats:
+    - stat: 2
+      value: 2
+    - stat: 0
+      value: 1
+    armor: 3

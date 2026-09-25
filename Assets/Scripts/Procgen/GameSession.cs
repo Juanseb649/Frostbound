@@ -5,6 +5,26 @@ public class GameSession : MonoBehaviour
 {
     public static GameSession Instance { get; private set; }
 
+    [Header("Héroe elegido")]
+    public CharacterClass SelectedClass;
+    public string PlumageId = "";
+    public string HeroName = "";
+
+    // Crea la sesión si todavía no existe (por ejemplo, al abrir el menú por primera vez).
+    public static GameSession Ensure()
+    {
+        if (Instance != null) return Instance;
+        var go = new GameObject("GameSession");
+        return go.AddComponent<GameSession>();
+    }
+
+    public void SetHero(CharacterClass cls, string plumageId, string heroName)
+    {
+        SelectedClass = cls;
+        PlumageId = plumageId;
+        HeroName = heroName;
+    }
+
     [Header("Mundo")]
     [Tooltip("Seed maestro de esta partida. Define montaña, castillos y spawn.")]
     public int worldSeed;

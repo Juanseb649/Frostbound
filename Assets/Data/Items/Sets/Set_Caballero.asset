@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bcb4553d60e9d54fb601fc1879ab796, type: 3}
+  m_Name: Set_Caballero
+  m_EditorClassIdentifier: Assembly-CSharp::ArmorSet
+  displayName: Set del Caballero de la Escarcha
+  pieces:
+  - {fileID: 11400000, guid: b953925c4d50e2c4f999f85476578dfe, type: 2}
+  - {fileID: 11400000, guid: 5219a63326a982a488378450661fa33f, type: 2}
+  - {fileID: 11400000, guid: 19e7d05b06488ef4bae684c94337bc17, type: 2}
+  bonuses:
+  - piecesRequired: 2
+    stats:
+    - stat: 3
+      value: 2
+    armor: 0
+  - piecesRequired: 3
+    stats:
+    - stat: 0
+      value: 2
+    armor: 6

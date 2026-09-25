@@ -8,14 +8,31 @@ public class PlayerController : MonoBehaviour
     [Header("Movement")]
     public float moveSpeed = 6f;
     public float rotationSpeed = 12f;
-    [Tooltip("Clic (o tocar) en el suelo para moverse, estilo Diablo.")]
+    [Tooltip("Clic (o tocar) en el suelo para moverse, estilo Diablo. Mantener pulsado sigue al cursor.")]
     public bool clickToMove = true;
+    [Tooltip("Distancia (m) a la que se considera que llegó al punto clicado.")]
+    public float stopDistance = 0.2f;
+    [Tooltip("Segundos empujando contra un obstáculo antes de cancelar el destino.")]
+    public float stuckTimeout = 0.35f;
+
+    [Header("Interacción")]
+    [Tooltip("Tecla para hablar con el NPC más cercano.")]
+    public Key interactKey = Key.E;
+    [Tooltip("Se cierra el menú del NPC si el héroe se aleja más que su alcance más este margen.")]
+    public float menuCloseMargin = 1.5f;
 
     private Rigidbody _rb;
     private Camera _camera;
     private CharacterStats _stats;
     private Vector3 _moveDirection;
     private Vector3? _clickTarget;
+    private NPCInteractable _interactTarget;
+    private NPCInteractable _hovered;
+    private bool _pressStartedOnUI;
+    private float _stuckTimer;
+    private Vector3 _lastPosition;
+    private Quaternion _targetRotation;
+    private readonly RaycastHit[] _hits = new RaycastHit[16];
 
     void Awake()
     {
@@ -25,24 +42,29 @@ public class PlayerController : MonoBehaviour
         _rb.interpolation = RigidbodyInterpolation.Interpolate;
         _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         _rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        _camera = Camera.main != null ? Camera.main : null;
+        _rb.angularVelocity = Vector3.zero;
+        _targetRotation = _rb.rotation;
+        _camera = Camera.main;
+        _lastPosition = _rb.position;
     }
 
     void Update()
     {
-        Vector2 input = ReadKeyboardInput();
-        input = Vector2.ClampMagnitude(input, 1f);
+        if (_camera == null) _camera = Camera.main;
+        UpdateHover();
 
-        if (_clickTarget.HasValue && ((Vector2)(_clickTarget.Value - transform.position)).sqrMagnitude < 0.04f)
+        Vector2 input = Vector2.ClampMagnitude(ReadKeyboardInput(), 1f);
+
+        if (_clickTarget.HasValue && FlatOffset(_clickTarget.Value).sqrMagnitude < stopDistance * stopDistance)
             _clickTarget = null;
 
-        if (ReadClickTarget())
-        {
-            _moveDirection = (_clickTarget.Value - transform.position).normalized;
-        }
-        else if (input.sqrMagnitude > 0.01f)
+        Keyboard kb = Keyboard.current;
+        if (kb != null && kb[interactKey].wasPressedThisFrame) TalkToNearest();
+
+        if (input.sqrMagnitude > 0.01f)
         {
             _clickTarget = null;
+            _interactTarget = null;
             Vector3 forward = Vector3.forward;
             Vector3 right = Vector3.right;
             if (_camera != null)
@@ -52,25 +74,147 @@ public class PlayerController : MonoBehaviour
             }
             _moveDirection = (forward * input.y + right * input.x).normalized;
         }
+        else if (ReadClick())
+        {
+            _moveDirection = FlatOffset(_clickTarget.Value).normalized;
+        }
+        else if (_interactTarget != null)
+        {
+            _moveDirection = ApproachInteractTarget();
+        }
         else
         {
             _moveDirection = Vector3.zero;
         }
 
         if (_moveDirection.sqrMagnitude > 0.01f)
+            _targetRotation = Quaternion.LookRotation(_moveDirection, Vector3.up);
+
+        WorldHUD hud = WorldHUD.Instance;
+        if (hud != null && hud.MenuOpen)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(_moveDirection, Vector3.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            NPCInteractable npc = hud.MenuTarget;
+            float limit = npc.interactRange + menuCloseMargin;
+            if (FlatOffset(npc.transform.position).sqrMagnitude > limit * limit) hud.CloseMenu();
         }
     }
 
     void FixedUpdate()
     {
-        // La clase (stats) define la velocidad: Ninja corre más, Vikingo menos.
         float speed = _stats != null ? _stats.MoveSpeed : moveSpeed;
+        Vector3 moved = _rb.position - _lastPosition;
+        moved.y = 0f;
+        float actualSpeed = moved.magnitude / Time.fixedDeltaTime;
+        _lastPosition = _rb.position;
+
         Vector3 velocity = _moveDirection * speed;
         velocity.y = _rb.linearVelocity.y;
         _rb.linearVelocity = velocity;
+
+        // La rotación la controla solo el script: los choques no pueden dejarlo girando.
+        _rb.angularVelocity = Vector3.zero;
+        _rb.MoveRotation(Quaternion.Slerp(_rb.rotation, _targetRotation, rotationSpeed * Time.fixedDeltaTime));
+
+        if (_clickTarget.HasValue || _interactTarget != null)
+        {
+            _stuckTimer = actualSpeed < speed * 0.2f && _moveDirection.sqrMagnitude > 0.01f ? _stuckTimer + Time.fixedDeltaTime : 0f;
+            if (_stuckTimer > stuckTimeout)
+            {
+                _clickTarget = null;
+                _interactTarget = null;
+                _stuckTimer = 0f;
+            }
+        }
+        else
+        {
+            _stuckTimer = 0f;
+        }
+    }
+
+    // ---------- Interacción con NPC ----------
+
+    public void Interact(NPCInteractable npc)
+    {
+        if (npc == null) return;
+        _clickTarget = null;
+        _interactTarget = npc;
+        if (WorldHUD.Instance != null) WorldHUD.Instance.CloseMenu();
+    }
+
+    private Vector3 ApproachInteractTarget()
+    {
+        Vector3 offset = FlatOffset(_interactTarget.transform.position);
+        float reach = _interactTarget.interactRange;
+        if (offset.sqrMagnitude <= reach * reach)
+        {
+            _targetRotation = Quaternion.LookRotation(offset.sqrMagnitude > 0.001f ? offset.normalized : transform.forward, Vector3.up);
+            if (WorldHUD.Instance != null) WorldHUD.Instance.OpenMenu(_interactTarget);
+            _interactTarget = null;
+            return Vector3.zero;
+        }
+        return offset.normalized;
+    }
+
+    private void TalkToNearest()
+    {
+        WorldHUD hud = WorldHUD.Instance;
+        if (hud != null && hud.MenuOpen) return;
+        NPCInteractable best = null;
+        float bestDist = float.MaxValue;
+        foreach (NPCInteractable npc in FindObjectsByType<NPCInteractable>(FindObjectsSortMode.None))
+        {
+            float reach = npc.interactRange + 1.2f;
+            float d = FlatOffset(npc.transform.position).sqrMagnitude;
+            if (d < reach * reach && d < bestDist)
+            {
+                best = npc;
+                bestDist = d;
+            }
+        }
+        if (best != null) Interact(best);
+    }
+
+    private NPCInteractable NpcUnderCursor(Vector2 screen)
+    {
+        if (_camera == null) return null;
+        Ray ray = _camera.ScreenPointToRay(screen);
+        int count = Physics.RaycastNonAlloc(ray, _hits, 200f, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.MaxValue;
+        NPCInteractable found = null;
+        for (int i = 0; i < count; i++)
+        {
+            if (_hits[i].transform.IsChildOf(transform) || _hits[i].distance >= best) continue;
+            best = _hits[i].distance;
+            found = _hits[i].collider.GetComponentInParent<NPCInteractable>();
+        }
+        return found;
+    }
+
+    private void UpdateHover()
+    {
+        Mouse mouse = Mouse.current;
+        NPCInteractable now = null;
+        if (mouse != null && !WorldHUD.PointerOverUI()) now = NpcUnderCursor(mouse.position.ReadValue());
+        if (now == _hovered) return;
+        SetHighlight(_hovered, false);
+        _hovered = now;
+        SetHighlight(_hovered, true);
+    }
+
+    private static void SetHighlight(NPCInteractable npc, bool on)
+    {
+        if (npc == null) return;
+        NameTag tag = npc.GetComponent<NameTag>();
+        if (tag != null) tag.Highlighted = on;
+    }
+
+    // ---------- Entrada ----------
+
+    private Vector3 FlatOffset(Vector3 point)
+    {
+        Vector3 offset = point - transform.position;
+        offset.y = 0f;
+        return offset;
     }
 
     private Vector2 ReadKeyboardInput()
@@ -86,20 +230,41 @@ public class PlayerController : MonoBehaviour
         return input;
     }
 
-    private bool ReadClickTarget()
+    // Devuelve true si hay un punto del suelo al que caminar.
+    private bool ReadClick()
     {
         if (!clickToMove) return false;
-
         Mouse mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame && _camera != null)
+        if (mouse == null || _camera == null) return _clickTarget.HasValue;
+
+        if (mouse.leftButton.wasPressedThisFrame)
+        {
+            _pressStartedOnUI = WorldHUD.PointerOverUI();
+            if (!_pressStartedOnUI)
+            {
+                NPCInteractable npc = NpcUnderCursor(mouse.position.ReadValue());
+                if (npc != null)
+                {
+                    Interact(npc);
+                    return false;
+                }
+                _interactTarget = null;
+                if (WorldHUD.Instance != null) WorldHUD.Instance.CloseMenu();
+            }
+        }
+
+        if (mouse.leftButton.isPressed && !_pressStartedOnUI && _interactTarget == null)
         {
             Ray ray = _camera.ScreenPointToRay(mouse.position.ReadValue());
-            RaycastHit[] hits = Physics.RaycastAll(ray, 200f);
-            foreach (RaycastHit hit in hits)
+            int count = Physics.RaycastNonAlloc(ray, _hits, 200f, ~0, QueryTriggerInteraction.Ignore);
+            float best = float.MaxValue;
+            for (int i = 0; i < count; i++)
             {
-                if (hit.transform.IsChildOf(transform)) continue;
-                _clickTarget = hit.point;
-                break;
+                if (_hits[i].transform.IsChildOf(transform)) continue;
+                if (_hits[i].collider.GetComponentInParent<NPCInteractable>() != null) continue;
+                if (_hits[i].distance >= best) continue;
+                best = _hits[i].distance;
+                _clickTarget = _hits[i].point;
             }
         }
         return _clickTarget.HasValue;

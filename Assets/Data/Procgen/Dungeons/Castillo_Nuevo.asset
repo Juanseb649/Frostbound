@@ -24,4 +24,4 @@ MonoBehaviour:
   extraLinks: 2
   cellSize: 4
   wallHeight: 4
-  corridorWidthCells: 1
+  corridorWidthCells: 2
