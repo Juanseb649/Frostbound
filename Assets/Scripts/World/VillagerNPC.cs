@@ -8,6 +8,8 @@ public class VillagerNPC : MonoBehaviour
     public string villagerName = "Aldeano";
     [Tooltip("Rol para sistemas futuros (diálogo, tienda, reparación).")]
     public string role = "Aldeano";
+    [Tooltip("Frases que dice al hablarle (sistema de diálogo pendiente).")]
+    [TextArea(2, 4)] public string[] dialogue = new string[0];
 
     [Header("Comportamiento")]
     public VillagerMood mood = VillagerMood.Pace;
@@ -40,6 +42,7 @@ public class VillagerNPC : MonoBehaviour
     private Vector3 _modelBasePos;
     private Quaternion _modelBaseRot;
     private Transform _player;
+    private NPCInteractable _interact;
 
     void Awake()
     {
@@ -58,8 +61,17 @@ public class VillagerNPC : MonoBehaviour
 
     void Start()
     {
+        _interact = GetComponent<NPCInteractable>();
         PlayerController pc = FindAnyObjectByType<PlayerController>();
         if (pc != null) _player = pc.transform;
+
+        PenguinRigAnimator rig = GetComponentInChildren<PenguinRigAnimator>();
+        if (rig != null)
+        {
+            rig.enableIdleActions = mood == VillagerMood.Lookout || mood == VillagerMood.Pace;
+            rig.idleActionDelay = Random.Range(2f, 8f);
+            rig.idleActionInterval = new Vector2(6f, 12f);
+        }
     }
 
     void Update()
@@ -79,7 +91,13 @@ public class VillagerNPC : MonoBehaviour
         }
 
         _walking = false;
-        if (!playerNear)
+        bool talking = _interact != null && _interact.Busy;
+        if (talking && _player != null)
+        {
+            desiredForward = _player.position - transform.position;
+            playerNear = true;
+        }
+        else if (!playerNear)
         {
             switch (mood)
             {

@@ -3,24 +3,35 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
+// Construye el poblado de los pingüinos: una plaza de mercado amurallada (inspirada en los mercados de pueblo
+// de los Zelda clásicos) con fuente helada, casas, tiendas, puestos, faroles, banderines y dos puertas.
 public static class SetupVillage
 {
     private const string ScenePath = "Assets/Scenes/SampleScene.unity";
     private const string MatFolder = "Assets/Materials/Village";
     private const string MeshFolder = "Assets/Meshes";
     private const string ConeMeshPath = MeshFolder + "/Cone_LowPoly.asset";
+    private const string PrismMeshPath = MeshFolder + "/Prism_Roof.asset";
     private const string IglooTexPath = "Assets/Textures/igloo_blocks.png";
-    private const string RootName = "Campamento";
+    private const string CobbleTexPath = "Assets/Textures/cobblestone.png";
+    public const string RootName = "Poblado";
+    private static readonly string[] LegacyRoots = { "Campamento", "Poblado" };
 
-    private const float FenceRadius = 20f;
-    private const float GateHalfAngle = 12f;
+    public const float WallRadius = 32f;
+    private const float PlazaRadius = 14f;
+    private const float BuildingRadius = 20f;
+    private const float GateHalfAngle = 8f;
     private const int LayoutSeed = 2026;
+    public static readonly Vector3 FirePos = new Vector3(-7f, 0f, -7f);
+    public static readonly Vector3 SteveClearing = new Vector3(-11f, 0f, -47f);
+    public static readonly Vector3 PlayerSpawn = new Vector3(0f, 0.05f, -11f);
 
     private static Transform _root;
     private static System.Random _rng;
-    private static Mesh _cone;
+    private static Mesh _cone, _prism;
     private static readonly Dictionary<string, Material> Mats = new Dictionary<string, Material>();
 
     private static readonly Color[] PenguinColors =
@@ -32,10 +43,16 @@ public static class SetupVillage
         new Color(1.00f, 0.72f, 0.52f)
     };
 
-    [MenuItem("Tools/Frostbound/Construir Campamento")]
+    private struct Spots
+    {
+        public Transform fire, forge, stall, tavern, plazaCenter, steveFire;
+        public Vector3 elderDoor, smith, merchant, tavernKeeper;
+    }
+
+    [MenuItem("Tools/Frostbound/Construir Poblado")]
     public static void Build()
     {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        if (!FrostboundBridge.ConfirmSave()) return;
         BuildScene(true);
     }
 
@@ -48,54 +65,72 @@ public static class SetupVillage
         EnsureFolder("Assets", "Materials");
         EnsureFolder("Assets/Materials", "Village");
         EnsureFolder("Assets", "Meshes");
+        EnsureFolder("Assets", "Textures");
         _cone = GetConeMesh();
+        _prism = GetPrismMesh();
         Texture2D iglooTex = GetIglooTexture();
+        Texture2D cobbleTex = GetCobbleTexture();
 
-        GameObject old = GameObject.Find(RootName);
-        if (old != null) Object.DestroyImmediate(old);
+        foreach (string legacy in LegacyRoots)
+        {
+            GameObject old = GameObject.Find(legacy);
+            if (old != null) Object.DestroyImmediate(old);
+        }
         _root = new GameObject(RootName).transform;
 
-        CreateMaterials(iglooTex);
+        CreateMaterials(iglooTex, cobbleTex);
 
-        Transform fire = BuildCampfire(Vector3.zero);
-        BuildBenches();
-        BuildPaths();
-        BuildIgloos(out Vector3 elderDoor, out Vector3 smithSpot, out Vector3 merchantSpot);
-        BuildForge(smithSpot);
-        BuildMerchantStall(merchantSpot);
-        BuildFence();
-        BuildGate();
+        var spots = new Spots();
+        spots.plazaCenter = Group("Centro_Plaza", Vector3.zero);
+        BuildPlaza();
+        BuildFountain();
+        spots.fire = BuildCampfire(FirePos, "Hoguera", 1f);
+        BuildBenches(FirePos);
+        BuildTown(ref spots);
+        BuildStalls();
+        BuildLampsAndBunting();
+        BuildWalls();
+        BuildGate(0f, true);
+        BuildGate(180f, false);
+        BuildOutsidePaths();
+        spots.steveFire = BuildSteveClearing();
         BuildSnowMounds();
         BuildForest();
         BuildMountain();
         BuildSnowfall();
         BuildZoneExit();
-        BuildVillagers(fire, elderDoor, smithSpot, merchantSpot);
+        BuildVillagers(spots);
+        SetupSteve.Add(_root, spots.steveFire);
         PlacePlayer();
+        EnsureHUD();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
 
         if (!showDialog) return;
-        EditorUtility.DisplayDialog("Frostbound",
-            "Campamento construido en " + ScenePath + ".\n\n" +
-            "Iglús, hoguera, herrería, puesto del mercader, empalizada con salida al norte (hacia The Frostspire) " +
-            "y 14 pingüinos asustados.\n\nPulsa Play para recorrerlo. Puedes volver a ejecutar esta herramienta: reemplaza el campamento.",
-            "OK");
+        FrostboundBridge.Dialog("Frostbound",
+            "Poblado construido en " + ScenePath + ".\n\n" +
+            "Plaza con fuente helada, herrería, tienda, taberna, casas, puestos, faroles y muralla con puerta norte " +
+            "(hacia The Frostspire) y puerta sur (hacia el bosque, donde toca Steve).\n\n" +
+            "Haz clic en un pingüino para hablar con él.", "OK");
     }
 
     // ---------- Materiales ----------
 
-    private static void CreateMaterials(Texture2D iglooTex)
+    private static void CreateMaterials(Texture2D iglooTex, Texture2D cobbleTex)
     {
         Mat("Igloo", Color.white, 0.35f, null, iglooTex);
         Mat("IglooDoor", new Color(0.05f, 0.08f, 0.15f), 0f);
         Mat("Wood", new Color(0.45f, 0.28f, 0.15f), 0.1f);
         Mat("WoodDark", new Color(0.30f, 0.18f, 0.10f), 0.1f);
         Mat("Stone", new Color(0.52f, 0.56f, 0.63f), 0.15f);
+        Mat("StoneDark", new Color(0.38f, 0.42f, 0.50f), 0.15f);
+        Mat("WallStone", new Color(0.70f, 0.76f, 0.85f), 0.15f);
         Mat("Snow", new Color(0.93f, 0.96f, 1.00f), 0.4f);
         Mat("SnowPath", new Color(0.78f, 0.86f, 0.93f), 0.2f);
+        Mat("Paving", new Color(0.86f, 0.89f, 0.94f), 0.2f, null, cobbleTex, new Vector2(7f, 7f));
+        Mat("PavingRoad", new Color(0.86f, 0.89f, 0.94f), 0.2f, null, cobbleTex, new Vector2(1.5f, 5f));
         Mat("Pine", new Color(0.10f, 0.38f, 0.35f), 0.1f);
         Mat("Mountain", new Color(0.36f, 0.42f, 0.55f), 0.1f);
         Mat("Flame", new Color(1f, 0.55f, 0.1f), 0f, new Color(4f, 1.6f, 0.2f));
@@ -104,10 +139,27 @@ public static class SetupVillage
         Mat("Iron", new Color(0.22f, 0.24f, 0.28f), 0.6f);
         Mat("ClothRed", new Color(0.80f, 0.18f, 0.20f), 0.1f);
         Mat("ClothBlue", new Color(0.20f, 0.45f, 0.85f), 0.1f);
+        Mat("ClothGreen", new Color(0.22f, 0.60f, 0.33f), 0.1f);
+        Mat("ClothYellow", new Color(0.96f, 0.76f, 0.22f), 0.1f);
+        Mat("ClothWhite", new Color(0.96f, 0.96f, 0.93f), 0.1f);
+        Mat("ClothPurple", new Color(0.50f, 0.30f, 0.75f), 0.1f);
         Mat("Ice", new Color(0.62f, 0.85f, 0.98f), 0.85f);
+        Mat("IceStatue", new Color(0.74f, 0.91f, 1.00f), 0.9f, new Color(0.08f, 0.2f, 0.32f));
+        Mat("Fish", new Color(0.55f, 0.68f, 0.80f), 0.7f);
+        Mat("Amp", new Color(0.10f, 0.10f, 0.12f), 0.3f);
+        Mat("Door", new Color(0.36f, 0.22f, 0.12f), 0.1f);
+        Mat("WindowGlow", new Color(1f, 0.82f, 0.45f), 0.2f, new Color(2.2f, 1.5f, 0.6f));
+        Mat("Wall_Cream", new Color(0.93f, 0.86f, 0.70f), 0.1f);
+        Mat("Wall_Ice", new Color(0.66f, 0.80f, 0.93f), 0.1f);
+        Mat("Wall_Terracotta", new Color(0.85f, 0.55f, 0.42f), 0.1f);
+        Mat("Wall_Sage", new Color(0.72f, 0.84f, 0.66f), 0.1f);
+        Mat("Wall_Rose", new Color(0.91f, 0.72f, 0.78f), 0.1f);
+        Mat("Roof_Red", new Color(0.62f, 0.24f, 0.20f), 0.15f);
+        Mat("Roof_Slate", new Color(0.24f, 0.33f, 0.50f), 0.15f);
+        Mat("Roof_Green", new Color(0.20f, 0.42f, 0.33f), 0.15f);
     }
 
-    private static Material Mat(string name, Color color, float smoothness, Color? emission = null, Texture2D tex = null)
+    private static Material Mat(string name, Color color, float smoothness, Color? emission = null, Texture2D tex = null, Vector2? tiling = null)
     {
         string path = MatFolder + "/" + name + ".mat";
         Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -123,6 +175,9 @@ public static class SetupVillage
         {
             if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex);
             if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", tex);
+            Vector2 t = tiling ?? Vector2.one;
+            if (m.HasProperty("_BaseMap")) m.SetTextureScale("_BaseMap", t);
+            if (m.HasProperty("_MainTex")) m.SetTextureScale("_MainTex", t);
         }
         if (emission.HasValue)
         {
@@ -135,13 +190,6 @@ public static class SetupVillage
         return m;
     }
 
-    private static Material PenguinMat(int index)
-    {
-        string name = "Penguin_" + index;
-        if (Mats.TryGetValue(name, out Material m)) return m;
-        return Mat(name, PenguinColors[index % PenguinColors.Length], 0.3f);
-    }
-
     private static Shader LitShader()
     {
         Shader s = Shader.Find("Universal Render Pipeline/Lit");
@@ -149,11 +197,97 @@ public static class SetupVillage
         return s;
     }
 
+    // ---------- Plaza y fuente ----------
+
+    private static void BuildPlaza()
+    {
+        Transform g = Group("Plaza", Vector3.zero);
+        Prim(PrimitiveType.Cylinder, "Borde_Plaza", g, new Vector3(0f, 0.006f, 0f), Vector3.zero,
+            new Vector3(PlazaRadius * 2f + 1.2f, 0.006f, PlazaRadius * 2f + 1.2f), "StoneDark", false);
+        Prim(PrimitiveType.Cylinder, "Empedrado", g, new Vector3(0f, 0.014f, 0f), Vector3.zero,
+            new Vector3(PlazaRadius * 2f, 0.01f, PlazaRadius * 2f), "Paving", false);
+
+        Road(g, "Calle_Norte", 0f, PlazaRadius - 0.5f, WallRadius + 1.5f, 5f);
+        Road(g, "Calle_Sur", 180f, PlazaRadius - 0.5f, WallRadius + 1.5f, 5f);
+        Road(g, "Callejon_Este", 90f, PlazaRadius - 0.5f, WallRadius - 3f, 3f);
+        Road(g, "Callejon_Oeste", 270f, PlazaRadius - 0.5f, WallRadius - 3f, 3f);
+    }
+
+    private static void Road(Transform parent, string name, float deg, float from, float to, float width)
+    {
+        Vector3 a = Polar(deg, from);
+        Vector3 b = Polar(deg, to);
+        Transform t = Prim(PrimitiveType.Cube, name, parent, (a + b) * 0.5f + Vector3.up * 0.012f, Vector3.zero,
+            new Vector3(width, 0.01f, Vector3.Distance(a, b)), "PavingRoad", false).transform;
+        t.rotation = Quaternion.LookRotation((b - a).normalized);
+    }
+
+    private static void BuildFountain()
+    {
+        Transform g = Group("Fuente_Helada", Vector3.zero);
+        Prim(PrimitiveType.Cylinder, "Pileta", g, new Vector3(0f, 0.35f, 0f), Vector3.zero, new Vector3(6.4f, 0.35f, 6.4f), "WallStone", false);
+        Prim(PrimitiveType.Cylinder, "Pileta_Borde", g, new Vector3(0f, 0.72f, 0f), Vector3.zero, new Vector3(6.7f, 0.04f, 6.7f), "Snow", false);
+        Prim(PrimitiveType.Cylinder, "Agua_Congelada", g, new Vector3(0f, 0.7f, 0f), Vector3.zero, new Vector3(5.8f, 0.03f, 5.8f), "Ice", false);
+        Prim(PrimitiveType.Cylinder, "Columna", g, new Vector3(0f, 1.6f, 0f), Vector3.zero, new Vector3(0.8f, 0.95f, 0.8f), "WallStone", false);
+        Prim(PrimitiveType.Cylinder, "Taza", g, new Vector3(0f, 2.55f, 0f), Vector3.zero, new Vector3(2.6f, 0.14f, 2.6f), "WallStone", false);
+        Prim(PrimitiveType.Cylinder, "Taza_Hielo", g, new Vector3(0f, 2.7f, 0f), Vector3.zero, new Vector3(2.3f, 0.03f, 2.3f), "Ice", false);
+
+        for (int i = 0; i < 10; i++)
+        {
+            float deg = i * 36f + Rand(-8f, 8f);
+            Vector3 edge = Polar(deg, 1.25f);
+            float len = Rand(0.35f, 0.8f);
+            GameObject icicle = new GameObject("Carambano");
+            icicle.transform.SetParent(g, false);
+            icicle.transform.localPosition = edge + Vector3.up * 2.45f;
+            icicle.transform.localRotation = Quaternion.Euler(180f, 0f, 0f);
+            icicle.transform.localScale = new Vector3(0.14f, len, 0.14f);
+            icicle.isStatic = true;
+            icicle.AddComponent<MeshFilter>().sharedMesh = _cone;
+            icicle.AddComponent<MeshRenderer>().sharedMaterial = Mats["Ice"];
+        }
+
+        GameObject statueModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Penguin.obj");
+        if (statueModel != null)
+        {
+            var statue = (GameObject)PrefabUtility.InstantiatePrefab(statueModel, g);
+            statue.name = "Estatua_Fundador";
+            statue.transform.localPosition = new Vector3(0f, 2.72f, 0f);
+            statue.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            statue.transform.localScale = Vector3.one;
+            Bounds? sb = GetBounds(statue, "");
+            float statueHeight = sb.HasValue ? sb.Value.size.y : 1f;
+            statue.transform.localScale = Vector3.one * (1.5f / Mathf.Max(0.05f, statueHeight));
+            Bounds? sb2 = GetBounds(statue, "");
+            if (sb2.HasValue) statue.transform.position += Vector3.up * (g.position.y + 2.72f - sb2.Value.min.y);
+            foreach (Renderer r in statue.GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = new Material[Mathf.Max(1, r.sharedMaterials.Length)];
+                for (int i = 0; i < mats.Length; i++) mats[i] = Mats["IceStatue"];
+                r.sharedMaterials = mats;
+            }
+            foreach (Collider c in statue.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+        }
+        else
+        {
+            Cone("Cristal", g, new Vector3(0f, 2.7f, 0f), new Vector3(0.7f, 2.2f, 0.7f), "IceStatue");
+        }
+
+        Light l = AddPointLight(g, new Vector3(0f, 3.8f, 0f), new Color(0.55f, 0.8f, 1f), 1.2f, 7f, false);
+        l.name = "Luz_Fuente";
+
+        CapsuleCollider block = g.gameObject.AddComponent<CapsuleCollider>();
+        block.center = new Vector3(0f, 1.5f, 0f);
+        block.radius = 3.3f;
+        block.height = 3f;
+    }
+
     // ---------- Hoguera ----------
 
-    private static Transform BuildCampfire(Vector3 pos)
+    private static Transform BuildCampfire(Vector3 pos, string name, float scale)
     {
-        Transform fire = Group("Hoguera", pos);
+        Transform fire = Group(name, pos);
+        fire.localScale = Vector3.one * scale;
 
         for (int i = 0; i < 9; i++)
         {
@@ -172,11 +306,11 @@ public static class SetupVillage
 
         f1.gameObject.isStatic = false;
         f2.gameObject.isStatic = false;
-        Light light = AddPointLight(fire, new Vector3(0f, 1.4f, 0f), new Color(1f, 0.6f, 0.3f), 3f, 12f, true);
+        Light light = AddPointLight(fire, new Vector3(0f, 1.4f, 0f), new Color(1f, 0.6f, 0.3f), 3f * scale, 12f * scale, scale >= 1f);
         FlickerLight flicker = fire.gameObject.AddComponent<FlickerLight>();
         flicker.targetLight = light;
         flicker.flames = new[] { f1, f2 };
-        flicker.baseIntensity = 3f;
+        flicker.baseIntensity = 3f * scale;
 
         CapsuleCollider block = fire.gameObject.AddComponent<CapsuleCollider>();
         block.center = new Vector3(0f, 0.5f, 0f);
@@ -185,9 +319,9 @@ public static class SetupVillage
         return fire;
     }
 
-    private static void BuildBenches()
+    private static void BuildBenches(Vector3 center)
     {
-        Transform g = Group("Bancos", Vector3.zero);
+        Transform g = Group("Bancos", center);
         for (int i = 0; i < 4; i++)
         {
             float deg = 45f + i * 90f;
@@ -197,77 +331,152 @@ public static class SetupVillage
         }
     }
 
-    private static void BuildPaths()
+    // ---------- Edificios ----------
+
+    private enum Sign { None, Smith, Shop, Tavern }
+
+    private static void BuildTown(ref Spots spots)
     {
-        Transform g = Group("Caminos", Vector3.zero);
-        for (float z = 2.5f; z < 60f; z += 1.6f)
-        {
-            float x = Mathf.Sin(z * 0.15f) * 0.8f;
-            Prim(PrimitiveType.Cylinder, "Huella", g, new Vector3(x, 0.01f, z), Vector3.zero,
-                new Vector3(2.4f + Rand(-0.3f, 0.3f), 0.01f, 2.0f), "SnowPath", false);
-        }
-        Prim(PrimitiveType.Cylinder, "Plaza", g, new Vector3(0f, 0.005f, 0f), Vector3.zero, new Vector3(9f, 0.01f, 9f), "SnowPath", false);
-    }
+        Transform g = Group("Edificios", Vector3.zero);
 
-    // ---------- Iglús ----------
+        House(g, "Casa_Azul", 22f, 6f, 5.5f, 4.6f, "Wall_Ice", "Roof_Slate", Sign.None, "ClothBlue");
+        House(g, "Herreria", 42f, 6.5f, 5.5f, 4.2f, "Wall_Terracotta", "Roof_Red", Sign.Smith, "ClothRed");
+        BuildIgloo(g, "Iglu_Familia_A", Polar(64f, BuildingRadius + 0.5f), 2.4f);
+        House(g, "Casa_Crema", 116f, 6f, 5f, 3.4f, "Wall_Cream", "Roof_Green", Sign.None, "ClothGreen");
+        House(g, "Casa_Rosa", 138f, 5.5f, 5f, 3.2f, "Wall_Rose", "Roof_Slate", Sign.None, "ClothBlue");
+        BuildIgloo(g, "Iglu_Familia_B", Polar(158f, BuildingRadius + 0.5f), 2.2f);
 
-    private static void BuildIgloos(out Vector3 elderDoor, out Vector3 smithSpot, out Vector3 merchantSpot)
-    {
-        Transform g = Group("Iglus", Vector3.zero);
-
-        float[] angles = { 50f, 95f, 140f, 220f, 265f, 310f };
-        string[] names = { "Iglu_Familia_A", "Iglu_Herreria", "Iglu_Familia_B", "Iglu_Familia_C", "Iglu_Mercader", "Iglu_Familia_D" };
-        smithSpot = Vector3.zero;
-        merchantSpot = Vector3.zero;
-
-        for (int i = 0; i < angles.Length; i++)
-        {
-            float radius = 12.5f + Rand(-0.8f, 0.8f);
-            float size = 2.2f + Rand(-0.25f, 0.35f);
-            Vector3 pos = Polar(angles[i], radius);
-            BuildIgloo(g, names[i], pos, size);
-
-            Vector3 side = Quaternion.Euler(0f, 90f, 0f) * (-pos.normalized);
-            if (names[i] == "Iglu_Herreria") smithSpot = pos - pos.normalized * (size + 2.2f) + side * 2.4f;
-            if (names[i] == "Iglu_Mercader") merchantSpot = pos - pos.normalized * (size + 2.2f) - side * 2.4f;
-        }
-
-        Vector3 elderPos = Polar(180f, 14.5f);
+        Vector3 elderPos = Polar(204f, BuildingRadius + 1.5f);
         BuildIgloo(g, "Iglu_Anciano", elderPos, 3.2f);
-        Prim(PrimitiveType.Cylinder, "Estandarte_Poste", g, elderPos + new Vector3(2.6f, 1.8f, 1.5f), Vector3.zero,
-            new Vector3(0.15f, 1.8f, 0.15f), "WoodDark", true);
-        Prim(PrimitiveType.Cube, "Estandarte_Tela", g, elderPos + new Vector3(2.6f, 3.0f, 1.9f), Vector3.zero,
-            new Vector3(0.05f, 1.0f, 0.7f), "ClothBlue", false);
-        elderDoor = elderPos - elderPos.normalized * (3.2f + 2.2f);
+        Prim(PrimitiveType.Cylinder, "Estandarte_Poste", g, elderPos - elderPos.normalized * 3.6f + Quaternion.Euler(0f, 90f, 0f) * elderPos.normalized * 2.6f + Vector3.up * 1.8f,
+            Vector3.zero, new Vector3(0.15f, 1.8f, 0.15f), "WoodDark", true);
+        spots.elderDoor = elderPos - elderPos.normalized * (3.2f + 2.4f);
+
+        House(g, "Casa_Salvia", 224f, 6f, 5f, 3.4f, "Wall_Sage", "Roof_Red", Sign.None, "ClothYellow");
+        BuildIgloo(g, "Iglu_Familia_C", Polar(244f, BuildingRadius + 0.5f), 2.3f);
+        Transform tavern = House(g, "Taberna_ElPezDorado", 298f, 7.5f, 6f, 4.8f, "Wall_Cream", "Roof_Red", Sign.Tavern, "ClothYellow");
+        House(g, "Tienda", 320f, 6f, 5.5f, 4.2f, "Wall_Ice", "Roof_Green", Sign.Shop, "ClothGreen");
+        House(g, "Casa_Terracota", 340f, 5.5f, 5f, 4.4f, "Wall_Terracotta", "Roof_Slate", Sign.None, "ClothWhite");
+
+        Vector3 forgePos = Polar(42f, BuildingRadius - 6.2f);
+        spots.forge = BuildForge(forgePos);
+        spots.smith = forgePos - forgePos.normalized * 1.6f;
+
+        Vector3 stallPos = Polar(320f, BuildingRadius - 6.4f);
+        spots.stall = BuildMerchantStall(stallPos);
+        spots.merchant = stallPos - stallPos.normalized * 0.2f;
+
+        Vector3 tavernFront = Polar(298f, BuildingRadius - 3f);
+        spots.tavernKeeper = Polar(298f, BuildingRadius - 4.3f);
+        spots.tavern = tavern;
+        BuildTavernTerrace(tavernFront);
     }
 
-    private static void BuildIgloo(Transform parent, string name, Vector3 pos, float radius)
+    private static Transform House(Transform parent, string name, float deg, float w, float d, float h,
+        string wallMat, string roofMat, Sign sign, string accent)
     {
-        Vector3 toCenter = -pos;
-        toCenter.y = 0f;
-        Transform igloo = Group(name, pos);
-        igloo.rotation = Quaternion.LookRotation(toCenter.normalized, Vector3.up);
-        igloo.SetParent(parent, true);
+        Vector3 pos = Polar(deg, BuildingRadius + d * 0.5f - 1f);
+        Transform t = Group(name, pos);
+        t.rotation = Quaternion.LookRotation(-new Vector3(pos.x, 0f, pos.z).normalized);
+        t.SetParent(parent, true);
+        float front = d * 0.5f;
 
-        GameObject dome = Prim(PrimitiveType.Sphere, "Cupula", igloo, Vector3.zero, Vector3.zero,
-            new Vector3(radius * 2f, radius * 1.8f, radius * 2f), "Igloo", false);
-        MeshCollider mc = dome.AddComponent<MeshCollider>();
-        mc.sharedMesh = dome.GetComponent<MeshFilter>().sharedMesh;
+        Prim(PrimitiveType.Cube, "Zocalo", t, new Vector3(0f, 0.25f, 0f), Vector3.zero, new Vector3(w + 0.3f, 0.5f, d + 0.3f), "StoneDark", false);
+        Prim(PrimitiveType.Cube, "Muros", t, new Vector3(0f, h * 0.5f, 0f), Vector3.zero, new Vector3(w, h, d), wallMat, true);
+        foreach (float sx in new[] { -1f, 1f })
+            foreach (float sz in new[] { -1f, 1f })
+                Prim(PrimitiveType.Cube, "Viga", t, new Vector3(sx * w * 0.5f, h * 0.5f, sz * front), Vector3.zero, new Vector3(0.24f, h, 0.24f), "WoodDark", false);
+        Prim(PrimitiveType.Cube, "Viga_Frontal", t, new Vector3(0f, h - 0.1f, front + 0.03f), Vector3.zero, new Vector3(w + 0.1f, 0.22f, 0.12f), "WoodDark", false);
+        if (h > 4f) Prim(PrimitiveType.Cube, "Viga_Piso", t, new Vector3(0f, 2.55f, front + 0.03f), Vector3.zero, new Vector3(w, 0.16f, 0.1f), "WoodDark", false);
 
-        float tunnelDia = Mathf.Clamp(radius * 0.75f, 1.5f, 2.3f);
-        float tunnelLen = 1.6f;
-        float tunnelZ = radius * 0.8f + tunnelLen * 0.5f;
-        Prim(PrimitiveType.Cylinder, "Tunel", igloo, new Vector3(0f, 0f, tunnelZ), new Vector3(90f, 0f, 0f),
-            new Vector3(tunnelDia, tunnelLen * 0.5f, tunnelDia), "Igloo", true);
-        Prim(PrimitiveType.Cylinder, "Puerta", igloo, new Vector3(0f, 0f, tunnelZ + tunnelLen * 0.5f + 0.01f), new Vector3(90f, 0f, 0f),
-            new Vector3(tunnelDia * 0.72f, 0.02f, tunnelDia * 0.72f), "IglooDoor", false);
+        float doorX = sign == Sign.None ? Rand(-0.8f, 0.8f) : 0f;
+        Prim(PrimitiveType.Cube, "Puerta", t, new Vector3(doorX, 1.05f, front + 0.04f), Vector3.zero, new Vector3(1.1f, 2.1f, 0.1f), "Door", false);
+        Prim(PrimitiveType.Cube, "Marco_Puerta", t, new Vector3(doorX, 2.18f, front + 0.06f), Vector3.zero, new Vector3(1.45f, 0.2f, 0.14f), "WoodDark", false);
+        Prim(PrimitiveType.Cube, "Escalon", t, new Vector3(doorX, 0.08f, front + 0.45f), Vector3.zero, new Vector3(1.5f, 0.16f, 0.6f), "StoneDark", false);
+
+        foreach (float sx in new[] { -1f, 1f })
+        {
+            float wx = doorX + sx * Mathf.Max(1.6f, w * 0.3f);
+            if (Mathf.Abs(wx) > w * 0.5f - 0.6f) continue;
+            Window(t, new Vector3(wx, 1.55f, front), accent);
+            if (h > 4f) Window(t, new Vector3(wx, 3.35f, front), accent);
+        }
+        if (h > 4f) Window(t, new Vector3(doorX, 3.35f, front), accent);
+
+        float roofH = Mathf.Clamp(w * 0.38f, 1.6f, 2.6f);
+        Roof(t, "Tejado", new Vector3(0f, h, 0f), new Vector3(w + 0.8f, roofH, d + 0.8f), roofMat);
+        Roof(t, "Tejado_Nieve", new Vector3(0f, h + roofH * 0.52f, 0f), new Vector3(w + 0.9f, roofH * 0.5f, (d + 0.8f) * 0.52f), "Snow");
+        Prim(PrimitiveType.Cube, "Alero_Nieve", t, new Vector3(0f, h + 0.05f, front + 0.42f), Vector3.zero, new Vector3(w + 0.9f, 0.12f, 0.25f), "Snow", false);
+
+        float cx = w * 0.28f * (Rand(0f, 1f) < 0.5f ? -1f : 1f);
+        Prim(PrimitiveType.Cube, "Chimenea", t, new Vector3(cx, h + roofH * 0.55f, -d * 0.18f), Vector3.zero, new Vector3(0.6f, roofH * 1.1f, 0.6f), "StoneDark", false);
+        Prim(PrimitiveType.Cube, "Chimenea_Nieve", t, new Vector3(cx, h + roofH * 1.1f + 0.05f, -d * 0.18f), Vector3.zero, new Vector3(0.72f, 0.14f, 0.72f), "Snow", false);
+
+        if (sign != Sign.None) HangingSign(t, new Vector3(w * 0.5f + 0.1f, h * 0.72f, front + 0.2f), sign);
+        return t;
     }
 
-    // ---------- Herrería y mercader ----------
-
-    private static void BuildForge(Vector3 pos)
+    private static void Window(Transform house, Vector3 at, string accent)
     {
-        Transform g = Group("Herreria", pos);
+        Prim(PrimitiveType.Cube, "Ventana_Marco", house, at + new Vector3(0f, 0f, 0.03f), Vector3.zero, new Vector3(1.0f, 1.0f, 0.08f), "WoodDark", false);
+        Prim(PrimitiveType.Cube, "Ventana_Luz", house, at + new Vector3(0f, 0f, 0.07f), Vector3.zero, new Vector3(0.78f, 0.78f, 0.04f), "WindowGlow", false);
+        Prim(PrimitiveType.Cube, "Ventana_Cruz", house, at + new Vector3(0f, 0f, 0.1f), Vector3.zero, new Vector3(0.08f, 0.8f, 0.03f), "WoodDark", false);
+        Prim(PrimitiveType.Cube, "Ventana_Cruz", house, at + new Vector3(0f, 0f, 0.1f), Vector3.zero, new Vector3(0.8f, 0.08f, 0.03f), "WoodDark", false);
+        Prim(PrimitiveType.Cube, "Alfeizar_Nieve", house, at + new Vector3(0f, -0.55f, 0.12f), Vector3.zero, new Vector3(1.1f, 0.1f, 0.26f), "Snow", false);
+        foreach (float sx in new[] { -1f, 1f })
+            Prim(PrimitiveType.Cube, "Contraventana", house, at + new Vector3(sx * 0.72f, 0f, 0.05f), Vector3.zero, new Vector3(0.4f, 0.95f, 0.06f), accent, false);
+    }
+
+    private static void HangingSign(Transform house, Vector3 at, Sign sign)
+    {
+        Prim(PrimitiveType.Cube, "Letrero_Brazo", house, at + new Vector3(0.55f, 0f, 0f), Vector3.zero, new Vector3(1.2f, 0.1f, 0.1f), "Iron", false);
+        Prim(PrimitiveType.Cube, "Letrero", house, at + new Vector3(0.75f, -0.5f, 0f), Vector3.zero, new Vector3(0.9f, 0.7f, 0.1f), "Wood", false);
+        Vector3 icon = at + new Vector3(0.75f, -0.5f, 0f);
+        switch (sign)
+        {
+            case Sign.Smith:
+                foreach (float s in new[] { -1f, 1f })
+                {
+                    Prim(PrimitiveType.Cube, "Icono_Martillo_Mango", house, icon + new Vector3(0f, 0f, s * 0.07f), new Vector3(0f, 0f, 35f), new Vector3(0.08f, 0.5f, 0.03f), "WoodDark", false);
+                    Prim(PrimitiveType.Cube, "Icono_Martillo_Cabeza", house, icon + new Vector3(-0.12f, 0.17f, s * 0.07f), new Vector3(0f, 0f, 35f), new Vector3(0.3f, 0.14f, 0.04f), "Iron", false);
+                }
+                break;
+            case Sign.Shop:
+                foreach (float s in new[] { -1f, 1f })
+                {
+                    Prim(PrimitiveType.Sphere, "Icono_Bolsa", house, icon + new Vector3(0f, -0.05f, s * 0.07f), Vector3.zero, new Vector3(0.36f, 0.34f, 0.05f), "ClothYellow", false);
+                    Prim(PrimitiveType.Cube, "Icono_Bolsa_Nudo", house, icon + new Vector3(0f, 0.16f, s * 0.07f), Vector3.zero, new Vector3(0.14f, 0.08f, 0.05f), "WoodDark", false);
+                }
+                break;
+            case Sign.Tavern:
+                foreach (float s in new[] { -1f, 1f })
+                {
+                    Prim(PrimitiveType.Sphere, "Icono_Pez", house, icon + new Vector3(0.06f, 0f, s * 0.07f), Vector3.zero, new Vector3(0.42f, 0.2f, 0.05f), "ClothYellow", false);
+                    Prim(PrimitiveType.Cube, "Icono_Pez_Cola", house, icon + new Vector3(-0.22f, 0f, s * 0.07f), new Vector3(0f, 0f, 45f), new Vector3(0.14f, 0.14f, 0.04f), "ClothYellow", false);
+                }
+                break;
+        }
+    }
+
+    private static void BuildTavernTerrace(Vector3 pos)
+    {
+        Transform g = Group("Terraza_Taberna", pos);
+        g.rotation = Quaternion.LookRotation(-new Vector3(pos.x, 0f, pos.z).normalized);
+        for (int i = 0; i < 2; i++)
+        {
+            Vector3 p = new Vector3(i == 0 ? -2.2f : 2.2f, 0f, 0.6f);
+            Prim(PrimitiveType.Cylinder, "Mesa", g, p + Vector3.up * 0.75f, Vector3.zero, new Vector3(1.1f, 0.04f, 1.1f), "Wood", false);
+            Prim(PrimitiveType.Cylinder, "Mesa_Pata", g, p + Vector3.up * 0.37f, Vector3.zero, new Vector3(0.15f, 0.37f, 0.15f), "WoodDark", true);
+            Prim(PrimitiveType.Cylinder, "Taza", g, p + new Vector3(0.2f, 0.85f, 0.1f), Vector3.zero, new Vector3(0.14f, 0.08f, 0.14f), "ClothWhite", false);
+            foreach (float s in new[] { -1f, 1f })
+                Prim(PrimitiveType.Cylinder, "Taburete", g, p + new Vector3(s * 0.85f, 0.25f, 0f), Vector3.zero, new Vector3(0.4f, 0.25f, 0.4f), "WoodDark", false);
+        }
+        Prim(PrimitiveType.Cylinder, "Barril", g, new Vector3(0f, 0.5f, -0.4f), Vector3.zero, new Vector3(0.7f, 0.5f, 0.7f), "Wood", true);
+    }
+
+    private static Transform BuildForge(Vector3 pos)
+    {
+        Transform g = Group("Herreria_Fragua", pos);
         g.rotation = Quaternion.LookRotation(-new Vector3(pos.x, 0f, pos.z).normalized);
 
         Prim(PrimitiveType.Cube, "Fragua", g, new Vector3(-1.2f, 0.5f, 0f), Vector3.zero, new Vector3(1.2f, 1f, 1.2f), "Stone", true);
@@ -284,67 +493,217 @@ public static class SetupVillage
         Prim(PrimitiveType.Cube, "Yunque", g, new Vector3(0.8f, 0.7f, 0f), Vector3.zero, new Vector3(0.9f, 0.25f, 0.4f), "Iron", false);
         Prim(PrimitiveType.Cube, "Yunque_Punta", g, new Vector3(1.35f, 0.72f, 0f), new Vector3(0f, 0f, -12f), new Vector3(0.35f, 0.15f, 0.25f), "Iron", false);
 
+        Prim(PrimitiveType.Cube, "Armero", g, new Vector3(0f, 0.9f, -1.3f), Vector3.zero, new Vector3(1.6f, 0.1f, 0.2f), "WoodDark", false);
         for (int i = 0; i < 3; i++)
         {
-            Prim(PrimitiveType.Cube, "Arma_Apoyada", g, new Vector3(-0.3f + i * 0.35f, 0.7f, -1.1f), new Vector3(-15f, 0f, 0f),
+            Prim(PrimitiveType.Cube, "Arma_Apoyada", g, new Vector3(-0.5f + i * 0.5f, 0.75f, -1.15f), new Vector3(-12f, 0f, 0f),
                 new Vector3(0.08f, 1.4f, 0.12f), "Iron", false);
         }
+        return g;
     }
 
-    private static void BuildMerchantStall(Vector3 pos)
+    private static Transform BuildMerchantStall(Vector3 pos)
     {
-        Transform g = Group("Puesto_Mercader", pos);
+        Transform g = Stall(Group("Puesto_Mercader", pos), 1.4f, 0.9f, "ClothRed");
         g.rotation = Quaternion.LookRotation(-new Vector3(pos.x, 0f, pos.z).normalized);
-
-        float w = 1.4f, d = 0.9f;
-        foreach (Vector2 c in new[] { new Vector2(-w, -d), new Vector2(w, -d), new Vector2(-w, d), new Vector2(w, d) })
+        Prim(PrimitiveType.Sphere, "Mercancia_Hielo", g, new Vector3(-0.6f, 1.12f, 0.72f), Vector3.zero, new Vector3(0.25f, 0.25f, 0.25f), "Ice", false);
+        Prim(PrimitiveType.Cube, "Mercancia_Caja", g, new Vector3(0.5f, 1.1f, 0.72f), new Vector3(0f, 20f, 0f), new Vector3(0.3f, 0.2f, 0.3f), "ClothBlue", false);
+        for (int i = 0; i < 4; i++)
         {
-            Prim(PrimitiveType.Cylinder, "Poste", g, new Vector3(c.x, 1.1f, c.y), Vector3.zero, new Vector3(0.12f, 1.1f, 0.12f), "Wood", true);
-        }
-        Prim(PrimitiveType.Cube, "Techo", g, new Vector3(0f, 2.25f, 0f), new Vector3(-10f, 0f, 0f), new Vector3(w * 2f + 0.5f, 0.08f, d * 2f + 0.6f), "ClothRed", false);
-        Prim(PrimitiveType.Cube, "Mostrador", g, new Vector3(0f, 0.5f, d * 0.8f), Vector3.zero, new Vector3(w * 2f, 1f, 0.5f), "Wood", true);
-        Prim(PrimitiveType.Sphere, "Mercancia_Hielo", g, new Vector3(-0.6f, 1.12f, d * 0.8f), Vector3.zero, new Vector3(0.25f, 0.25f, 0.25f), "Ice", false);
-        Prim(PrimitiveType.Cube, "Mercancia_Caja", g, new Vector3(0.5f, 1.1f, d * 0.8f), new Vector3(0f, 20f, 0f), new Vector3(0.3f, 0.2f, 0.3f), "ClothBlue", false);
-
-        for (int i = 0; i < 5; i++)
-        {
-            Vector3 p = new Vector3(Rand(-2.6f, -1.8f) + (i % 2) * 4.4f, 0f, Rand(-1.5f, 0.5f));
-            float s = Rand(0.5f, 0.8f);
-            if (i % 3 == 0)
+            Vector3 p = new Vector3(i < 2 ? -2.2f : 2.2f, 0f, Rand(-1.2f, 0.2f));
+            float s = Rand(0.5f, 0.75f);
+            if (i % 2 == 0)
                 Prim(PrimitiveType.Cylinder, "Barril", g, p + Vector3.up * s * 0.6f, Vector3.zero, new Vector3(s, s * 0.6f, s), "Wood", true);
             else
                 Prim(PrimitiveType.Cube, "Caja", g, p + Vector3.up * s * 0.5f, new Vector3(0f, Rand(0f, 45f), 0f), Vector3.one * s, "WoodDark", true);
         }
+        return g;
     }
 
-    // ---------- Empalizada y puerta ----------
-
-    private static void BuildFence()
+    // Puesto con toldo a rayas (dos colores alternados) y mostrador.
+    private static Transform Stall(Transform g, float w, float d, string stripe)
     {
-        Transform g = Group("Empalizada", Vector3.zero);
-        float circumference = 2f * Mathf.PI * FenceRadius;
-        int count = Mathf.RoundToInt(circumference / 1.0f);
-        for (int i = 0; i < count; i++)
+        foreach (Vector2 c in new[] { new Vector2(-w, -d), new Vector2(w, -d), new Vector2(-w, d), new Vector2(w, d) })
+            Prim(PrimitiveType.Cylinder, "Poste", g, new Vector3(c.x, 1.15f, c.y), Vector3.zero, new Vector3(0.12f, 1.15f, 0.12f), "Wood", true);
+
+        const int strips = 6;
+        float sw = (w * 2f + 0.5f) / strips;
+        for (int i = 0; i < strips; i++)
         {
-            float deg = i * 360f / count;
-            if (Mathf.Abs(Mathf.DeltaAngle(deg, 0f)) < GateHalfAngle) continue;
-            float h = Rand(0.75f, 1.0f);
-            Vector3 p = Polar(deg, FenceRadius + Rand(-0.1f, 0.1f));
-            Prim(PrimitiveType.Cylinder, "Estaca", g, p + Vector3.up * h, new Vector3(Rand(-4f, 4f), 0f, Rand(-4f, 4f)),
-                new Vector3(0.28f, h, 0.28f), "Wood", true);
-            Prim(PrimitiveType.Sphere, "Nieve_Estaca", g, p + Vector3.up * (h * 2f), Vector3.zero, new Vector3(0.32f, 0.14f, 0.32f), "Snow", false);
+            float x = -w - 0.25f + sw * (i + 0.5f);
+            Prim(PrimitiveType.Cube, "Toldo", g, new Vector3(x, 2.35f, 0.1f), new Vector3(-12f, 0f, 0f),
+                new Vector3(sw + 0.01f, 0.07f, d * 2f + 0.8f), i % 2 == 0 ? stripe : "ClothWhite", false);
+            Prim(PrimitiveType.Cube, "Toldo_Faldon", g, new Vector3(x, 2.05f, d + 0.55f), Vector3.zero,
+                new Vector3(sw + 0.01f, 0.35f, 0.05f), i % 2 == 0 ? stripe : "ClothWhite", false);
+        }
+        Prim(PrimitiveType.Cube, "Toldo_Nieve", g, new Vector3(0f, 2.45f, -0.1f), new Vector3(-12f, 0f, 0f), new Vector3(w * 2f + 0.3f, 0.06f, d * 1.2f), "Snow", false);
+        Prim(PrimitiveType.Cube, "Mostrador", g, new Vector3(0f, 0.5f, d * 0.8f), Vector3.zero, new Vector3(w * 2f, 1f, 0.5f), "Wood", true);
+        return g;
+    }
+
+    private static void BuildStalls()
+    {
+        Transform g = Group("Puestos", Vector3.zero);
+        float[] angles = { 72f, 108f, 146f, 282f };
+        string[] stripes = { "ClothBlue", "ClothGreen", "ClothPurple", "ClothYellow" };
+        for (int i = 0; i < angles.Length; i++)
+        {
+            Vector3 pos = Polar(angles[i], PlazaRadius - 2.2f);
+            Transform s = Stall(Group("Puesto_" + (i + 1), pos), 1.1f, 0.7f, stripes[i]);
+            s.SetParent(g, true);
+            s.rotation = Quaternion.LookRotation(-new Vector3(pos.x, 0f, pos.z).normalized);
+            float z = 0.56f;
+            switch (i % 3)
+            {
+                case 0:
+                    for (int k = 0; k < 4; k++)
+                    {
+                        Vector3 p = new Vector3(-0.75f + k * 0.5f, 1.08f, z);
+                        Prim(PrimitiveType.Sphere, "Pescado", s, p, new Vector3(0f, Rand(-20f, 20f), 0f), new Vector3(0.38f, 0.12f, 0.16f), "Fish", false);
+                    }
+                    break;
+                case 1:
+                    for (int k = 0; k < 3; k++)
+                        Prim(PrimitiveType.Cube, "Bloque_Hielo", s, new Vector3(-0.6f + k * 0.6f, 1.15f, z), new Vector3(0f, Rand(0f, 30f), 0f), Vector3.one * 0.28f, "Ice", false);
+                    break;
+                default:
+                    for (int k = 0; k < 3; k++)
+                        Prim(PrimitiveType.Cylinder, "Tarro", s, new Vector3(-0.6f + k * 0.6f, 1.14f, z), Vector3.zero, new Vector3(0.22f, 0.14f, 0.22f), k == 1 ? "ClothRed" : "ClothYellow", false);
+                    break;
+            }
+            Prim(PrimitiveType.Cube, "Caja", s, new Vector3(1.5f, 0.3f, -0.2f), new Vector3(0f, Rand(0f, 40f), 0f), Vector3.one * 0.6f, "WoodDark", true);
         }
     }
 
-    private static void BuildGate()
+    private static void BuildLampsAndBunting()
     {
-        Transform g = Group("Puerta_Norte", Vector3.zero);
+        Transform g = Group("Faroles", Vector3.zero);
+        const int count = 8;
+        const float r = PlazaRadius + 0.3f;
+        var tops = new List<Vector3>();
+        for (int i = 0; i < count; i++)
+        {
+            float deg = 22.5f + i * 45f;
+            Vector3 p = Polar(deg, r);
+            Transform lamp = Group("Farol", p);
+            lamp.SetParent(g, true);
+            Prim(PrimitiveType.Cylinder, "Poste", lamp, new Vector3(0f, 1.6f, 0f), Vector3.zero, new Vector3(0.16f, 1.6f, 0.16f), "Iron", true);
+            Prim(PrimitiveType.Cylinder, "Base", lamp, new Vector3(0f, 0.12f, 0f), Vector3.zero, new Vector3(0.4f, 0.12f, 0.4f), "Iron", false);
+            Prim(PrimitiveType.Cube, "Farol_Luz", lamp, new Vector3(0f, 3.4f, 0f), Vector3.zero, new Vector3(0.36f, 0.45f, 0.36f), "WindowGlow", false);
+            Prim(PrimitiveType.Cube, "Farol_Techo", lamp, new Vector3(0f, 3.7f, 0f), new Vector3(0f, 45f, 0f), new Vector3(0.5f, 0.12f, 0.5f), "Iron", false);
+            Prim(PrimitiveType.Sphere, "Farol_Nieve", lamp, new Vector3(0f, 3.78f, 0f), Vector3.zero, new Vector3(0.45f, 0.12f, 0.45f), "Snow", false);
+            if (i % 2 == 0) AddPointLight(lamp, new Vector3(0f, 3.3f, 0f), new Color(1f, 0.78f, 0.45f), 1.4f, 8f, false);
+            tops.Add(p + Vector3.up * 3.25f);
+        }
+
+        Transform b = Group("Banderines", Vector3.zero);
+        string[] colors = { "ClothRed", "ClothYellow", "ClothBlue", "ClothGreen", "ClothWhite" };
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 a = tops[i];
+            Vector3 c = tops[(i + 1) % count];
+            const int flags = 9;
+            for (int k = 0; k <= flags; k++)
+            {
+                float t = k / (float)flags;
+                Vector3 p = Vector3.Lerp(a, c, t) + Vector3.down * (Mathf.Sin(t * Mathf.PI) * 0.9f);
+                if (k < flags)
+                {
+                    float t2 = (k + 1) / (float)flags;
+                    Vector3 p2 = Vector3.Lerp(a, c, t2) + Vector3.down * (Mathf.Sin(t2 * Mathf.PI) * 0.9f);
+                    Transform rope = Prim(PrimitiveType.Cylinder, "Cuerda", b, (p + p2) * 0.5f, Vector3.zero,
+                        new Vector3(0.03f, Vector3.Distance(p, p2) * 0.5f, 0.03f), "WoodDark", false).transform;
+                    rope.rotation = Quaternion.FromToRotation(Vector3.up, (p2 - p).normalized);
+                }
+                if (k == 0 || k == flags) continue;
+                Transform flag = Prim(PrimitiveType.Cube, "Banderin", b, p + Vector3.down * 0.2f, Vector3.zero,
+                    new Vector3(0.28f, 0.28f, 0.02f), colors[(i + k) % colors.Length], false).transform;
+                flag.rotation = Quaternion.LookRotation((c - a).normalized.y > 0.99f ? Vector3.forward : Vector3.Cross(Vector3.up, (c - a).normalized)) * Quaternion.Euler(0f, 0f, 45f);
+            }
+        }
+    }
+
+    // ---------- Muralla y puertas ----------
+
+    private static void BuildWalls()
+    {
+        Transform g = Group("Muralla", Vector3.zero);
+        var towers = new List<float> { GateHalfAngle, 50f, 95f, 135f, 180f - GateHalfAngle, 180f + GateHalfAngle, 225f, 265f, 310f, 360f - GateHalfAngle };
+        for (int i = 0; i < towers.Count; i++)
+        {
+            float a0 = towers[i];
+            float a1 = towers[(i + 1) % towers.Count];
+            bool gate = Mathf.Approximately(a0, 180f - GateHalfAngle) || Mathf.Approximately(a0, 360f - GateHalfAngle);
+            bool gateTower = Mathf.Abs(Mathf.DeltaAngle(a0, 0f)) < GateHalfAngle + 0.1f || Mathf.Abs(Mathf.DeltaAngle(a0, 180f)) < GateHalfAngle + 0.1f;
+            Tower(g, a0, gateTower ? 7f : 5.8f);
+            if (!gate) WallSegment(g, a0, a1);
+        }
+    }
+
+    private static void WallSegment(Transform parent, float a0, float a1)
+    {
+        Vector3 p0 = Polar(a0, WallRadius);
+        Vector3 p1 = Polar(a1 < a0 ? a1 + 360f : a1, WallRadius);
+        float len = Vector3.Distance(p0, p1) - 3.2f;
+        Transform seg = Group("Muro", (p0 + p1) * 0.5f);
+        seg.SetParent(parent, true);
+        seg.rotation = Quaternion.LookRotation((p1 - p0).normalized);
+        const float h = 3.6f;
+        Prim(PrimitiveType.Cube, "Muro_Piedra", seg, new Vector3(0f, h * 0.5f, 0f), Vector3.zero, new Vector3(1.3f, h, len), "WallStone", true);
+        Prim(PrimitiveType.Cube, "Muro_Zocalo", seg, new Vector3(0f, 0.4f, 0f), Vector3.zero, new Vector3(1.5f, 0.8f, len), "StoneDark", false);
+        Prim(PrimitiveType.Cube, "Muro_Nieve", seg, new Vector3(0f, h + 0.06f, 0f), Vector3.zero, new Vector3(1.45f, 0.14f, len), "Snow", false);
+        int n = Mathf.FloorToInt(len / 1.5f);
+        for (int k = 0; k < n; k++)
+        {
+            float z = -len * 0.5f + 0.75f + k * (len - 1.5f) / Mathf.Max(1, n - 1);
+            Prim(PrimitiveType.Cube, "Almena", seg, new Vector3(0f, h + 0.45f, z), Vector3.zero, new Vector3(1.3f, 0.75f, 0.7f), "WallStone", false);
+            Prim(PrimitiveType.Cube, "Almena_Nieve", seg, new Vector3(0f, h + 0.86f, z), Vector3.zero, new Vector3(1.38f, 0.1f, 0.78f), "Snow", false);
+        }
+    }
+
+    private static void Tower(Transform parent, float deg, float h)
+    {
+        Transform t = Group("Torre", Polar(deg, WallRadius));
+        t.SetParent(parent, true);
+        Prim(PrimitiveType.Cylinder, "Torre_Cuerpo", t, new Vector3(0f, h * 0.5f, 0f), Vector3.zero, new Vector3(3.4f, h * 0.5f, 3.4f), "WallStone", true);
+        Prim(PrimitiveType.Cylinder, "Torre_Base", t, new Vector3(0f, 0.5f, 0f), Vector3.zero, new Vector3(3.7f, 0.5f, 3.7f), "StoneDark", false);
+        Prim(PrimitiveType.Cylinder, "Torre_Corona", t, new Vector3(0f, h + 0.15f, 0f), Vector3.zero, new Vector3(4.1f, 0.2f, 4.1f), "StoneDark", false);
+        Cone("Torre_Techo", t, new Vector3(0f, h + 0.3f, 0f), new Vector3(4.4f, 3.2f, 4.4f), "Roof_Slate");
+        Cone("Torre_Techo_Nieve", t, new Vector3(0f, h + 1.75f, 0f), new Vector3(2.4f, 1.8f, 2.4f), "Snow");
+        Vector3 outward = Polar(deg, 1f);
+        Transform slit = Prim(PrimitiveType.Cube, "Aspillera", t, outward * -1.68f + Vector3.up * (h * 0.6f), Vector3.zero, new Vector3(0.18f, 0.8f, 0.1f), "WindowGlow", false).transform;
+        slit.rotation = Quaternion.LookRotation(outward);
+    }
+
+    private static void BuildGate(float deg, bool north)
+    {
+        Transform g = Group(north ? "Puerta_Norte" : "Puerta_Sur", Polar(deg, WallRadius));
+        g.rotation = Quaternion.LookRotation(Polar(deg, 1f));
+        Vector3 left = g.InverseTransformPoint(Polar(deg - GateHalfAngle, WallRadius));
+        Vector3 right = g.InverseTransformPoint(Polar(deg + GateHalfAngle, WallRadius));
+        float span = Vector3.Distance(left, right);
+
+        Prim(PrimitiveType.Cube, "Arco", g, new Vector3(0f, 5.2f, 0f), Vector3.zero, new Vector3(span, 1.8f, 1.6f), "WallStone", false);
+        Prim(PrimitiveType.Cube, "Arco_Nieve", g, new Vector3(0f, 6.17f, 0f), Vector3.zero, new Vector3(span, 0.14f, 1.75f), "Snow", false);
+        for (int k = 0; k < 5; k++)
+        {
+            float x = -span * 0.35f + k * span * 0.7f / 4f;
+            Prim(PrimitiveType.Cube, "Almena", g, new Vector3(x, 6.55f, 0f), Vector3.zero, new Vector3(0.8f, 0.75f, 1.5f), "WallStone", false);
+        }
+        for (int k = 0; k < 9; k++)
+        {
+            float x = -2.2f + k * 0.55f;
+            Prim(PrimitiveType.Cube, "Rastrillo", g, new Vector3(x, 4.1f, 0f), Vector3.zero, new Vector3(0.09f, 0.7f, 0.09f), "Iron", false);
+        }
+        Prim(PrimitiveType.Cube, "Rastrillo_Barra", g, new Vector3(0f, 4.35f, 0f), Vector3.zero, new Vector3(4.6f, 0.1f, 0.1f), "Iron", false);
+
         foreach (float side in new[] { -1f, 1f })
         {
-            Vector3 p = Polar(side * GateHalfAngle, FenceRadius);
-            Prim(PrimitiveType.Cylinder, "Poste_Puerta", g, p + Vector3.up * 1.6f, Vector3.zero, new Vector3(0.45f, 1.6f, 0.45f), "WoodDark", true);
+            foreach (float face in new[] { -1f, 1f })
+                Prim(PrimitiveType.Cube, "Estandarte", g, new Vector3(side * (span * 0.5f - 0.2f), 4.1f, face * 1.75f), Vector3.zero,
+                    new Vector3(0.9f, 2.0f, 0.05f), north ? "ClothBlue" : "ClothRed", false);
 
-            Vector3 torch = p + new Vector3(side * -0.5f, 0f, -0.4f);
+            Vector3 torch = new Vector3(side * (span * 0.5f - 2.0f), 0f, -1.3f);
             Prim(PrimitiveType.Cylinder, "Antorcha", g, torch + Vector3.up * 0.8f, Vector3.zero, new Vector3(0.1f, 0.8f, 0.1f), "Wood", false);
             Transform flame = Prim(PrimitiveType.Sphere, "Antorcha_Llama", g, torch + Vector3.up * 1.72f, Vector3.zero, new Vector3(0.25f, 0.4f, 0.25f), "Flame", false).transform;
             flame.gameObject.isStatic = false;
@@ -356,44 +715,99 @@ public static class SetupVillage
             fl.flames = new[] { flame };
         }
 
-        Vector3 left = Polar(-GateHalfAngle, FenceRadius);
-        Vector3 right = Polar(GateHalfAngle, FenceRadius);
-        Vector3 mid = (left + right) * 0.5f;
-        float span = Vector3.Distance(left, right) + 0.6f;
-        Prim(PrimitiveType.Cube, "Dintel", g, mid + Vector3.up * 3.1f, Vector3.zero, new Vector3(span, 0.35f, 0.4f), "WoodDark", false);
-        Prim(PrimitiveType.Cube, "Dintel_Nieve", g, mid + Vector3.up * 3.33f, Vector3.zero, new Vector3(span + 0.1f, 0.12f, 0.5f), "Snow", false);
-
-        Vector3 sign = mid + new Vector3(3.2f, 0f, 2.5f);
+        Vector3 sign = new Vector3(3.6f, 0f, 3.5f);
         Prim(PrimitiveType.Cylinder, "Cartel_Poste", g, sign + Vector3.up * 0.9f, Vector3.zero, new Vector3(0.12f, 0.9f, 0.12f), "Wood", true);
-        Prim(PrimitiveType.Cube, "Cartel_HaciaFrostspire", g, sign + Vector3.up * 1.6f, new Vector3(0f, 0f, 8f), new Vector3(1.3f, 0.4f, 0.08f), "Wood", false);
+        Prim(PrimitiveType.Cube, north ? "Cartel_HaciaFrostspire" : "Cartel_HaciaElBosque", g, sign + Vector3.up * 1.6f,
+            new Vector3(0f, 0f, 8f), new Vector3(1.3f, 0.4f, 0.08f), "Wood", false);
     }
 
-    // ---------- Entorno ----------
+    // ---------- Exterior ----------
+
+    private static void BuildOutsidePaths()
+    {
+        Transform g = Group("Caminos", Vector3.zero);
+        for (float z = WallRadius + 2f; z < 60f; z += 1.6f)
+        {
+            float x = Mathf.Sin(z * 0.15f) * 0.8f;
+            Prim(PrimitiveType.Cylinder, "Huella", g, new Vector3(x, 0.01f, z), Vector3.zero,
+                new Vector3(2.4f + Rand(-0.3f, 0.3f), 0.01f, 2.0f), "SnowPath", false);
+        }
+        Vector3 start = Polar(180f, WallRadius + 2f);
+        Vector3 end = SteveClearing + new Vector3(3f, 0f, 3f);
+        Vector3 ctrl = new Vector3(0f, 0f, (start.z + end.z) * 0.5f - 2f);
+        for (float t = 0f; t <= 1f; t += 0.12f)
+        {
+            Vector3 p = Vector3.Lerp(Vector3.Lerp(start, ctrl, t), Vector3.Lerp(ctrl, end, t), t);
+            Prim(PrimitiveType.Cylinder, "Huella", g, p + Vector3.up * 0.01f, Vector3.zero,
+                new Vector3(2.0f + Rand(-0.3f, 0.3f), 0.01f, 1.8f), "SnowPath", false);
+        }
+    }
+
+    private static Transform BuildSteveClearing()
+    {
+        Transform g = Group("Claro_Steve", SteveClearing);
+        Prim(PrimitiveType.Cylinder, "Claro", g, new Vector3(0f, 0.008f, 0f), Vector3.zero, new Vector3(9f, 0.008f, 9f), "SnowPath", false);
+        Transform fire = BuildCampfire(SteveClearing, "Fogata_Steve", 0.7f);
+        fire.SetParent(g, true);
+        Prim(PrimitiveType.Cylinder, "Tronco_Asiento", g, new Vector3(-2.2f, 0.25f, 0.6f), new Vector3(0f, 20f, 90f), new Vector3(0.5f, 1.1f, 0.5f), "Wood", true);
+        Transform amp = Group("Amplificador", SteveClearing + new Vector3(2.3f, 0f, -1.4f));
+        amp.SetParent(g, true);
+        amp.rotation = Quaternion.LookRotation(-new Vector3(2.3f, 0f, -1.4f).normalized);
+        Prim(PrimitiveType.Cube, "Caja", amp, new Vector3(0f, 0.45f, 0f), Vector3.zero, new Vector3(0.9f, 0.9f, 0.5f), "Amp", true);
+        Prim(PrimitiveType.Cube, "Rejilla", amp, new Vector3(0f, 0.4f, 0.26f), Vector3.zero, new Vector3(0.75f, 0.6f, 0.02f), "StoneDark", false);
+        Prim(PrimitiveType.Cube, "Panel", amp, new Vector3(0f, 0.8f, 0.26f), Vector3.zero, new Vector3(0.75f, 0.1f, 0.02f), "ClothYellow", false);
+        Prim(PrimitiveType.Cube, "Nieve", amp, new Vector3(0f, 0.92f, 0f), Vector3.zero, new Vector3(0.95f, 0.06f, 0.55f), "Snow", false);
+
+        for (int i = 0; i < 14; i++)
+        {
+            float deg = i * 360f / 14f + Rand(-8f, 8f);
+            if (Mathf.Abs(Mathf.DeltaAngle(deg, 40f)) < 28f) continue;
+            BuildPine(g, SteveClearing + Polar(deg, Rand(6.5f, 9f)), Rand(0.9f, 1.4f));
+        }
+        return fire;
+    }
 
     private static void BuildSnowMounds()
     {
         Transform g = Group("Montones_Nieve", Vector3.zero);
-        for (int i = 0; i < 26; i++)
+        int placed = 0;
+        for (int attempt = 0; attempt < 200 && placed < 30; attempt++)
         {
             float deg = Rand(0f, 360f);
-            float r = i < 10 ? Rand(6f, 18f) : Rand(22f, 60f);
+            float r = placed < 8 ? Rand(WallRadius - 4.5f, WallRadius - 2.5f) : Rand(WallRadius + 4f, 65f);
             Vector3 p = Polar(deg, r);
-            if (Mathf.Abs(p.x) < 3.5f && p.z > 0f) continue;
-            float s = Rand(0.8f, 2.4f);
+            if (OnRoad(p) || Vector3.Distance(p, SteveClearing) < 7f) continue;
+            float s = Rand(0.8f, 2.2f);
             Prim(PrimitiveType.Sphere, "Monton", g, p, Vector3.zero, new Vector3(s * 1.4f, s * 0.6f, s), "Snow", false);
+            placed++;
         }
+    }
+
+    private static bool OnRoad(Vector3 p)
+    {
+        if (Mathf.Abs(p.x) < 5f && p.z > 0f) return true;
+        if (Mathf.Abs(p.x) < 4f && p.z < 0f && p.z > -WallRadius - 4f) return true;
+        Vector3 start = Polar(180f, WallRadius + 2f);
+        Vector3 end = SteveClearing + new Vector3(3f, 0f, 3f);
+        Vector3 ctrl = new Vector3(0f, 0f, (start.z + end.z) * 0.5f - 2f);
+        for (float t = 0f; t <= 1f; t += 0.1f)
+        {
+            Vector3 q = Vector3.Lerp(Vector3.Lerp(start, ctrl, t), Vector3.Lerp(ctrl, end, t), t);
+            if ((q - p).sqrMagnitude < 16f) return true;
+        }
+        return false;
     }
 
     private static void BuildForest()
     {
         Transform g = Group("Bosque", Vector3.zero);
         int placed = 0;
-        for (int attempt = 0; attempt < 400 && placed < 70; attempt++)
+        for (int attempt = 0; attempt < 600 && placed < 95; attempt++)
         {
             float deg = Rand(0f, 360f);
-            float r = Rand(FenceRadius + 3f, 75f);
+            float r = Rand(WallRadius + 4.5f, 85f);
             Vector3 p = Polar(deg, r);
-            if (Mathf.Abs(p.x - Mathf.Sin(p.z * 0.15f) * 0.8f) < 5f && p.z > 0f) continue;
+            if (OnRoad(p) || Vector3.Distance(p, SteveClearing) < 10f) continue;
             BuildPine(g, p, Rand(0.8f, 1.5f));
             placed++;
         }
@@ -415,7 +829,7 @@ public static class SetupVillage
 
     private static void BuildMountain()
     {
-        Transform g = Group("The_Frostspire", new Vector3(0f, -1f, 175f));
+        Transform g = Group("The_Frostspire", new Vector3(0f, -1f, 185f));
         Peak(g, Vector3.zero, 150f, 120f);
         Peak(g, new Vector3(-70f, 0f, 20f), 90f, 70f);
         Peak(g, new Vector3(75f, 0f, 15f), 100f, 80f);
@@ -442,16 +856,16 @@ public static class SetupVillage
         main.startLifetime = 9f;
         main.startSpeed = new ParticleSystem.MinMaxCurve(1.6f, 2.4f);
         main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.14f);
-        main.maxParticles = 3000;
+        main.maxParticles = 3500;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.prewarm = true;
 
         var emission = ps.emission;
-        emission.rateOverTime = 260f;
+        emission.rateOverTime = 300f;
 
         var shape = ps.shape;
         shape.shapeType = ParticleSystemShapeType.Box;
-        shape.scale = new Vector3(70f, 70f, 1f);
+        shape.scale = new Vector3(80f, 80f, 1f);
 
         var noise = ps.noise;
         noise.enabled = true;
@@ -497,73 +911,127 @@ public static class SetupVillage
 
     // ---------- Pingüinos ----------
 
-    private struct VillagerSpec
+    public class NpcSpec
     {
         public string name, role;
+        public bool showRole;
         public VillagerMood mood;
         public Vector3 pos;
-        public float scale, fear;
-        public int color;
-        public string[] outfits;
+        public float scale = 1f, fear;
+        public Color plumage;
+        public string materialName;
+        public List<OutfitItem> outfits = new List<OutfitItem>();
+        public Transform focus;
+        public Vector3 lookout = Vector3.forward;
+        public float wanderRadius = 3f, walkSpeed = 1.3f;
+        public List<NPCOption> options = new List<NPCOption> { NPCOption.Hablar };
+        public string[] lines;
     }
 
-    private static void BuildVillagers(Transform fire, Vector3 elderDoor, Vector3 smithSpot, Vector3 merchantSpot)
+    private static readonly Dictionary<string, string[]> Lines = new Dictionary<string, string[]>
     {
-        GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Penguin.obj");
-        if (model == null)
+        { "Herrero", new[] {
+            "Mi fragua nunca se apaga. Si el Frost te congela la espada, tráemela.",
+            "El hierro de la montaña está cambiando: se vuelve negro al enfriarse.",
+            "Reparo lo que traigas, pero no hago milagros." } },
+        { "Mercader", new[] {
+            "¡Pescado fresco, cristales, cuerdas! Todo lo que un aventurero necesita.",
+            "Desde que cerraron el paso norte, los precios... bueno, ya sabes.",
+            "Si encuentras algo raro en la montaña, te lo compro." } },
+        { "Tabernera", new[] {
+            "Chocolate caliente y sopa de pescado. Nada mejor contra el frío.",
+            "Los vigías dicen que anoche la montaña brilló otra vez.",
+            "Siéntate un rato, héroe. El Frost puede esperar un sorbo." } },
+        { "Anciano", new[] {
+            "Hace mucho sellamos algo bajo el Frostspire. Temo que el sello se esté rompiendo.",
+            "Sube la montaña, joven. Descubre qué está despertando la corrupción.",
+            "Las ruinas guardan la historia de quienes lo intentaron antes." } },
+        { "Vigía", new[] {
+            "Desde aquí se ve la luz azul en la cima. No me gusta nada.",
+            "Nadie sale por la puerta norte sin avisarme.",
+            "Algunos cazadores volvieron... pero ya no eran ellos." } },
+        { "Aldeano", new[] {
+            "¿Oíste eso? Algo cruje en el bosque por las noches.",
+            "Mi hermano subió a la montaña hace tres días.",
+            "Menos mal que la hoguera sigue encendida." } },
+        { "Pingüinito", new[] {
+            "¡Te reto a una carrera hasta la fuente!",
+            "Dicen que la estatua de hielo se mueve cuando nadie mira.",
+            "¿Eres un héroe de verdad?" } },
+    };
+
+    private static void BuildVillagers(Spots spots)
+    {
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(SetupPenguinWardrobe.PrefabPath) == null)
         {
-            Debug.LogWarning("[SetupVillage] No se encontró Assets/Penguin.obj; no se crearon pingüinos.");
+            Debug.LogWarning("[SetupVillage] Falta " + SetupPenguinWardrobe.PrefabPath + "; ejecuta Configurar Pingüino Vestible.");
             return;
         }
-
         Transform g = Group("Pinguinos", Vector3.zero);
-        Vector3 gate = Polar(0f, FenceRadius - 2f);
-        Vector3 smithFront = smithSpot - smithSpot.normalized * 1.6f;
-        Vector3 merchantFront = merchantSpot - merchantSpot.normalized * 1.8f;
+        Vector3 gateIn = Polar(0f, WallRadius - 3f);
 
-        var specs = new List<VillagerSpec>
+        var specs = new List<NpcSpec>
         {
-            new VillagerSpec { name = "Anciano Pingo", role = "Anciano", mood = VillagerMood.Work, pos = elderDoor, scale = 1.05f, fear = 0.2f, color = 7, outfits = new[] { "Sombrero_Mago" } },
-            new VillagerSpec { name = "Herrera Brunna", role = "Herrero", mood = VillagerMood.Work, pos = smithFront, scale = 1.1f, fear = 0.1f, color = 0, outfits = new[] { "Casco_Cuernos", "Armadura" } },
-            new VillagerSpec { name = "Mercader Tico", role = "Mercader", mood = VillagerMood.Work, pos = merchantFront, scale = 1f, fear = 0.3f, color = 3 },
-            new VillagerSpec { name = "Vigía Kora", role = "Vigía", mood = VillagerMood.Lookout, pos = gate + new Vector3(-1.8f, 0f, 0f), scale = 1f, fear = 0.5f, color = 11, outfits = new[] { "Traje_Capucha" } },
-            new VillagerSpec { name = "Vigía Brisk", role = "Vigía", mood = VillagerMood.Lookout, pos = gate + new Vector3(1.8f, 0f, 0f), scale = 1f, fear = 0.55f, color = 8, outfits = new[] { "Traje_Capucha" } },
+            Spec("Anciano Pingo", "Anciano", true, VillagerMood.Work, spots.elderDoor, 1.05f, 0.2f, 7, spots.plazaCenter, "Sombrero_Mago"),
+            Spec("Herrera Brunna", "Herrero", true, VillagerMood.Work, spots.smith, 1.1f, 0.1f, 0, spots.forge, "Casco_Cuernos", "Armadura"),
+            Spec("Mercader Tico", "Mercader", true, VillagerMood.Work, spots.merchant, 1f, 0.3f, 3, spots.plazaCenter),
+            Spec("Tabernera Mora", "Tabernera", true, VillagerMood.Work, spots.tavernKeeper, 1f, 0.2f, 10, spots.plazaCenter),
+            Spec("Vigía Kora", "Vigía", true, VillagerMood.Lookout, gateIn + new Vector3(-3.2f, 0f, 0f), 1f, 0.5f, 11, null, "Traje_Capucha"),
+            Spec("Vigía Brisk", "Vigía", true, VillagerMood.Lookout, gateIn + new Vector3(3.2f, 0f, 0f), 1f, 0.55f, 8, null, "Traje_Capucha"),
         };
+        specs[1].options = new List<NPCOption> { NPCOption.Vender, NPCOption.Reparar, NPCOption.Hablar };
+        specs[2].options = new List<NPCOption> { NPCOption.Comprar, NPCOption.Vender, NPCOption.Hablar };
+        specs[3].options = new List<NPCOption> { NPCOption.Comprar, NPCOption.Hablar };
 
         string[] huddle = { "Lumi", "Nilo", "Tundra", "Copo", "Escarcha" };
         for (int i = 0; i < huddle.Length; i++)
         {
             float deg = 20f + i * 72f + Rand(-10f, 10f);
-            specs.Add(new VillagerSpec { name = huddle[i], role = "Aldeano", mood = VillagerMood.Huddle, pos = Polar(deg, 2.3f), scale = Rand(0.9f, 1.05f), fear = Rand(0.7f, 1f), color = 1 + i * 2 });
+            specs.Add(Spec(huddle[i], "Aldeano", false, VillagerMood.Huddle, FirePos + Polar(deg, 2.3f), Rand(0.9f, 1.05f), Rand(0.7f, 1f), 1 + i * 2, spots.fire));
         }
 
         string[] kids = { "Pip", "Tuki", "Bru", "Nieves" };
+        Vector3[] kidSpots = { new Vector3(6f, 0f, -6f), new Vector3(7f, 0f, 5f), new Vector3(-6.5f, 0f, 6f), new Vector3(3f, 0f, -9f) };
         for (int i = 0; i < kids.Length; i++)
         {
-            float deg = i < 2 ? 100f + i * 40f : 220f + (i - 2) * 40f;
-            specs.Add(new VillagerSpec { name = kids[i], role = "Pingüinito", mood = VillagerMood.Pace, pos = Polar(deg, 7.5f), scale = Rand(0.6f, 0.72f), fear = Rand(0.5f, 0.9f), color = 2 + i * 3 });
+            NpcSpec s = Spec(kids[i], "Pingüinito", false, VillagerMood.Pace, kidSpots[i], Rand(0.6f, 0.72f), Rand(0.5f, 0.9f), 2 + i * 3, null);
+            s.wanderRadius = 3f;
+            s.walkSpeed = 1.6f;
+            specs.Add(s);
         }
 
-        foreach (VillagerSpec s in specs)
-        {
-            CreateVillager(g, model, s, fire, smithSpot, merchantSpot, elderDoor);
-        }
+        foreach (NpcSpec s in specs) CreateNPC(g, s);
     }
 
-    private static void CreateVillager(Transform parent, GameObject model, VillagerSpec s, Transform fire,
-        Vector3 smithSpot, Vector3 merchantSpot, Vector3 elderDoor)
+    private static NpcSpec Spec(string name, string role, bool showRole, VillagerMood mood, Vector3 pos, float scale, float fear,
+        int color, Transform focus, params string[] outfits)
     {
+        var s = new NpcSpec
+        {
+            name = name, role = role, showRole = showRole, mood = mood, pos = pos, scale = scale, fear = fear,
+            plumage = PenguinColors[color % PenguinColors.Length], materialName = "Toon_Penguin_" + color, focus = focus
+        };
+        foreach (string o in outfits)
+        {
+            OutfitItem item = SetupPenguinWardrobe.LoadItem(o);
+            if (item != null) s.outfits.Add(item);
+        }
+        return s;
+    }
+
+    public static GameObject CreateNPC(Transform parent, NpcSpec s)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(SetupPenguinWardrobe.PrefabPath);
+        if (prefab == null) return null;
+
         GameObject root = new GameObject("NPC_" + s.name.Replace(" ", "_"));
         root.transform.SetParent(parent, false);
         root.transform.position = new Vector3(s.pos.x, 0f, s.pos.z);
         root.transform.localScale = Vector3.one * s.scale;
 
-        GameObject rigged = AssetDatabase.LoadAssetAtPath<GameObject>(SetupPenguinWardrobe.PrefabPath);
-        GameObject body = (GameObject)PrefabUtility.InstantiatePrefab(rigged != null ? rigged : model, root.transform);
+        GameObject body = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root.transform);
         body.name = "Penguin";
-        Material mat = rigged != null
-            ? SetupPenguinWardrobe.ToonPenguinVariant("Toon_Penguin_" + s.color, PenguinColors[s.color % PenguinColors.Length])
-            : PenguinMat(s.color);
+        Material mat = SetupPenguinWardrobe.ToonPenguinVariant(s.materialName, s.plumage);
         foreach (Renderer r in body.GetComponentsInChildren<Renderer>(true))
         {
             var mats = new Material[Mathf.Max(1, r.sharedMaterials.Length)];
@@ -571,20 +1039,18 @@ public static class SetupVillage
             r.sharedMaterials = mats;
         }
 
+        // La ropa se pone ya en el editor para que se vea en la escena (y no depende de Start).
         PenguinOutfit outfit = body.GetComponent<PenguinOutfit>();
         if (outfit != null)
         {
             outfit.useClassOutfit = false;
             outfit.startingItems = new List<OutfitItem>();
-            if (s.outfits != null)
-                foreach (string itemName in s.outfits)
-                {
-                    OutfitItem item = SetupPenguinWardrobe.LoadItem(itemName);
-                    if (item != null) outfit.startingItems.Add(item);
-                }
+            outfit.CacheBones();
+            foreach (OutfitItem item in s.outfits) outfit.Equip(item);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(outfit);
         }
 
-        Bounds? b = GetBounds(body);
+        Bounds? b = GetBounds(body, "Penguin_");
         float height = 1f;
         if (b.HasValue)
         {
@@ -605,47 +1071,45 @@ public static class SetupVillage
         npc.mood = s.mood;
         npc.fear = s.fear;
         npc.model = body.transform;
+        npc.focusPoint = s.focus;
+        npc.lookoutDirection = s.lookout;
+        npc.wanderRadius = s.wanderRadius;
+        npc.walkSpeed = s.walkSpeed;
+        string[] lines = s.lines ?? (Lines.TryGetValue(s.role, out string[] l) ? l : new[] { "..." });
+        npc.dialogue = (string[])lines.Clone();
 
-        switch (s.mood)
-        {
-            case VillagerMood.Huddle:
-                npc.focusPoint = fire;
-                break;
-            case VillagerMood.Lookout:
-                npc.lookoutDirection = Vector3.forward;
-                break;
-            case VillagerMood.Pace:
-                npc.wanderRadius = 3.5f;
-                npc.walkSpeed = 1.6f;
-                break;
-            case VillagerMood.Work:
-                Transform focus = FindNear(s.role == "Herrero" ? "Herreria" : s.role == "Mercader" ? "Puesto_Mercader" : null);
-                npc.focusPoint = focus != null ? focus : fire;
-                break;
-        }
+        var tag = root.AddComponent<NameTag>();
+        tag.displayName = s.name;
+        tag.subtitle = s.showRole ? s.role : "";
+
+        var interact = root.AddComponent<NPCInteractable>();
+        interact.displayName = s.name;
+        interact.role = s.role;
+        interact.options = new List<NPCOption>(s.options);
+        interact.lines = (string[])lines.Clone();
+        interact.headHeight = height * 1.05f;
 
         PenguinRigAnimator rigAnim = body.GetComponent<PenguinRigAnimator>();
         if (rigAnim != null) rigAnim.referenceSpeed = npc.walkSpeed;
 
-        Vector3 look = (npc.focusPoint != null ? npc.focusPoint.position : root.transform.position + Vector3.forward) - root.transform.position;
-        if (s.mood == VillagerMood.Lookout) look = Vector3.forward;
+        Vector3 look = (s.focus != null ? s.focus.position : root.transform.position + Vector3.forward) - root.transform.position;
+        if (s.mood == VillagerMood.Lookout) look = s.lookout;
         look.y = 0f;
         if (look.sqrMagnitude > 0.01f) root.transform.rotation = Quaternion.LookRotation(look.normalized);
-    }
-
-    private static Transform FindNear(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return null;
-        Transform t = _root.Find(name);
-        return t;
+        return root;
     }
 
     private static void PlacePlayer()
     {
         GameObject player = GameObject.Find("Player");
         if (player == null) return;
-        player.transform.position = new Vector3(0f, 0.05f, -5.5f);
+        player.transform.position = PlayerSpawn;
         player.transform.rotation = Quaternion.identity;
+
+        if (player.GetComponent<NameTag>() == null) player.AddComponent<NameTag>().isPlayer = true;
+        PlayerLoadout loadout = player.GetComponent<PlayerLoadout>();
+        if (loadout == null) loadout = player.AddComponent<PlayerLoadout>();
+        if (loadout.palette == null) loadout.palette = AssetDatabase.LoadAssetAtPath<PlumagePalette>("Assets/Data/PlumagePalette.asset");
 
         GameObject cam = GameObject.Find("Main Camera");
         if (cam == null) return;
@@ -653,6 +1117,32 @@ public static class SetupVillage
         if (follow == null) return;
         cam.transform.position = player.transform.position + follow.offset;
         cam.transform.LookAt(player.transform.position + Vector3.up * follow.lookHeight);
+    }
+
+    // HUD de nombres, globos y menú de NPC; y un EventSystem para poder hacer clic en él.
+    public static void EnsureHUD()
+    {
+        const string ui = "Assets/Frostbound/UI/";
+        GameObject hudGo = GameObject.Find("HUD_Mundo");
+        if (hudGo == null) hudGo = new GameObject("HUD_Mundo", typeof(RectTransform));
+        WorldHUD hud = hudGo.GetComponent<WorldHUD>();
+        if (hud == null) hud = hudGo.AddComponent<WorldHUD>();
+        hud.nameFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(ui + "Fonts/Nunito-ExtraBold SDF.asset");
+        hud.textFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(ui + "Fonts/Nunito-Bold SDF.asset");
+        hud.subFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(ui + "Fonts/Nunito-Medium SDF.asset");
+        hud.roundSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Round12.png");
+        hud.bubbleSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Round16.png");
+        hud.tailSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Diamond.png");
+        hud.roleColor = new Color(0.47f, 0.29f, 0.02f);
+        hud.pillSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Pill.png");
+        if (hud.nameFont == null) Debug.LogWarning("[SetupVillage] Faltan las fuentes TMP: ejecuta primero Tools > Frostbound > UI > Construir menú.");
+        EditorUtility.SetDirty(hud);
+
+        if (Object.FindAnyObjectByType<EventSystem>() == null)
+        {
+            var es = new GameObject("EventSystem", typeof(EventSystem));
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        }
     }
 
     // ---------- Utilidades ----------
@@ -683,14 +1173,26 @@ public static class SetupVillage
 
     private static void Cone(string name, Transform parent, Vector3 localPos, Vector3 scale, string matName)
     {
+        MeshObject(name, parent, localPos, scale, _cone, matName, false);
+    }
+
+    private static void Roof(Transform parent, string name, Vector3 localPos, Vector3 scale, string matName)
+    {
+        MeshObject(name, parent, localPos, scale, _prism, matName, false);
+    }
+
+    private static GameObject MeshObject(string name, Transform parent, Vector3 localPos, Vector3 scale, Mesh mesh, string matName, bool collider)
+    {
         GameObject go = new GameObject(name);
         go.transform.SetParent(parent, false);
         go.transform.localPosition = localPos;
         go.transform.localScale = scale;
         go.isStatic = true;
-        go.AddComponent<MeshFilter>().sharedMesh = _cone;
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
         MeshRenderer mr = go.AddComponent<MeshRenderer>();
         if (Mats.TryGetValue(matName, out Material m)) mr.sharedMaterial = m;
+        if (collider) go.AddComponent<MeshCollider>().sharedMesh = mesh;
+        return go;
     }
 
     private static Light AddPointLight(Transform parent, Vector3 localPos, Color color, float intensity, float range, bool shadows)
@@ -707,6 +1209,28 @@ public static class SetupVillage
         return l;
     }
 
+    private static void BuildIgloo(Transform parent, string name, Vector3 pos, float radius)
+    {
+        Vector3 toCenter = -pos;
+        toCenter.y = 0f;
+        Transform igloo = Group(name, pos);
+        igloo.rotation = Quaternion.LookRotation(toCenter.normalized, Vector3.up);
+        igloo.SetParent(parent, true);
+
+        GameObject dome = Prim(PrimitiveType.Sphere, "Cupula", igloo, Vector3.zero, Vector3.zero,
+            new Vector3(radius * 2f, radius * 1.8f, radius * 2f), "Igloo", false);
+        MeshCollider mc = dome.AddComponent<MeshCollider>();
+        mc.sharedMesh = dome.GetComponent<MeshFilter>().sharedMesh;
+
+        float tunnelDia = Mathf.Clamp(radius * 0.75f, 1.5f, 2.3f);
+        float tunnelLen = 1.6f;
+        float tunnelZ = radius * 0.8f + tunnelLen * 0.5f;
+        Prim(PrimitiveType.Cylinder, "Tunel", igloo, new Vector3(0f, 0f, tunnelZ), new Vector3(90f, 0f, 0f),
+            new Vector3(tunnelDia, tunnelLen * 0.5f, tunnelDia), "Igloo", true);
+        Prim(PrimitiveType.Cylinder, "Puerta", igloo, new Vector3(0f, 0f, tunnelZ + tunnelLen * 0.5f + 0.01f), new Vector3(90f, 0f, 0f),
+            new Vector3(tunnelDia * 0.72f, 0.02f, tunnelDia * 0.72f), "IglooDoor", false);
+    }
+
     private static Vector3 Polar(float degFromNorth, float radius)
     {
         float a = degFromNorth * Mathf.Deg2Rad;
@@ -715,12 +1239,20 @@ public static class SetupVillage
 
     private static float Rand(float min, float max) => min + (float)_rng.NextDouble() * (max - min);
 
-    private static Bounds? GetBounds(GameObject root)
+    private static Bounds? GetBounds(GameObject root, string namePrefix)
     {
-        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
-        if (renderers.Length == 0) return null;
-        Bounds combined = renderers[0].bounds;
-        for (int i = 1; i < renderers.Length; i++) combined.Encapsulate(renderers[i].bounds);
+        Bounds? combined = null;
+        foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true))
+        {
+            if (!r.name.StartsWith(namePrefix)) continue;
+            if (combined.HasValue)
+            {
+                Bounds c = combined.Value;
+                c.Encapsulate(r.bounds);
+                combined = c;
+            }
+            else combined = r.bounds;
+        }
         return combined;
     }
 
@@ -757,6 +1289,37 @@ public static class SetupVillage
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         AssetDatabase.CreateAsset(mesh, ConeMeshPath);
+        return mesh;
+    }
+
+    // Prisma triangular para tejados a dos aguas: base 1×1 en y=0, cumbrera a lo largo de X en y=1.
+    private static Mesh GetPrismMesh()
+    {
+        Mesh existing = AssetDatabase.LoadAssetAtPath<Mesh>(PrismMeshPath);
+        if (existing != null) return existing;
+
+        var verts = new List<Vector3>();
+        var tris = new List<int>();
+        Vector3 fl = new Vector3(-0.5f, 0f, 0.5f), fr = new Vector3(0.5f, 0f, 0.5f);
+        Vector3 bl = new Vector3(-0.5f, 0f, -0.5f), br = new Vector3(0.5f, 0f, -0.5f);
+        Vector3 tl = new Vector3(-0.5f, 1f, 0f), tr = new Vector3(0.5f, 1f, 0f);
+        Vector3 front = new Vector3(0f, 0.5f, 1f).normalized, back = new Vector3(0f, 0.5f, -1f).normalized;
+
+        AddTri(verts, tris, fl, fr, tr, front);
+        AddTri(verts, tris, fl, tr, tl, front);
+        AddTri(verts, tris, bl, tl, tr, back);
+        AddTri(verts, tris, bl, tr, br, back);
+        AddTri(verts, tris, bl, fl, tl, Vector3.left);
+        AddTri(verts, tris, br, tr, fr, Vector3.right);
+        AddTri(verts, tris, bl, br, fr, Vector3.down);
+        AddTri(verts, tris, bl, fr, fl, Vector3.down);
+
+        Mesh mesh = new Mesh { name = "Prism_Roof" };
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        AssetDatabase.CreateAsset(mesh, PrismMeshPath);
         return mesh;
     }
 
@@ -821,5 +1384,58 @@ public static class SetupVillage
         Object.DestroyImmediate(tex);
         AssetDatabase.ImportAsset(IglooTexPath);
         return AssetDatabase.LoadAssetAtPath<Texture2D>(IglooTexPath);
+    }
+
+    // Empedrado: filas de piedras de ancho variable, juntas oscuras y un poco de variación por piedra.
+    private static Texture2D GetCobbleTexture()
+    {
+        Texture2D existing = AssetDatabase.LoadAssetAtPath<Texture2D>(CobbleTexPath);
+        if (existing != null) return existing;
+
+        const int size = 512;
+        const int rows = 8;
+        const int gap = 4;
+        var rng = new System.Random(77);
+        Color stoneA = new Color(0.93f, 0.95f, 0.98f);
+        Color stoneB = new Color(0.78f, 0.83f, 0.90f);
+        Color joint = new Color(0.55f, 0.61f, 0.70f);
+
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true);
+        Color[] px = new Color[size * size];
+        int rowH = size / rows;
+        for (int row = 0; row < rows; row++)
+        {
+            var cuts = new List<int> { 0 };
+            int x = rng.Next(0, 40);
+            cuts[0] = x - size;
+            while (x < size)
+            {
+                cuts.Add(x);
+                x += rng.Next(48, 88);
+            }
+            cuts.Add(x);
+            for (int y = row * rowH; y < (row + 1) * rowH; y++)
+            {
+                int yIn = y - row * rowH;
+                for (int px0 = 0; px0 < size; px0++)
+                {
+                    int k = 0;
+                    while (k < cuts.Count - 1 && cuts[k + 1] <= px0) k++;
+                    int xIn = px0 - cuts[k];
+                    int w = cuts[k + 1] - cuts[k];
+                    bool isJoint = yIn < gap || xIn < gap;
+                    float edge = Mathf.Min(Mathf.Min(yIn, rowH - yIn), Mathf.Min(xIn, w - xIn)) / 10f;
+                    float shade = (float)((row * 31 + k * 17) % 11) / 10f;
+                    Color c = Color.Lerp(stoneB, stoneA, Mathf.Clamp01(0.35f + shade * 0.5f + Mathf.Clamp01(edge) * 0.15f));
+                    px[y * size + px0] = isJoint ? joint : c;
+                }
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        File.WriteAllBytes(CobbleTexPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+        AssetDatabase.ImportAsset(CobbleTexPath);
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(CobbleTexPath);
     }
 }
