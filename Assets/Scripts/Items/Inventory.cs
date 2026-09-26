@@ -97,6 +97,35 @@ public class Inventory : MonoBehaviour
         return left;
     }
 
+    // Añade una casilla conservando su estado (durabilidad, runas). Devuelve false si no cupo.
+    public bool AddStack(ItemStack stack)
+    {
+        if (stack == null || stack.IsEmpty) return true;
+        if (!stack.HasInstanceData && stack.item.IsStackable) return Add(stack.item, stack.quantity) <= 0;
+        EnsureSize();
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (!IsEmptySlot(i)) continue;
+            stack.EnsureInstance();
+            slots[i] = stack;
+            ItemAdded?.Invoke(stack.item, stack.quantity);
+            Changed?.Invoke();
+            return true;
+        }
+        return false;
+    }
+
+    public bool PutAt(int index, ItemStack stack)
+    {
+        if (stack == null || index < 0 || index >= slots.Count || !IsEmptySlot(index)) return false;
+        slots[index] = stack;
+        Changed?.Invoke();
+        return true;
+    }
+
+    // Avisa a la interfaz cuando cambia el estado de un objeto (durabilidad, runas).
+    public void NotifyChanged() => Changed?.Invoke();
+
     public bool TryAdd(ItemDefinition item, int quantity = 1)
     {
         if (!HasSpaceFor(item, quantity)) return false;
@@ -109,8 +138,13 @@ public class Inventory : MonoBehaviour
         ItemStack s = Get(index);
         if (s == null) return null;
         int n = Mathf.Min(quantity, s.quantity);
+        if (n >= s.quantity)
+        {
+            slots[index] = null;
+            Changed?.Invoke();
+            return s;
+        }
         s.quantity -= n;
-        if (s.quantity <= 0) slots[index] = null;
         Changed?.Invoke();
         return new ItemStack(s.item, n);
     }
@@ -179,11 +213,16 @@ public class Inventory : MonoBehaviour
         var merged = new List<ItemStack>();
         foreach (ItemStack s in items)
         {
+            if (s.HasInstanceData || !s.item.IsStackable)
+            {
+                merged.Add(s);
+                continue;
+            }
             int left = s.quantity;
             foreach (ItemStack m in merged)
             {
                 if (left <= 0) break;
-                if (m.item != s.item || m.SpaceLeft <= 0) continue;
+                if (m.item != s.item || m.SpaceLeft <= 0 || m.HasInstanceData) continue;
                 int n = Mathf.Min(left, m.SpaceLeft);
                 m.quantity += n;
                 left -= n;
@@ -201,8 +240,9 @@ public class Inventory : MonoBehaviour
             case ItemCategory.Weapon: return 0;
             case ItemCategory.Armor: return 1;
             case ItemCategory.Consumable: return 2;
-            case ItemCategory.Material: return 3;
-            default: return 4;
+            case ItemCategory.Rune: return 3;
+            case ItemCategory.Material: return 4;
+            default: return 5;
         }
     }
 

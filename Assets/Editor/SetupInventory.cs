@@ -38,6 +38,8 @@ public static class SetupInventory
         CreateSets(items);
         AssignClassItems(items);
         ItemDatabase db = CreateDatabase(items);
+        // Armas (modelos en la aleta, durabilidad, runas) y runas: se añaden a la base de datos.
+        SetupWeapons.Setup(false);
         UISkin skin = CreateSkin(icons);
         AssetDatabase.SaveAssets();
 
@@ -485,6 +487,7 @@ public static class SetupInventory
         Equipment eq = GetOrAdd<Equipment>(player);
         eq.outfit = player.GetComponentInChildren<PenguinOutfit>(true);
         eq.giveClassStartingItems = true;
+        GetOrAdd<PlayerDodge>(player);
         ProgressionDebug dbg = GetOrAdd<ProgressionDebug>(player);
         dbg.database = db;
         OutfitTester tester = player.GetComponent<OutfitTester>();

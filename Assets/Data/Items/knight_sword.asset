@@ -27,7 +27,20 @@ MonoBehaviour:
     value: 1
   armor: 0
   damage: 6
-  outfit: {fileID: 11400000, guid: e1ec89924d782af4b8ace92442d380fe, type: 2}
+  outfit: {fileID: 0}
   armorSet: {fileID: 0}
+  weaponType: 7
+  attackSpeed: 1.1
+  damageSpread: 0.15
+  requiredStats: []
+  maxDurability: 50
+  runeSlots: 1
+  weaponModel: {fileID: 919132149155446097, guid: a8ea7eca2a6984c44ab953eebdcd8d80, type: 3}
+  projectileModel: {fileID: 0}
+  runeEffect: 0
+  runePower: 0
+  runeDuration: 0
+  runeChance: 1
+  engraveManaCost: 15
   heal: 0
   restoreMana: 0

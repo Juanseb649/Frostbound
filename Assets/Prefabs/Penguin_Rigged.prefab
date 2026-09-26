@@ -76,6 +76,13 @@ MonoBehaviour:
   enableIdleActions: 1
   idleActionDelay: 10
   idleActionInterval: {x: 8, y: 14}
+  wristStiffness: 20
+  wristDamping: 0.55
+  maxWristAngle: 100
+  bladeClearance: 0.06
+  headFollow: 14
+  crouchDepth: 0.09
+  comboRecover: 0.32
 --- !u!114 &8307915250689772115
 MonoBehaviour:
   m_ObjectHideFlags: 0

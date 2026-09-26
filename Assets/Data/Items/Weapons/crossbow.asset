@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49e8d916073f4da409e529efc96160f1, type: 3}
+  m_Name: crossbow
+  m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
+  id: crossbow
+  displayName: Ballesta de hierro
+  description: Lenta de recargar, pero el virote atraviesa el hielo.
+  icon: {fileID: 21300000, guid: 656679afe48cbc74ebcea29637c4909f, type: 3}
+  category: 1
+  rarity: 2
+  maxStack: 1
+  equipSlot: 4
+  requiredLevel: 6
+  allowedClasses: []
+  stats: []
+  armor: 0
+  damage: 13
+  outfit: {fileID: 0}
+  armorSet: {fileID: 0}
+  weaponType: 20
+  attackSpeed: 0.7
+  damageSpread: 0.15
+  requiredStats:
+  - stat: 0
+    value: 9
+  - stat: 2
+    value: 6
+  maxDurability: 55
+  runeSlots: 2
+  weaponModel: {fileID: 919132149155446097, guid: f0e383dc34e79264f9e8cb3d6314fb90, type: 3}
+  projectileModel: {fileID: 919132149155446097, guid: 29a336a7cdf640540b80002b253cd55a, type: 3}
+  runeEffect: 0
+  runePower: 0
+  runeDuration: 0
+  runeChance: 1
+  engraveManaCost: 15
+  heal: 0
+  restoreMana: 0
