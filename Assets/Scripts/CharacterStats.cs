@@ -110,6 +110,8 @@ public class CharacterStats : MonoBehaviour
     public float WeaponDamage { get; private set; }
     public bool IsDead => currentHealth <= 0f;
 
+    [NonSerialized] public bool invulnerable;
+
     public event Action StatsChanged;
     public event Action<int> LeveledUp;
     public event Action<int> ExperienceGained;
@@ -271,7 +273,7 @@ public class CharacterStats : MonoBehaviour
 
     public void TakeDamage(float amount)
     {
-        if (IsDead) return;
+        if (IsDead || invulnerable) return;
         currentHealth = Mathf.Max(0f, currentHealth - amount * (1f - DamageReduction));
         Notify();
         if (currentHealth <= 0f) Die();
