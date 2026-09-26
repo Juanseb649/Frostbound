@@ -12,6 +12,7 @@ public class PenguinOutfit : MonoBehaviour
     private readonly Dictionary<OutfitSlot, Equipped> _equipped = new Dictionary<OutfitSlot, Equipped>();
     private SkinnedMeshRenderer _bodyRenderer;
 
+
     private class Equipped
     {
         public OutfitItem item;
@@ -120,6 +121,7 @@ public class PenguinOutfit : MonoBehaviour
 
     public void UnequipAll()
     {
+
         foreach (OutfitSlot slot in new List<OutfitSlot>(_equipped.Keys)) Unequip(slot);
     }
 
@@ -144,6 +146,7 @@ public class PenguinOutfit : MonoBehaviour
             if (smr.rootBone != null) _bones.TryGetValue(smr.rootBone.name, out root);
 
             smr.bones = mapped;
+            if (Application.isPlaying) AddSprings(smr, equipped);
             smr.rootBone = root != null ? root : (_bodyRenderer != null ? _bodyRenderer.rootBone : transform);
             smr.transform.SetParent(transform, false);
             smr.transform.localPosition = Vector3.zero;
@@ -155,6 +158,71 @@ public class PenguinOutfit : MonoBehaviour
             equipped.spawned.Add(smr.gameObject);
         }
         DestroySafe(instance);
+    }
+
+    // Piezas rígidas que ganan movimiento secundario: (parte, hueso que la sostiene, hueso de influencia, peso, rigidez, amortiguación).
+    private static readonly (string part, string bone, string influence, float weight, float stiffness, float damping)[] SpringParts =
+    {
+        ("Helm", "Head", null, 0f, 900f, 55f),
+        ("Hat", "Head", null, 0f, 500f, 34f),
+        ("Hood", "Head", null, 0f, 700f, 48f),
+        ("Hair", "Head", null, 0f, 380f, 26f),
+        ("Beard", "Head", null, 0f, 420f, 28f),
+        ("Glasses", "Head", null, 0f, 1200f, 65f),
+        ("Shoulder_R", "Spine", "Flipper_R", 0.35f, 800f, 52f),
+        ("Shoulder_L", "Spine", "Flipper_L", 0.35f, 800f, 52f),
+        ("Pendant", "Spine", null, 0f, 260f, 18f),
+        ("Katana_Back", "Spine", null, 0f, 600f, 40f),
+    };
+
+    // Giro de reposo del hueso padre visto desde el de influencia, sacado de las poses de enlace de la malla
+    // (así no depende de la pose en que esté el pingüino al vestirse).
+    private static Quaternion? RestOffset(SkinnedMeshRenderer smr, string influenceName, string parentName)
+    {
+        if (influenceName == null || smr.sharedMesh == null) return null;
+        Matrix4x4[] bind = smr.sharedMesh.bindposes;
+        Transform[] bones = smr.bones;
+        int fi = -1, pi = -1;
+        for (int i = 0; i < bones.Length && i < bind.Length; i++)
+        {
+            if (bones[i] == null) continue;
+            if (bones[i].name == influenceName) fi = i;
+            if (bones[i].name == parentName) pi = i;
+        }
+        if (fi < 0 || pi < 0) return null;
+        Quaternion restInfluence = bind[fi].inverse.rotation;
+        Quaternion restParent = bind[pi].inverse.rotation;
+        return Quaternion.Inverse(restInfluence) * restParent;
+    }
+
+    // Cambia el hueso de la pieza por un hueso-resorte hijo suyo (misma pose de reposo, así el enlace no cambia).
+    private void AddSprings(SkinnedMeshRenderer smr, Equipped equipped)
+    {
+        string partName = smr.name;
+        foreach (var sp in SpringParts)
+        {
+            if (!partName.EndsWith(sp.part)) continue;
+            if (!_bones.TryGetValue(sp.bone, out Transform bone)) return;
+            var go = new GameObject(sp.bone + "_Resorte_" + sp.part);
+            go.transform.SetParent(bone, false);
+            var spring = go.AddComponent<SpringBone>();
+            spring.stiffness = sp.stiffness;
+            spring.damping = sp.damping;
+            spring.root = transform;
+            // Casco, gafas y hombreras van casi pegados; solo lo que cuelga (colgante, pelo, katana) se balancea más.
+            bool rigid = sp.part.Contains("Helm") || sp.part.Contains("Glasses") || sp.part.Contains("Shoulder") || sp.part.Contains("Hood");
+            spring.maxAngle = rigid ? 4f : 12f;
+            Transform influence = null;
+            if (sp.influence != null) _bones.TryGetValue(sp.influence, out influence);
+            spring.Setup(influence, sp.weight, RestOffset(smr, sp.influence, sp.bone));
+
+            Transform[] bones = smr.bones;
+            for (int i = 0; i < bones.Length; i++)
+                if (bones[i] == bone) bones[i] = go.transform;
+            smr.bones = bones;
+            equipped.spawned.Add(go);
+            return;
+        }
     }
 
     private void SpawnAnchored(OutfitItem item, Equipped equipped)
