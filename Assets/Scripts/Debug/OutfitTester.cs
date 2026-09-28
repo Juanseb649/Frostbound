@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// Para probar la ropa en Play: teclas 1-9 ponen/quitan cada prenda de la lista, 0 quita todo.
+// Solo en el editor y en builds de desarrollo. Para probar la ropa en Play: teclas 1-9 ponen/quitan cada prenda de la lista, 0 quita todo.
 public class OutfitTester : MonoBehaviour
 {
     public PenguinOutfit outfit;
@@ -11,6 +11,7 @@ public class OutfitTester : MonoBehaviour
     void Awake()
     {
         if (outfit == null) outfit = GetComponentInChildren<PenguinOutfit>();
+        if (!Application.isEditor && !Debug.isDebugBuild) enabled = false;
     }
 
     void Update()
