@@ -268,7 +268,7 @@ public static class SetupPenguinWardrobe
         model.transform.localPosition = Vector3.zero;
         model.transform.localRotation = Quaternion.identity;
 
-        PenguinAnimator anim = player.GetComponent<PenguinAnimator>();
+        PenguinBodySway anim = player.GetComponent<PenguinBodySway>();
         if (anim != null) anim.model = model.transform;
 
         CharacterStats stats = player.GetComponent<CharacterStats>();
