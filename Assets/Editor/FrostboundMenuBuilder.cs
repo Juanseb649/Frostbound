@@ -188,7 +188,7 @@ public static class FrostboundMenuBuilder
         foreach (GameObject go in scene.GetRootGameObjects())
         {
             if (go.name == "MainMenuCanvas") { Object.DestroyImmediate(go); continue; }
-            bool isOldUi = go.GetComponentInChildren<Canvas>(true) != null || go.GetComponentInChildren<MenuManager>(true) != null;
+            bool isOldUi = go.GetComponentInChildren<Canvas>(true) != null;
             if (isOldUi && go.GetComponent<EventSystem>() == null) go.SetActive(false);
         }
     }

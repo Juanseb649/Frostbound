@@ -212,7 +212,6 @@ public class ClassSelectController : MonoBehaviour
         GameSession session = GameSession.Ensure();
         session.SetHero(cls, palette.entries[_plumageIndex].id, heroName);
         session.NewGame();
-        PlayerPrefs.SetString("username", heroName);
         SceneManager.LoadScene(gameScene);
     }
 }
