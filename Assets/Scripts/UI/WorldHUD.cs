@@ -13,13 +13,15 @@ public class WorldHUD : MonoBehaviour
     private static readonly List<NameTag> Tags = new List<NameTag>();
 
     [Header("Fuentes y sprites")]
-    public TMP_FontAsset nameFont;
-    public TMP_FontAsset textFont;
-    public TMP_FontAsset subFont;
-    public Sprite roundSprite;
-    public Sprite bubbleSprite;
-    public Sprite tailSprite;
-    public Sprite pillSprite;
+    public UISkin skin;
+
+    private TMP_FontAsset nameFont => skin.nunito800;
+    private TMP_FontAsset textFont => skin.nunito700;
+    private TMP_FontAsset subFont => skin.nunito500;
+    private Sprite roundSprite => skin.round12;
+    private Sprite bubbleSprite => skin.round16;
+    private Sprite tailSprite => skin.diamond;
+    private Sprite pillSprite => skin.pill;
 
     [Header("Nombres")]
     public Color nameColor = new Color(0.07f, 0.13f, 0.24f);

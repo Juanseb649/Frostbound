@@ -2913,11 +2913,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1726965647}
   fear: 0.2
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &42690284
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -11566,11 +11561,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 726708353}
   fear: 0.2
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &139514341
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -16341,11 +16331,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1263900596}
   fear: 0
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &192086893
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -30449,11 +30434,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 135094990}
   fear: 0.9838717
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &324112853
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -31251,13 +31231,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e1e65bac1920d24a946d50456dfb81a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldHUD
-  nameFont: {fileID: 11400000, guid: b1b54099d10cf924583df2b065e3e7e3, type: 2}
-  textFont: {fileID: 11400000, guid: 11ca8cf9e6bec2b40b47a98f7f5f13e3, type: 2}
-  subFont: {fileID: 11400000, guid: 3b7ccb5120dc65b4981819deb3edf6fd, type: 2}
-  roundSprite: {fileID: 21300000, guid: a7e07f24e01e8994d9c3a12baaf3ece2, type: 3}
-  bubbleSprite: {fileID: 21300000, guid: e87e5a70be317f940b6559b5b2b88c18, type: 3}
-  tailSprite: {fileID: 21300000, guid: 031e54bb1a035494395a5a09a79f2546, type: 3}
-  pillSprite: {fileID: 21300000, guid: d35d44205f9506247a284f5b59ccd984, type: 3}
+  skin: {fileID: 11400000, guid: 1f1ceb1136ad50045bc3d4088f3e2040, type: 2}
   nameColor: {r: 0.07, g: 0.13, b: 0.24, a: 1}
   highlightColor: {r: 0.12, g: 0.31, b: 0.71, a: 1}
   roleColor: {r: 0.47, g: 0.29, b: 0.02, a: 1}
@@ -69409,11 +69383,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1305355955}
   fear: 0.88173985
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &780142756
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -81708,12 +81677,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PenguinAnimator
   model: {fileID: 859396821}
+  referenceSpeed: 6
   bobFrequency: 14
   bobAmplitude: 0.12
+  stepBounce: 0
   rollAngle: 6
   leanAngle: 8
   idleFrequency: 1.2
   idleAmplitude: 0.025
+  fear: 0
+  calm: 1
+  shiverAmplitude: 0.02
+  shiverFrequency: 32
+  hunchAngle: 6
 --- !u!114 &952827391
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -86484,11 +86460,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 343937547}
   fear: 0.8004626
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1019429790
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -92677,11 +92648,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 278573982}
   fear: 0.9773916
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1093634164
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -128671,11 +128637,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1726745920}
   fear: 0.55
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1539745574
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -132179,11 +132140,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1426551059}
   fear: 0.7084517
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1597940179
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -133889,11 +133845,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1662065289}
   fear: 0.89973783
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1611137704
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -142187,11 +142138,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1210623022}
   fear: 0.3
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1715572841
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -143924,11 +143870,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 69136727}
   fear: 0.71815366
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1733742748
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -148675,11 +148616,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 387444583}
   fear: 0.5
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1793874007
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -151084,7 +151020,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InventoryScreen
   skin: {fileID: 11400000, guid: 1f1ceb1136ad50045bc3d4088f3e2040, type: 2}
   player: {fileID: 952827399}
-  hud: {fileID: 1386567976}
 --- !u!1 &1824735423
 GameObject:
   m_ObjectHideFlags: 0
@@ -153217,11 +153152,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 605829253}
   fear: 0.88591444
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1845390911
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -159203,11 +159133,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1319886307}
   fear: 0.1
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &1909076002
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -177563,11 +177488,6 @@ MonoBehaviour:
   noticeRadius: 4
   model: {fileID: 1042932833}
   fear: 0.76581854
-  shiverAmplitude: 0.02
-  shiverFrequency: 32
-  bobFrequency: 13
-  bobAmplitude: 0.07
-  rollAngle: 7
 --- !u!54 &2139336085
 Rigidbody:
   m_ObjectHideFlags: 0

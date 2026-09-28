@@ -44,4 +44,16 @@ public static class Fase1Migration
         }
         return string.Join(" ", report);
     }
+
+    public static string AssignWorldHudSkin()
+    {
+        Scene scene = EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
+        WorldHUD hud = Object.FindAnyObjectByType<WorldHUD>(FindObjectsInactive.Include);
+        if (hud == null) return "sin WorldHUD";
+        hud.skin = AssetDatabase.LoadAssetAtPath<UISkin>("Assets/Data/UI/UISkin.asset");
+        EditorUtility.SetDirty(hud);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        return hud.skin != null ? "skin asignado" : "UISkin no encontrado";
+    }
 }

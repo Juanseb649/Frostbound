@@ -1122,20 +1122,13 @@ public static class SetupVillage
     // HUD de nombres, globos y menú de NPC; y un EventSystem para poder hacer clic en él.
     public static void EnsureHUD()
     {
-        const string ui = "Assets/Frostbound/UI/";
         GameObject hudGo = GameObject.Find("HUD_Mundo");
         if (hudGo == null) hudGo = new GameObject("HUD_Mundo", typeof(RectTransform));
         WorldHUD hud = hudGo.GetComponent<WorldHUD>();
         if (hud == null) hud = hudGo.AddComponent<WorldHUD>();
-        hud.nameFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(ui + "Fonts/Nunito-ExtraBold SDF.asset");
-        hud.textFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(ui + "Fonts/Nunito-Bold SDF.asset");
-        hud.subFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(ui + "Fonts/Nunito-Medium SDF.asset");
-        hud.roundSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Round12.png");
-        hud.bubbleSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Round16.png");
-        hud.tailSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Diamond.png");
+        hud.skin = AssetDatabase.LoadAssetAtPath<UISkin>("Assets/Data/UI/UISkin.asset");
         hud.roleColor = new Color(0.47f, 0.29f, 0.02f);
-        hud.pillSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ui + "Sprites/UI_Pill.png");
-        if (hud.nameFont == null) Debug.LogWarning("[SetupVillage] Faltan las fuentes TMP: ejecuta primero Tools > Frostbound > UI > Construir menú.");
+        if (hud.skin == null || hud.skin.nunito800 == null) Debug.LogWarning("[SetupVillage] Falta el UISkin con las fuentes TMP: ejecuta primero Tools > Frostbound > UI > Construir menú.");
         EditorUtility.SetDirty(hud);
 
         if (Object.FindAnyObjectByType<EventSystem>() == null)
