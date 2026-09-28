@@ -514,7 +514,6 @@ public static class SetupInventory
         var screen = invRt.gameObject.AddComponent<InventoryScreen>();
         screen.skin = skin;
         screen.player = eq;
-        screen.hud = hud;
         hud.inventoryScreen = screen;
 
         if (Object.FindAnyObjectByType<EventSystem>() == null)

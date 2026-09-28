@@ -290,7 +290,6 @@ public static class FrostboundWeaponTests
     private static int _walkLeg;
     public static string _driftTag = "walkA";
     public static string TagB() { _driftTag = "walkB"; return "ok"; }
-    private static readonly Mesh _bake = null;
 
     private static void DriftTick()
     {

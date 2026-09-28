@@ -206,7 +206,7 @@ public static class FrostboundMenuBuilder
     {
         int layer = LayerMask.NameToLayer(PreviewLayer);
         if (layer < 0) return;
-        foreach (Camera cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Camera cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
             cam.cullingMask &= ~(1 << layer);
     }
 

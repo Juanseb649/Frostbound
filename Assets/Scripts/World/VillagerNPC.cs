@@ -31,7 +31,6 @@ public class VillagerNPC : MonoBehaviour
     private Vector3 _home;
     private Vector3 _target;
     private float _waitTimer;
-    private bool _walking;
     private float _phase;
     private Transform _player;
     private NPCInteractable _interact;
@@ -87,7 +86,6 @@ public class VillagerNPC : MonoBehaviour
             }
         }
 
-        _walking = false;
         bool talking = _interact != null && _interact.Busy;
         if (talking && _player != null)
         {
@@ -128,7 +126,6 @@ public class VillagerNPC : MonoBehaviour
 
         if (toTarget.sqrMagnitude > 0.04f)
         {
-            _walking = true;
             Vector3 step = toTarget.normalized * walkSpeed * Time.deltaTime;
             if (step.sqrMagnitude > toTarget.sqrMagnitude) step = toTarget;
             transform.position += step;

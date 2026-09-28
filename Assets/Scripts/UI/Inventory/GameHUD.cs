@@ -40,13 +40,21 @@ public class GameHUD : MonoBehaviour
         _stats = player.Stats;
         Build();
         _stats.LeveledUp += OnLevelUp;
-        _stats.ExperienceGained += amount => ShowMessage("+" + amount + " XP", FrostboundUI.XpBar);
+        _stats.ExperienceGained += OnExperienceGained;
         player.Inventory.ItemAdded += OnItemAdded;
+        Notifications.Register(this);
     }
+
+    private void OnExperienceGained(int amount) => ShowMessage("+" + amount + " XP", FrostboundUI.XpBar);
 
     void OnDestroy()
     {
-        if (_stats != null) _stats.LeveledUp -= OnLevelUp;
+        Notifications.Unregister(this);
+        if (_stats != null)
+        {
+            _stats.LeveledUp -= OnLevelUp;
+            _stats.ExperienceGained -= OnExperienceGained;
+        }
         if (player != null && player.Inventory != null) player.Inventory.ItemAdded -= OnItemAdded;
     }
 

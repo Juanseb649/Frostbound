@@ -11,8 +11,6 @@ public class DungeonGenerator : MonoBehaviour
     [Header("Prueba rápida")]
     [Tooltip("Genera un piso automáticamente al pulsar Play.")]
     [SerializeField] private bool generarAlIniciar = true;
-    [Tooltip("Id del castillo que se genera al iniciar.")]
-    [SerializeField] private int dungeonIdPrueba = 1;
     [SerializeField] private int pisoPrueba = 0;
     [Tooltip("Seed fijo para depurar siempre el mismo layout. 0 = usa el seed de la partida.")]
     [SerializeField] private int seedDebug = 0;

@@ -12,7 +12,6 @@ public class InventoryScreen : MonoBehaviour
 {
     public UISkin skin;
     public Equipment player;
-    public GameHUD hud;
 
     public bool IsOpen { get; private set; }
 
@@ -510,10 +509,10 @@ public class InventoryScreen : MonoBehaviour
             if (ok && item.IsRune)
             {
                 Select(_equipViews[EquipSlot.Weapon]);
-                if (hud != null && !string.IsNullOrEmpty(message)) hud.ShowMessage(message, FrostboundUI.Positive);
+                if (!string.IsNullOrEmpty(message)) Notifications.Show(message, FrostboundUI.Positive);
             }
         }
-        if (!ok && !string.IsNullOrEmpty(message) && hud != null) hud.ShowMessage(message, FrostboundUI.Negative);
+        if (!ok) Notifications.Show(message, FrostboundUI.Negative);
         _dirty = true;
     }
 
@@ -539,7 +538,7 @@ public class InventoryScreen : MonoBehaviour
             Vector3 origin = t.position + Vector3.up * 1.1f + t.forward * 0.5f;
             Vector3 velocity = t.forward * 2.2f + Vector3.up * 3f + Random.insideUnitSphere * 0.6f;
             WorldItem.Spawn(removed, origin, velocity, player.gameObject);
-            if (hud != null) hud.ShowMessage("Tiraste " + removed.item.displayName, FrostboundUI.Muted);
+            Notifications.Show("Tiraste " + removed.item.displayName, FrostboundUI.Muted);
         }
         Select(null);
     }
