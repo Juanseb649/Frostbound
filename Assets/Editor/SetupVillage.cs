@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 // de los Zelda clásicos) con fuente helada, casas, tiendas, puestos, faroles, banderines y dos puertas.
 public static class SetupVillage
 {
-    private const string ScenePath = "Assets/Scenes/SampleScene.unity";
+    private const string ScenePath = SceneIds.VillagePath;
     private const string MatFolder = "Assets/Materials/Village";
     private const string MeshFolder = "Assets/Meshes";
     private const string ConeMeshPath = MeshFolder + "/Cone_LowPoly.asset";

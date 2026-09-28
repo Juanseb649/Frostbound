@@ -25,7 +25,7 @@ public static class SetupInventory
     private const string BootMatDir = "Assets/Materials/Gear";
     private const string SkinPath = "Assets/Data/UI/UISkin.asset";
     private const string DatabasePath = ItemDir + "/ItemDatabase.asset";
-    private const string ScenePath = "Assets/Scenes/SampleScene.unity";
+    private const string ScenePath = SceneIds.VillagePath;
 
     [MenuItem("Tools/Frostbound/Inventario/Configurar progresión e inventario")]
     public static void Setup()

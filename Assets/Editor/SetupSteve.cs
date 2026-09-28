@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 // NPC Steve: el rockero que toca junto a su fogata, en un claro del bosque al sur del poblado.
 public static class SetupSteve
 {
-    private const string ScenePath = "Assets/Scenes/SampleScene.unity";
+    private const string ScenePath = SceneIds.VillagePath;
     public const string ObjectName = "NPC_Steve";
     public static readonly Color Plumage = new Color(0xF2 / 255f, 0xC2 / 255f, 0x30 / 255f);
 

@@ -11,7 +11,6 @@ public class ClassSelectController : MonoBehaviour
     public List<CharacterClass> classes = new List<CharacterClass>();
     public PlumagePalette palette;
     public GameObject penguinPrefab;
-    public string gameScene = "SampleScene";
     public string previewLayerName = "UIPreview";
 
     [Header("Lista de clases")]
@@ -212,6 +211,6 @@ public class ClassSelectController : MonoBehaviour
         GameSession session = GameSession.Ensure();
         session.SetHero(cls, palette.entries[_plumageIndex].id, heroName);
         session.NewGame();
-        SceneManager.LoadScene(gameScene);
+        SceneManager.LoadScene(SceneIds.Village);
     }
 }
