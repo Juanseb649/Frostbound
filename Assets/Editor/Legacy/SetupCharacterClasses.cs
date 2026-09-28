@@ -5,7 +5,7 @@ public static class SetupCharacterClasses
 {
     private const string Folder = "Assets/Data/Classes";
 
-    [MenuItem("Tools/Penguin/Character Classes/Create 4 Default Classes")]
+    [MenuItem("Tools/Frostbound/Legacy/Character Classes/Create 4 Default Classes")]
     public static void CreateClasses()
     {
         if (!AssetDatabase.IsValidFolder("Assets/Data"))

@@ -6,7 +6,7 @@ public static class PropTexturesGenerator
 {
     const int Size = 1024;
 
-    [MenuItem("Tools/Penguin/Prop Textures/Generate All Prop Textures")]
+    [MenuItem("Tools/Frostbound/Legacy/Prop Textures/Generate All Prop Textures")]
     public static void GenerateAll()
     {
         GenerateSnowMound();
@@ -17,7 +17,7 @@ public static class PropTexturesGenerator
     }
 
     // TEXTURE 1 - Snow mound / rock prop
-    [MenuItem("Tools/Penguin/Prop Textures/Snow Mound (Rock)")]
+    [MenuItem("Tools/Frostbound/Legacy/Prop Textures/Snow Mound (Rock)")]
     public static void GenerateSnowMound()
     {
         Color[] p = new Color[Size * Size];
@@ -81,7 +81,7 @@ public static class PropTexturesGenerator
     }
 
     // TEXTURE 2 - Ice boundary wall
-    [MenuItem("Tools/Penguin/Prop Textures/Ice Boundary Wall")]
+    [MenuItem("Tools/Frostbound/Legacy/Prop Textures/Ice Boundary Wall")]
     public static void GenerateIceWall()
     {
         Color[] p = new Color[Size * Size];
@@ -129,7 +129,7 @@ public static class PropTexturesGenerator
     }
 
     // TEXTURE 3 - Snowy pine tree (billboard with transparent background)
-    [MenuItem("Tools/Penguin/Prop Textures/Snowy Pine Tree (Billboard)")]
+    [MenuItem("Tools/Frostbound/Legacy/Prop Textures/Snowy Pine Tree (Billboard)")]
     public static void GeneratePineTree()
     {
         Color[] p = new Color[Size * Size];
@@ -193,7 +193,7 @@ public static class PropTexturesGenerator
     }
 
     // TEXTURE 4 - Wooden fence / camp boundary
-    [MenuItem("Tools/Penguin/Prop Textures/Wooden Fence")]
+    [MenuItem("Tools/Frostbound/Legacy/Prop Textures/Wooden Fence")]
     public static void GenerateWoodenFence()
     {
         Color[] p = new Color[Size * Size];

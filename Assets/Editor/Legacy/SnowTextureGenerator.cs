@@ -4,7 +4,7 @@ using System.IO;
 
 public static class SnowTextureGenerator
 {
-    [MenuItem("Tools/Penguin/Generate Club Penguin Snow Texture")]
+    [MenuItem("Tools/Frostbound/Legacy/Generate Club Penguin Snow Texture")]
     public static void Generate()
     {
         int width = 1024;
