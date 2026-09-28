@@ -142,6 +142,8 @@ public static class FrostboundGearSetup
             imp.importBlendShapes = false;
             imp.animationType = ModelImporterAnimationType.Generic;
             imp.optimizeGameObjects = false;
+            // Las capas y telas sueltas usan Cloth, que necesita leer la malla.
+            imp.isReadable = true;
             foreach (var pair in mats)
                 imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), pair.Key), pair.Value);
             imp.SaveAndReimport();
@@ -253,6 +255,21 @@ public static class FrostboundGearSetup
         eq.startingClass = "";
         PrefabUtility.SaveAsPrefabAsset(root, SetupPenguinWardrobe.PrefabPath);
         PrefabUtility.UnloadPrefabContents(root);
+    }
+
+    // Activa Read/Write en los modelos del equipo (la tela con física lo necesita) sin rehacer todo lo demás.
+    public static string MakeGearReadable()
+    {
+        int n = 0;
+        foreach (string file in Directory.GetFiles(GearModelDir, "*.fbx"))
+        {
+            var imp = (ModelImporter)AssetImporter.GetAtPath(file.Replace('\\', '/'));
+            if (imp == null || imp.isReadable) continue;
+            imp.isReadable = true;
+            imp.SaveAndReimport();
+            n++;
+        }
+        return n + " modelos";
     }
 
     public static void EnsureFolder(string path)

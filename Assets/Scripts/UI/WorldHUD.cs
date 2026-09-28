@@ -36,6 +36,15 @@ public class WorldHUD : MonoBehaviour
 
     public static void Unregister(NameTag t) => Tags.Remove(t);
 
+    private static readonly List<WorldItem> Items = new List<WorldItem>();
+
+    public static void RegisterItem(WorldItem w)
+    {
+        if (!Items.Contains(w)) Items.Add(w);
+    }
+
+    public static void UnregisterItem(WorldItem w) => Items.Remove(w);
+
     public static bool PointerOverUI()
     {
         return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
@@ -54,7 +63,27 @@ public class WorldHUD : MonoBehaviour
 
     private readonly Dictionary<NameTag, Label> _labels = new Dictionary<NameTag, Label>();
     private readonly List<NameTag> _scratch = new List<NameTag>();
-    private RectTransform _canvasRt, _namesLayer, _bubbleLayer, _menuLayer, _toastLayer;
+    private RectTransform _canvasRt, _namesLayer, _itemLayer, _numbersLayer, _bubbleLayer, _menuLayer, _toastLayer;
+
+    private class PopupEntry
+    {
+        public RectTransform rt;
+        public TextMeshProUGUI text;
+        public Vector3 world;
+        public float born, scale;
+        public bool alive;
+    }
+    private readonly List<PopupEntry> _popups = new List<PopupEntry>();
+
+    private class ItemLabel
+    {
+        public RectTransform rt;
+        public Image bg;
+        public TextMeshProUGUI text;
+        public string shown;
+    }
+    private readonly Dictionary<WorldItem, ItemLabel> _itemLabels = new Dictionary<WorldItem, ItemLabel>();
+    private readonly List<WorldItem> _itemScratch = new List<WorldItem>();
     private Camera _cam;
 
     private RectTransform _bubble;
@@ -104,6 +133,8 @@ public class WorldHUD : MonoBehaviour
         _canvasRt = (RectTransform)transform;
 
         _namesLayer = Layer("Nombres");
+        _itemLayer = Layer("Objetos");
+        _numbersLayer = Layer("Numeros");
         _bubbleLayer = Layer("Globos");
         _menuLayer = Layer("Menu");
         _toastLayer = Layer("Avisos");
@@ -349,6 +380,8 @@ public class WorldHUD : MonoBehaviour
         if (_cam == null) _cam = Camera.main;
         if (_cam == null) return;
         UpdateNames();
+        UpdateItemLabels();
+        UpdatePopups();
         UpdateBubble();
         UpdateMenu();
         UpdateMenuKeys();
@@ -404,6 +437,126 @@ public class WorldHUD : MonoBehaviour
             label.rt.localScale = Vector3.Lerp(label.rt.localScale, new Vector3(s, s, 1f), Time.deltaTime * 14f);
             label.name.color = tag.Highlighted ? highlightColor : nameColor;
         }
+    }
+
+    // ----- Números de daño -----
+
+    public void Popup(Vector3 world, string text, Color color, float scale = 1f)
+    {
+        PopupEntry p = null;
+        foreach (PopupEntry q in _popups) if (!q.alive) { p = q; break; }
+        if (p == null)
+        {
+            p = new PopupEntry { rt = Rect("Numero", _numbersLayer) };
+            p.rt.anchorMin = p.rt.anchorMax = new Vector2(0.5f, 0.5f);
+            p.rt.sizeDelta = new Vector2(220f, 40f);
+            p.text = Text(p.rt, "Texto", nameFont, 28f, Color.white, TextAlignmentOptions.Center);
+            Stretch(p.text.rectTransform, 0f);
+            p.text.outlineWidth = 0.25f;
+            p.text.outlineColor = new Color32(10, 18, 34, 255);
+            _popups.Add(p);
+        }
+        p.alive = true;
+        p.world = world;
+        p.born = Time.time;
+        p.scale = scale;
+        p.text.text = text;
+        p.text.color = color;
+        p.rt.gameObject.SetActive(true);
+        p.rt.SetAsLastSibling();
+    }
+
+    private void UpdatePopups()
+    {
+        const float life = 0.9f;
+        foreach (PopupEntry p in _popups)
+        {
+            if (!p.alive) continue;
+            float t = (Time.time - p.born) / life;
+            if (t >= 1f || !ToCanvas(p.world, out Vector2 pos))
+            {
+                p.alive = t < 1f;
+                p.rt.gameObject.SetActive(false);
+                continue;
+            }
+            if (!p.rt.gameObject.activeSelf) p.rt.gameObject.SetActive(true);
+            p.rt.anchoredPosition = pos + new Vector2(0f, 60f * t);
+            float pop = t < 0.12f ? Mathf.Lerp(1.5f, 1f, t / 0.12f) : 1f;
+            p.rt.localScale = Vector3.one * p.scale * pop;
+            Color c = p.text.color;
+            c.a = t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f;
+            p.text.color = c;
+        }
+    }
+
+    // ----- Etiquetas de objetos en el suelo (clic para recoger) -----
+
+    private void UpdateItemLabels()
+    {
+        _itemScratch.Clear();
+        foreach (var pair in _itemLabels)
+            if (pair.Key == null || !Items.Contains(pair.Key)) _itemScratch.Add(pair.Key);
+        foreach (WorldItem dead in _itemScratch)
+        {
+            if (_itemLabels[dead].rt != null) Destroy(_itemLabels[dead].rt.gameObject);
+            _itemLabels.Remove(dead);
+        }
+
+        foreach (WorldItem item in Items)
+        {
+            if (item == null) continue;
+            if (!_itemLabels.TryGetValue(item, out ItemLabel label))
+            {
+                label = CreateItemLabel(item);
+                _itemLabels[item] = label;
+            }
+            string text = item.Label;
+            if (label.shown != text)
+            {
+                label.shown = text;
+                label.text.text = text;
+                label.text.color = item.LabelColor;
+                Vector2 pref = label.text.GetPreferredValues(text);
+                label.rt.sizeDelta = new Vector2(pref.x + 22f, 26f);
+            }
+            Vector3 anchor = item.transform.position + Vector3.up * 0.35f;
+            bool visible = (anchor - _cam.transform.position).sqrMagnitude < maxDistance * maxDistance && ToCanvas(anchor, out _);
+            if (label.rt.gameObject.activeSelf != visible) label.rt.gameObject.SetActive(visible);
+            if (!visible) continue;
+            ToCanvas(anchor, out Vector2 p);
+            label.rt.anchoredPosition = p + new Vector2(0f, 16f);
+            label.rt.localScale = item.Highlighted ? new Vector3(1.08f, 1.08f, 1f) : Vector3.one;
+            label.bg.color = item.Highlighted ? new Color(0.11f, 0.17f, 0.29f, 0.95f) : new Color(0.04f, 0.07f, 0.13f, 0.82f);
+        }
+    }
+
+    private ItemLabel CreateItemLabel(WorldItem item)
+    {
+        var label = new ItemLabel { rt = Rect("Objeto_" + item.name, _itemLayer) };
+        label.rt.anchorMin = label.rt.anchorMax = new Vector2(0.5f, 0.5f);
+        label.rt.pivot = new Vector2(0.5f, 0f);
+        label.bg = label.rt.gameObject.AddComponent<Image>();
+        label.bg.sprite = pillSprite != null ? pillSprite : roundSprite;
+        label.bg.type = Image.Type.Sliced;
+        label.bg.raycastTarget = true;
+        label.text = Text(label.rt, "Texto", textFont, 14f, Color.white, TextAlignmentOptions.Center);
+        Stretch(label.text.rectTransform, 0f);
+        var button = label.rt.gameObject.AddComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        WorldItem target = item;
+        button.onClick.AddListener(() =>
+        {
+            PlayerController pc = FindAnyObjectByType<PlayerController>();
+            if (pc != null && target != null) pc.PickUp(target);
+        });
+        var trigger = label.rt.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+        var enter = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerEnter };
+        enter.callback.AddListener(_ => { if (target != null) target.Highlighted = true; });
+        var exit = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit };
+        exit.callback.AddListener(_ => { if (target != null) target.Highlighted = false; });
+        trigger.triggers.Add(enter);
+        trigger.triggers.Add(exit);
+        return label;
     }
 
     private Label CreateLabel(NameTag tag)

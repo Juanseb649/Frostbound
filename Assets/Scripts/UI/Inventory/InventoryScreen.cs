@@ -215,6 +215,7 @@ public class InventoryScreen : MonoBehaviour
         {
             ItemDefinition item = player.Get(pair.Key);
             pair.Value.Show(item, 1, true);
+            pair.Value.ShowState(player.GetStack(pair.Key));
             if (item != null && item.armorSet != null && !sets.Contains(item.armorSet)) sets.Add(item.armorSet);
         }
 
@@ -247,6 +248,7 @@ public class InventoryScreen : MonoBehaviour
             cell.gameObject.SetActive(true);
             cell.index = i;
             cell.Show(s != null ? s.item : null, s != null ? s.quantity : 0, s == null || MeetsRequirements(s.item));
+            cell.ShowState(s);
         }
         for (int i = shown; i < _cells.Count; i++)
         {
@@ -276,7 +278,7 @@ public class InventoryScreen : MonoBehaviour
             case Filter.Armor: return item.category == ItemCategory.Armor;
             case Filter.Weapons: return item.category == ItemCategory.Weapon;
             case Filter.Consumables: return item.category == ItemCategory.Consumable;
-            case Filter.Other: return item.category == ItemCategory.Material || item.category == ItemCategory.Misc;
+            case Filter.Other: return item.category == ItemCategory.Material || item.category == ItemCategory.Misc || item.category == ItemCategory.Rune;
             default: return true;
         }
     }
@@ -289,6 +291,13 @@ public class InventoryScreen : MonoBehaviour
         if (v.IsEquipmentSlot) return player.Get(v.slot);
         ItemStack s = _inventory.Get(v.index);
         return s != null ? s.item : null;
+    }
+
+    private ItemStack StackOf(ItemSlotView v)
+    {
+        if (v == null) return null;
+        if (v.IsEquipmentSlot) return player.GetStack(v.slot);
+        return _inventory.Get(v.index);
     }
 
     private void RefreshDetail()
@@ -310,17 +319,20 @@ public class InventoryScreen : MonoBehaviour
         _dName.text = item.displayName;
         _dName.color = FrostboundUI.Rarity(item.rarity);
 
-        string kind = item.IsEquippable ? ItemDefinition.SlotName(item.equipSlot) : ItemDefinition.CategoryName(item.category);
+        string kind = item.IsWeapon
+            ? "Arma · " + WeaponCatalog.HandlingName(item.Handling) + " · " + item.WeaponInfo.name
+            : item.IsEquippable ? ItemDefinition.SlotName(item.equipSlot) : ItemDefinition.CategoryName(item.category);
         _dMeta.text = ItemDefinition.RarityName(item.rarity) + "  ·  " + kind + (equipped ? "  ·  Equipado" : "");
 
-        _dBody.text = Describe(item, equipped ? null : player.Get(item.equipSlot), equipped);
+        _dBody.text = Describe(item, equipped ? null : player.Get(item.equipSlot), equipped, StackOf(view));
 
         if (actionable)
         {
-            string primary = equipped ? "Quitar" : item.IsEquippable ? "Equipar" : item.IsConsumable ? "Usar" : "";
+            string primary = equipped ? "Quitar" : item.IsEquippable ? "Equipar" : item.IsConsumable ? "Usar" : item.IsRune ? "Grabar" : "";
             _dPrimary.gameObject.SetActive(primary.Length > 0);
             _dPrimaryLabel.text = primary;
             bool ok = equipped || !item.IsEquippable || item.CanBeEquippedBy(_stats, out _);
+            if (item.IsRune) ok = player.MainWeapon != null && player.MainWeapon.FreeRuneSlots > 0 && !player.MainWeapon.IsBroken;
             _dPrimary.interactable = ok;
             _dPrimaryFill.color = ok ? FrostboundUI.Ice : FrostboundUI.Surface;
             _dPrimaryLabel.color = ok ? FrostboundUI.Bg : FrostboundUI.Disabled;
@@ -329,13 +341,26 @@ public class InventoryScreen : MonoBehaviour
         }
     }
 
-    private string Describe(ItemDefinition item, ItemDefinition compareTo, bool equipped)
+    private string Describe(ItemDefinition item, ItemDefinition compareTo, bool equipped, ItemStack stack)
     {
         var sb = new StringBuilder();
         string pos = FrostboundUI.RichHex(FrostboundUI.Positive);
         string neg = FrostboundUI.RichHex(FrostboundUI.Negative);
         string muted = FrostboundUI.RichHex(FrostboundUI.Muted);
         string gold = FrostboundUI.RichHex(FrostboundUI.Gold);
+
+        if (item.IsRune)
+        {
+            string rc = FrostboundUI.RichHex(WeaponCatalog.RuneColor(item.runeEffect));
+            sb.Append("<color=").Append(rc).Append(">• ").Append(WeaponCatalog.RuneName(item.runeEffect)).Append("</color>  ")
+              .Append(ItemDefinition.RuneDescription(item)).Append("\n");
+            sb.Append("<size=13><color=").Append(muted).Append(">Hechizo de grabado: ").Append(item.engraveManaCost)
+              .Append(" de maná. Queda grabada para siempre en el arma equipada.</color></size>\n");
+            ItemStack w = player.MainWeapon;
+            if (w == null) sb.Append("<size=13><color=").Append(neg).Append(">No tienes un arma equipada</color></size>\n");
+            else sb.Append("<size=13><color=").Append(w.FreeRuneSlots > 0 ? muted : neg).Append(">").Append(w.item.displayName)
+                   .Append(": ").Append(w.FreeRuneSlots).Append(" ranura(s) libre(s)</color></size>\n");
+        }
 
         if (item.damage > 0f) sb.Append("Daño  <b>+").Append(item.damage.ToString("0.#")).Append("</b>").Append(Delta(item.damage - (compareTo != null ? compareTo.damage : 0f), compareTo, item, pos, neg)).Append("\n");
         if (item.armor > 0) sb.Append("Armadura  <b>").Append(item.armor).Append("</b>").Append(Delta(item.armor - (compareTo != null ? compareTo.armor : 0), compareTo, item, pos, neg)).Append("\n");
@@ -349,6 +374,7 @@ public class InventoryScreen : MonoBehaviour
             sb.Append("<color=").Append(v > 0 ? pos : neg).Append(">").Append(v > 0 ? "+" : "").Append(v).Append(" ").Append(StatBlock.DisplayName(t)).Append("</color>")
               .Append(Delta(v - other.Get(t), compareTo, item, pos, neg)).Append("\n");
         }
+        if (item.IsWeapon) DescribeWeapon(sb, item, stack, pos, neg, muted, gold);
         if (item.heal > 0f) sb.Append("Cura <b>").Append(item.heal.ToString("0")).Append("</b> de vida\n");
         if (item.restoreMana > 0f) sb.Append("Recupera <b>").Append(item.restoreMana.ToString("0")).Append("</b> de maná\n");
 
@@ -374,6 +400,63 @@ public class InventoryScreen : MonoBehaviour
         if (!equipped && item.IsEquippable && compareTo == null)
             sb.Append("\n<size=12><color=").Append(muted).Append(">Ranura vacía</color></size>");
         return sb.ToString().TrimEnd('\n');
+    }
+
+    private void DescribeWeapon(StringBuilder sb, ItemDefinition item, ItemStack stack, string pos, string neg, string muted, string gold)
+    {
+        WeaponCatalog.Info info = item.WeaponInfo;
+        sb.Append("Velocidad  <b>").Append(item.attackSpeed.ToString("0.0#")).Append("</b>/s  ·  Alcance  <b>").Append(info.range.ToString("0.#")).Append(" m</b>")
+          .Append(info.projectile ? " <size=12><color=" + muted + ">(proyectil)</color></size>" : "").Append("\n");
+        sb.Append("<color=").Append(muted).Append(">Nivel  <b>").Append(item.requiredLevel).Append("</b></color>");
+        if (item.HasDurability)
+        {
+            float cur = stack != null && stack.durability >= 0f ? stack.durability : item.maxDurability;
+            bool broken = cur <= 0f;
+            float r = cur / item.maxDurability;
+            string col = broken ? neg : r <= 0.2f ? gold : muted;
+            sb.Append("  ·  <color=").Append(col).Append(">Durabilidad  <b>").Append(Mathf.CeilToInt(cur)).Append("/").Append(item.maxDurability).Append("</b>")
+              .Append(broken ? " ROTA" : "").Append("</color>");
+        }
+        sb.Append("\n");
+        var reqs = new List<string>();
+        foreach (StatModifier req in item.requiredStats)
+        {
+            if (req.value <= 0) continue;
+            bool ok = _stats.Get(req.stat) >= req.value;
+            reqs.Add("<color=" + (ok ? muted : neg) + ">" + req.value + " " + StatBlock.DisplayName(req.stat) + "</color>");
+        }
+        if (reqs.Count > 0) sb.Append("<color=").Append(muted).Append(">Requiere </color>").Append(string.Join("<color=" + muted + ">, </color>", reqs)).Append("\n");
+        if (item.runeSlots > 0)
+        {
+            sb.Append("<color=").Append(gold).Append(">Runas</color> ");
+            for (int i = 0; i < item.runeSlots; i++)
+            {
+                ItemDefinition rune = stack != null && i < stack.runes.Count ? stack.runes[i] : null;
+                if (i > 0) sb.Append("  ");
+                if (rune != null)
+                    sb.Append("<color=").Append(FrostboundUI.RichHex(WeaponCatalog.RuneColor(rune.runeEffect))).Append(">• ")
+                      .Append(WeaponCatalog.RuneName(rune.runeEffect)).Append("</color> <size=12>").Append(RuneShort(rune)).Append("</size>");
+                else
+                    sb.Append("<color=").Append(muted).Append(">• vacía</color>");
+            }
+            sb.Append("\n");
+        }
+    }
+
+    private static string RuneShort(ItemDefinition r)
+    {
+        switch (r.runeEffect)
+        {
+            case RuneEffect.Fire: return r.runePower.ToString("0.#") + " fuego/s";
+            case RuneEffect.Poison: return r.runePower.ToString("0.#") + " veneno/s";
+            case RuneEffect.Frost: return "-" + Mathf.RoundToInt(r.runePower * 100f) + " % vel.";
+            case RuneEffect.Chain: return Mathf.RoundToInt(r.runeChance * 100f) + " % rayo";
+            case RuneEffect.Lifesteal: return Mathf.RoundToInt(r.runePower * 100f) + " % vida";
+            case RuneEffect.Sharpness: return "+" + Mathf.RoundToInt(r.runePower * 100f) + " % daño";
+            case RuneEffect.Swiftness: return "+" + Mathf.RoundToInt(r.runePower * 100f) + " % vel. ataque";
+            case RuneEffect.Knockback: return "empuje";
+            default: return "";
+        }
     }
 
     private static string Delta(float d, ItemDefinition compareTo, ItemDefinition item, string pos, string neg)
@@ -424,6 +507,11 @@ public class InventoryScreen : MonoBehaviour
         {
             ok = player.UseOrEquip(v.index, out message);
             if (ok && item.IsEquippable) Select(_equipViews[item.equipSlot]);
+            if (ok && item.IsRune)
+            {
+                Select(_equipViews[EquipSlot.Weapon]);
+                if (hud != null && !string.IsNullOrEmpty(message)) hud.ShowMessage(message, FrostboundUI.Positive);
+            }
         }
         if (!ok && !string.IsNullOrEmpty(message) && hud != null) hud.ShowMessage(message, FrostboundUI.Negative);
         _dirty = true;
@@ -444,7 +532,15 @@ public class InventoryScreen : MonoBehaviour
             return;
         }
         ItemStack removed = _inventory.RemoveAt(_selected.index);
-        if (removed != null && hud != null) hud.ShowMessage("Tiraste " + removed.item.displayName, FrostboundUI.Muted);
+        if (removed != null)
+        {
+            // Cae delante del héroe con física y se puede volver a recoger.
+            Transform t = player.transform;
+            Vector3 origin = t.position + Vector3.up * 1.1f + t.forward * 0.5f;
+            Vector3 velocity = t.forward * 2.2f + Vector3.up * 3f + Random.insideUnitSphere * 0.6f;
+            WorldItem.Spawn(removed, origin, velocity, player.gameObject);
+            if (hud != null) hud.ShowMessage("Tiraste " + removed.item.displayName, FrostboundUI.Muted);
+        }
         Select(null);
     }
 
@@ -625,6 +721,9 @@ public class InventoryScreen : MonoBehaviour
         UIFactory.TopLeft(_dBody.rectTransform, 22f, 76f, 336f, 156f);
         _dBody.textWrappingMode = TextWrappingModes.Normal;
         _dBody.overflowMode = TextOverflowModes.Ellipsis;
+        _dBody.enableAutoSizing = true;
+        _dBody.fontSizeMin = 10.5f;
+        _dBody.fontSizeMax = 14f;
         UIFactory.SetLineHeight(_dBody, 1.4f);
 
         _dPrimary = UIFactory.FramedButton(p, "BtnPrimary", skin, skin.round12, "Equipar", 15f, FrostboundUI.Ice, FrostboundUI.White, FrostboundUI.Bg, out _dPrimaryLabel, out _dPrimaryFill);

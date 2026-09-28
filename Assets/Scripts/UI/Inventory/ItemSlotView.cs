@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -27,6 +28,74 @@ public class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     public ItemDefinition Item { get; private set; }
 
     private bool _hover;
+    private Image _durBg, _durFill;
+    private readonly List<Image> _pips = new List<Image>();
+
+    // Barra de durabilidad (solo si está gastada) y rombos de las ranuras de runa.
+    public void ShowState(ItemStack s)
+    {
+        bool durable = s != null && s.item != null && s.item.HasDurability;
+        if (durable || _durBg != null)
+        {
+            if (_durBg == null)
+            {
+                _durBg = NewImage("Durabilidad", new Color(0.04f, 0.07f, 0.13f, 0.9f));
+                var rt = _durBg.rectTransform;
+                rt.anchorMin = new Vector2(0f, 0f);
+                rt.anchorMax = new Vector2(1f, 0f);
+                rt.pivot = new Vector2(0.5f, 0f);
+                rt.offsetMin = new Vector2(8f, 6f);
+                rt.offsetMax = new Vector2(-8f, 11f);
+                _durFill = NewImage("Relleno", Color.white);
+                _durFill.transform.SetParent(_durBg.transform, false);
+                var f = _durFill.rectTransform;
+                f.anchorMin = Vector2.zero;
+                f.pivot = new Vector2(0f, 0.5f);
+                f.offsetMin = new Vector2(1f, 1f);
+                f.offsetMax = new Vector2(-1f, -1f);
+            }
+            float d = durable ? s.Durability01 : 1f;
+            bool show = durable && d < 0.999f;
+            _durBg.gameObject.SetActive(show);
+            if (show)
+            {
+                _durFill.rectTransform.anchorMax = new Vector2(Mathf.Max(0.02f, d), 1f);
+                _durFill.color = d > 0.5f ? FrostboundUI.Positive : d > 0.2f ? FrostboundUI.Gold : FrostboundUI.Negative;
+            }
+            if (durable && s.IsBroken) icon.color = new Color(1f, 0.45f, 0.45f, 0.6f);
+        }
+
+        int slots = s != null && s.item != null ? s.item.runeSlots : 0;
+        while (_pips.Count < slots)
+        {
+            Image pip = NewImage("Runa", Color.white);
+            var rt = pip.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(7f, 7f);
+            rt.anchoredPosition = new Vector2(11f + _pips.Count * 10f, -11f);
+            rt.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            _pips.Add(pip);
+        }
+        for (int i = 0; i < _pips.Count; i++)
+        {
+            bool on = i < slots;
+            _pips[i].gameObject.SetActive(on);
+            if (!on) continue;
+            ItemDefinition rune = i < s.runes.Count ? s.runes[i] : null;
+            _pips[i].color = rune != null ? WeaponCatalog.RuneColor(rune.runeEffect) : new Color(0.42f, 0.51f, 0.61f, 0.7f);
+        }
+    }
+
+    private Image NewImage(string objName, Color color)
+    {
+        var go = new GameObject(objName, typeof(RectTransform));
+        go.transform.SetParent(transform, false);
+        var img = go.AddComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+        return img;
+    }
 
     void OnDisable()
     {

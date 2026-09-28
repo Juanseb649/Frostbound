@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49e8d916073f4da409e529efc96160f1, type: 3}
+  m_Name: bow
+  m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
+  id: bow
+  displayName: Arco corto
+  description: "Ligero y r\xE1pido. Ideal para mantener la distancia."
+  icon: {fileID: 21300000, guid: 312f173a8f347e34aa783651e5b77562, type: 3}
+  category: 1
+  rarity: 0
+  maxStack: 1
+  equipSlot: 4
+  requiredLevel: 1
+  allowedClasses: []
+  stats: []
+  armor: 0
+  damage: 6
+  outfit: {fileID: 0}
+  armorSet: {fileID: 0}
+  weaponType: 18
+  attackSpeed: 1.3
+  damageSpread: 0.15
+  requiredStats:
+  - stat: 2
+    value: 6
+  maxDurability: 40
+  runeSlots: 2
+  weaponModel: {fileID: 919132149155446097, guid: 5f66a18eff7e62446a3bb5e34943c6fa, type: 3}
+  projectileModel: {fileID: 919132149155446097, guid: abf1ff950f3a5de48b8ec9978bffe119, type: 3}
+  runeEffect: 0
+  runePower: 0
+  runeDuration: 0
+  runeChance: 1
+  engraveManaCost: 15
+  heal: 0
+  restoreMana: 0

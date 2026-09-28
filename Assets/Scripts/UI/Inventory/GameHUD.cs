@@ -214,7 +214,7 @@ public class GameHUD : MonoBehaviour
         vl.childForceExpandWidth = false;
 
         // Teclas.
-        string hints = "I  Inventario     C  Personaje     Q  Poción de vida";
+        string hints = "Espacio  Rodar     I  Inventario     C  Personaje     Q  Poción de vida";
         if (showDebugHints && player.GetComponent<ProgressionDebug>() != null) hints += "\n<color=#5B6F8A>Depuración:  X  +experiencia     Mayús+X  subir nivel     G  objeto al azar</color>";
         TextMeshProUGUI hint = UIFactory.Text(root, "Hints", hints, skin.nunito700, 13f, FrostboundUI.Muted);
         UIFactory.Anchored(hint.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -20f), new Vector2(700f, 44f));

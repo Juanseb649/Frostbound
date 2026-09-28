@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Ranuras de equipo del héroe. Cada pieza (casco, torso, pies, arma...) se equipa por separado,
-// suma sus atributos a CharacterStats y muestra su modelo con PenguinOutfit.
+// suma sus atributos a CharacterStats y muestra su modelo (ropa con PenguinOutfit, armas con WeaponHolder).
+// Cada casilla guarda su propio estado: durabilidad y runas grabadas en el arma.
 [RequireComponent(typeof(CharacterStats))]
 [RequireComponent(typeof(Inventory))]
 public class Equipment : MonoBehaviour
@@ -18,23 +19,34 @@ public class Equipment : MonoBehaviour
     [Tooltip("Si la clase tiene objetos iniciales, se equipan al empezar.")]
     public bool giveClassStartingItems = true;
     public PenguinOutfit outfit;
+    public WeaponHolder weaponHolder;
 
-    private readonly Dictionary<EquipSlot, ItemDefinition> _equipped = new Dictionary<EquipSlot, ItemDefinition>();
+    private readonly Dictionary<EquipSlot, ItemStack> _equipped = new Dictionary<EquipSlot, ItemStack>();
     private CharacterStats _stats;
     private Inventory _inventory;
     private bool _started;
+    private OutfitCloth _cloth;
 
     public event Action Changed;
     public event Action<ItemDefinition> ItemUsed;
+    public event Action<ItemStack> WeaponBroke;
 
     public Inventory Inventory => _inventory;
     public CharacterStats Stats => _stats;
+    public ItemStack MainWeapon => GetStack(EquipSlot.Weapon);
 
     void Awake()
     {
         _stats = GetComponent<CharacterStats>();
         _inventory = GetComponent<Inventory>();
         if (outfit == null) outfit = GetComponentInChildren<PenguinOutfit>();
+        if (weaponHolder == null) weaponHolder = GetComponentInChildren<WeaponHolder>();
+        if (weaponHolder == null && outfit != null) weaponHolder = outfit.gameObject.AddComponent<WeaponHolder>();
+        if (outfit != null)
+        {
+            _cloth = outfit.GetComponent<OutfitCloth>();
+            if (_cloth == null) _cloth = outfit.gameObject.AddComponent<OutfitCloth>();
+        }
         if (UsesItems())
         {
             // El equipo lo controla este componente, no la ropa fija de la clase.
@@ -62,12 +74,18 @@ public class Equipment : MonoBehaviour
         foreach (ItemDefinition item in _stats.characterClass.startingItems)
         {
             if (item == null) continue;
-            if (item.IsEquippable && Get(item.equipSlot) == null) _equipped[item.equipSlot] = item;
+            if (item.IsEquippable && Get(item.equipSlot) == null) _equipped[item.equipSlot] = new ItemStack(item, 1);
             else _inventory.Add(item);
         }
     }
 
-    public ItemDefinition Get(EquipSlot slot) => _equipped.TryGetValue(slot, out ItemDefinition item) ? item : null;
+    public ItemStack GetStack(EquipSlot slot) => _equipped.TryGetValue(slot, out ItemStack s) ? s : null;
+
+    public ItemDefinition Get(EquipSlot slot)
+    {
+        ItemStack s = GetStack(slot);
+        return s != null ? s.item : null;
+    }
 
     public bool IsEquipped(ItemDefinition item) => item != null && item.IsEquippable && Get(item.equipSlot) == item;
 
@@ -75,14 +93,14 @@ public class Equipment : MonoBehaviour
     {
         if (set == null) return 0;
         int n = 0;
-        foreach (ItemDefinition item in _equipped.Values)
-            if (item != null && item.armorSet == set) n++;
+        foreach (ItemStack s in _equipped.Values)
+            if (s != null && s.item != null && s.item.armorSet == set) n++;
         return n;
     }
 
     // ----- Acciones -----
 
-    // Acción principal de una casilla de la mochila: equipar o usar.
+    // Acción principal de una casilla de la mochila: equipar, usar o grabar una runa.
     public bool UseOrEquip(int inventoryIndex, out string message)
     {
         ItemStack s = _inventory.Get(inventoryIndex);
@@ -90,6 +108,7 @@ public class Equipment : MonoBehaviour
         if (s == null) return false;
         if (s.item.IsEquippable) return EquipFromInventory(inventoryIndex, out message);
         if (s.item.IsConsumable) return Use(inventoryIndex, out message);
+        if (s.item.IsRune) return EngraveRune(inventoryIndex, out message);
         message = "No se puede usar";
         return false;
     }
@@ -102,11 +121,32 @@ public class Equipment : MonoBehaviour
         if (!s.item.CanBeEquippedBy(_stats, out message)) return false;
 
         EquipSlot slot = s.item.equipSlot;
-        ItemDefinition previous = Get(slot);
-        _inventory.RemoveAt(inventoryIndex, 1);
-        _equipped[slot] = s.item;
-        // Lo que llevaba puesto ocupa la casilla que quedó libre.
-        if (previous != null && !_inventory.PutAt(inventoryIndex, previous)) _inventory.Add(previous);
+        // Qué hay que quitar: la misma ranura y, con armas a dos manos, la otra aleta.
+        var displaced = new List<EquipSlot> { slot };
+        if (s.item.UsesBothHands) displaced.Add(EquipSlot.Offhand);
+        if (slot == EquipSlot.Offhand && Get(EquipSlot.Weapon) != null && Get(EquipSlot.Weapon).UsesBothHands) displaced.Add(EquipSlot.Weapon);
+
+        int toStore = 0;
+        foreach (EquipSlot d in displaced) if (GetStack(d) != null) toStore++;
+        if (toStore > 1 && _inventory.FreeSlots < toStore - 1)
+        {
+            message = "La mochila está llena";
+            return false;
+        }
+
+        ItemStack moving = _inventory.RemoveAt(inventoryIndex);
+        bool usedFreedSlot = false;
+        foreach (EquipSlot d in displaced)
+        {
+            ItemStack previous = GetStack(d);
+            if (previous == null) continue;
+            _equipped.Remove(d);
+            // Lo primero que se quita ocupa la casilla que quedó libre.
+            if (!usedFreedSlot && _inventory.PutAt(inventoryIndex, previous)) usedFreedSlot = true;
+            else _inventory.AddStack(previous);
+        }
+        moving.EnsureInstance();
+        _equipped[slot] = moving;
         Apply();
         return true;
     }
@@ -114,14 +154,15 @@ public class Equipment : MonoBehaviour
     public bool Unequip(EquipSlot slot, out string message)
     {
         message = "";
-        ItemDefinition item = Get(slot);
-        if (item == null) return false;
-        if (!_inventory.TryAdd(item))
+        ItemStack stack = GetStack(slot);
+        if (stack == null) return false;
+        if (_inventory.FreeSlots <= 0)
         {
             message = "La mochila está llena";
             return false;
         }
         _equipped.Remove(slot);
+        _inventory.AddStack(stack);
         Apply();
         return true;
     }
@@ -161,8 +202,90 @@ public class Equipment : MonoBehaviour
     public void EquipDirect(ItemDefinition item)
     {
         if (item == null || !item.IsEquippable) return;
-        _equipped[item.equipSlot] = item;
+        _equipped[item.equipSlot] = new ItemStack(item, 1);
         if (_started) Apply();
+    }
+
+    // ----- Runas -----
+
+    // Hechizo de grabado: la runa de la mochila queda grabada en el arma equipada y cuesta maná.
+    public bool EngraveRune(int inventoryIndex, out string message)
+    {
+        message = "";
+        ItemStack rune = _inventory.Get(inventoryIndex);
+        if (rune == null || !rune.item.IsRune) return false;
+        ItemStack weapon = MainWeapon;
+        if (weapon == null)
+        {
+            message = "Equipa un arma para grabar la runa";
+            return false;
+        }
+        if (weapon.item.runeSlots <= 0)
+        {
+            message = weapon.item.displayName + " no admite runas";
+            return false;
+        }
+        if (weapon.FreeRuneSlots <= 0)
+        {
+            message = "No quedan ranuras de runa en " + weapon.item.displayName;
+            return false;
+        }
+        if (weapon.IsBroken)
+        {
+            message = "Repara el arma antes de grabarle runas";
+            return false;
+        }
+        if (!_stats.SpendMana(rune.item.engraveManaCost))
+        {
+            message = "Necesitas " + rune.item.engraveManaCost + " de maná para el hechizo de grabado";
+            return false;
+        }
+        weapon.runes.Add(rune.item);
+        _inventory.RemoveAt(inventoryIndex, 1);
+        message = "La runa " + WeaponCatalog.RuneName(rune.item.runeEffect) + " quedó grabada en " + weapon.item.displayName;
+        Apply();
+        return true;
+    }
+
+    public float RunePower(RuneEffect effect)
+    {
+        ItemStack w = MainWeapon;
+        if (w == null || w.IsBroken) return 0f;
+        float total = 0f;
+        foreach (ItemDefinition r in w.runes)
+            if (r != null && r.runeEffect == effect) total += r.runePower;
+        return total;
+    }
+
+    // ----- Durabilidad -----
+
+    public void WearWeapon(float amount)
+    {
+        ItemStack w = MainWeapon;
+        if (w == null) return;
+        bool broke = w.Wear(amount);
+        if (broke)
+        {
+            Apply();
+            WeaponBroke?.Invoke(w);
+        }
+        else Changed?.Invoke();
+    }
+
+    // Lo que hace el herrero: deja como nuevas las armas equipadas y las de la mochila.
+    public int RepairAll()
+    {
+        int repaired = 0;
+        foreach (ItemStack s in _equipped.Values)
+            if (s != null && s.item.HasDurability && s.durability < s.item.maxDurability) { s.Repair(); repaired++; }
+        for (int i = 0; i < _inventory.Capacity; i++)
+        {
+            ItemStack s = _inventory.Get(i);
+            if (s != null && s.item.HasDurability && s.durability < s.item.maxDurability) { s.Repair(); repaired++; }
+        }
+        _inventory.NotifyChanged();
+        Apply();
+        return repaired;
     }
 
     // ----- Estadísticas y modelo -----
@@ -181,12 +304,19 @@ public class Equipment : MonoBehaviour
         float damage = 0f;
         var sets = new HashSet<ArmorSet>();
 
-        foreach (ItemDefinition item in _equipped.Values)
+        foreach (ItemStack s in _equipped.Values)
         {
-            if (item == null) continue;
+            if (s == null || s.item == null) continue;
+            // Un objeto roto no da bonificaciones (como en Diablo II).
+            if (s.IsBroken) continue;
+            ItemDefinition item = s.item;
             bonus = bonus + item.StatBonus;
             armor += item.armor;
-            damage += item.damage;
+            float d = item.damage;
+            if (item.equipSlot == EquipSlot.Weapon)
+                foreach (ItemDefinition r in s.runes)
+                    if (r != null && r.runeEffect == RuneEffect.Sharpness) d *= 1f + r.runePower;
+            damage += d;
             if (item.armorSet != null) sets.Add(item.armorSet);
         }
 
@@ -206,12 +336,20 @@ public class Equipment : MonoBehaviour
 
     private void RefreshVisuals()
     {
-        if (outfit == null) return;
-        outfit.UnequipAll();
-        foreach (EquipSlot slot in VisualOrder)
+        if (outfit != null)
         {
-            ItemDefinition item = Get(slot);
-            if (item != null && item.outfit != null) outfit.Equip(item.outfit);
+            outfit.UnequipAll();
+            foreach (EquipSlot slot in VisualOrder)
+            {
+                ItemDefinition item = Get(slot);
+                if (item == null || item.weaponModel != null) continue;
+                if (item.outfit != null) outfit.Equip(item.outfit);
+            }
         }
+        if (weaponHolder != null) weaponHolder.Show(Get(EquipSlot.Weapon), Get(EquipSlot.Offhand));
+        // Capas y telas sueltas con física: esquivan el cuerpo y la hoja del arma.
+        if (_cloth != null && Application.isPlaying) _cloth.Refresh(weaponHolder != null ? weaponHolder.BladeCollider : null);
+        PenguinRigAnimator rig = outfit != null ? outfit.GetComponent<PenguinRigAnimator>() : null;
+        if (rig != null) rig.RefreshBodyCapsule();
     }
 }

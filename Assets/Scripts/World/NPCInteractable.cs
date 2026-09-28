@@ -57,6 +57,14 @@ public class NPCInteractable : MonoBehaviour
             TalkUntil = Time.time + seconds;
             hud.Say(transform, headHeight * transform.lossyScale.y, text, seconds);
         }
+        else if (option == NPCOption.Reparar)
+        {
+            Equipment player = FindAnyObjectByType<Equipment>();
+            int n = player != null ? player.RepairAll() : 0;
+            string text = n > 0 ? "¡Listo! " + (n == 1 ? "Tu arma quedó" : "Tus " + n + " armas quedaron") + " como nuevas." : "Tus armas están en perfecto estado.";
+            TalkUntil = Time.time + 3.5f;
+            hud.Say(transform, headHeight * transform.lossyScale.y, text, 3.5f);
+        }
         else
         {
             hud.Toast(Label(option) + " — próximamente");

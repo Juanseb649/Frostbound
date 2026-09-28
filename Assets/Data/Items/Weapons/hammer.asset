@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49e8d916073f4da409e529efc96160f1, type: 3}
+  m_Name: hammer
+  m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
+  id: hammer
+  displayName: Martillo del herrero
+  description: "Brunna lo usaba en la fragua hasta que encontr\xF3 uno mejor."
+  icon: {fileID: 21300000, guid: 99b4df0ab19e3a443b06ffa3344c2ee6, type: 3}
+  category: 1
+  rarity: 0
+  maxStack: 1
+  equipSlot: 4
+  requiredLevel: 3
+  allowedClasses: []
+  stats: []
+  armor: 0
+  damage: 9
+  outfit: {fileID: 0}
+  armorSet: {fileID: 0}
+  weaponType: 9
+  attackSpeed: 1
+  damageSpread: 0.15
+  requiredStats:
+  - stat: 0
+    value: 8
+  maxDurability: 55
+  runeSlots: 1
+  weaponModel: {fileID: 919132149155446097, guid: 900945cbaeb339b4b865b4047994f445, type: 3}
+  projectileModel: {fileID: 0}
+  runeEffect: 0
+  runePower: 0
+  runeDuration: 0
+  runeChance: 1
+  engraveManaCost: 15
+  heal: 0
+  restoreMana: 0
