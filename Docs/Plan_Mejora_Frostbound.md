@@ -374,6 +374,7 @@ Rama `fase/1-limpieza`, 10 commits sobre `v0.1-pre-refactor`. Balance en `Script
 | F1.9 | `ProgressionDebug` y `OutfitTester` están en `Scripts/Debug` y se desactivan fuera del editor y de las builds de desarrollo. |
 | F1.10 | El bridge solo arranca con `FROSTBOUND_BRIDGE`. Se activa o desactiva en `Tools/Frostbound/Debug/Bridge de automatización` (ahora está activo). |
 | F1.11 | Los NPC solo muestran opciones implementadas. **Corrección a la auditoría:** Reparar sí funcionaba (gratis). Se ocultan Comprar y Vender. |
+| F1.3b | Se corrigió el temblor al arrancar y al frenar. La fase del paso se calculaba como `Time.time × frecuencia × velocidad`, así que cada cambio de velocidad hacía saltar la fase y el cuerpo vibraba. Ahora la fase se acumula frame a frame. Medido con `SwaySampler`: el salto máximo de altura bajó de 0,357 m a 0,008 m, el del contoneo de 19,2° a 0,3°, y los cambios bruscos de 45 a 0. (El error venía del `PenguinAnimator` original.) |
 | Extra | Se agregaron `Editor/Checks/SmokeTest` (prueba de humo y detección de scripts faltantes) y se limpiaron las advertencias del compilador. |
 
 **No se tocó (con motivo):**

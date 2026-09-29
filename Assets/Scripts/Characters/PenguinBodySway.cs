@@ -35,6 +35,7 @@ public class PenguinBodySway : MonoBehaviour
     private Vector3 _lastPos;
     private float _speed01;
     private float _phase;
+    private float _stridePhase;
 
     void Awake()
     {
@@ -84,9 +85,10 @@ public class PenguinBodySway : MonoBehaviour
         float speed = _speed01;
 
         float t = Time.time + _phase;
-        float motion = Mathf.Max(speed, 0.2f);
-        float wave = Mathf.Sin(t * bobFrequency * motion * 0.5f);
-        float bob = (stepBounce ? Mathf.Abs(wave) : Mathf.Sin(t * bobFrequency * motion)) * bobAmplitude * speed;
+        _stridePhase += dt * bobFrequency * Mathf.Max(speed, 0.2f);
+        if (_stridePhase > Mathf.PI * 4f) _stridePhase -= Mathf.PI * 4f;
+        float wave = Mathf.Sin(_stridePhase * 0.5f);
+        float bob = (stepBounce ? Mathf.Abs(wave) : Mathf.Sin(_stridePhase)) * bobAmplitude * speed;
         float roll = wave * rollAngle * speed;
         float lean = leanAngle * speed;
         float idle = Mathf.Sin(t * idleFrequency) * idleAmplitude * (1f - speed);
