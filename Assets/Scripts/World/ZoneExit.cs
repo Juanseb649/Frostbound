@@ -19,6 +19,7 @@ public class ZoneExit : MonoBehaviour
 
         if (!string.IsNullOrEmpty(targetScene) && Application.CanStreamedLevelBeLoaded(targetScene))
         {
+            if (GameSession.Instance != null) GameSession.Instance.SaveNow();
             SceneManager.LoadScene(targetScene);
             return;
         }

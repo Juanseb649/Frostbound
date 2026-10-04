@@ -59,8 +59,18 @@ public class Equipment : MonoBehaviour
     void Start()
     {
         _started = true;
-        if (UsesItems()) GiveStartingItems();
+        GameSession session = GameSession.Instance;
+        bool restored = session != null && session.RestorePlayer(this);
+        if (!restored && UsesItems()) GiveStartingItems();
         Apply();
+        if (restored) session.FinishRestore(this);
+    }
+
+    public void SetEquippedStack(EquipSlot slot, ItemStack stack)
+    {
+        if (stack == null || stack.item == null) _equipped.Remove(slot);
+        else _equipped[slot] = stack;
+        if (_started) Apply();
     }
 
     private bool UsesItems()

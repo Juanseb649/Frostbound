@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -36,8 +37,6 @@ public class MainMenuController : MonoBehaviour
     public List<CharacterClass> heroClasses = new List<CharacterClass>();
     public string previewLayerName = "UIPreview";
 
-    public const string SaveKey = "frostbound_save";
-
     private Button _returnFocus;
 
     void Start()
@@ -48,9 +47,10 @@ public class MainMenuController : MonoBehaviour
         optionsButton.onClick.AddListener(() => OpenStub("Opciones", optionsButton));
         creditsButton.onClick.AddListener(() => OpenStub("Créditos", creditsButton));
         quitButton.onClick.AddListener(Quit);
+        continueButton.onClick.AddListener(OpenLoad);
         if (stubCloseButton != null) stubCloseButton.onClick.AddListener(CloseStub);
 
-        bool hasSave = PlayerPrefs.HasKey(SaveKey);
+        bool hasSave = SaveSystem.AnyExists();
         continueButton.interactable = hasSave;
         if (!hasSave)
         {
@@ -121,6 +121,28 @@ public class MainMenuController : MonoBehaviour
         StartCoroutine(Swap(classGroup, mainGroup, () => Select(_returnFocus != null ? _returnFocus : newGameButton)));
     }
 
+    private void OpenLoad()
+    {
+        mainGroup.interactable = false;
+        SaveSlotsPanel.Open(SaveSlotsPanel.Mode.Load, slot =>
+        {
+            if (GameSession.Ensure().LoadGame(slot)) SceneManager.LoadScene(SceneIds.Village);
+            else
+            {
+                mainGroup.interactable = true;
+                Select(continueButton);
+            }
+        }, () =>
+        {
+            mainGroup.interactable = true;
+            bool any = SaveSystem.AnyExists();
+            continueButton.interactable = any;
+            if (continueLabel != null) continueLabel.color = any ? FrostboundUI.Text : FrostboundUI.Disabled;
+            SetupMenuNavigation(any);
+            Select(any ? continueButton : newGameButton);
+        });
+    }
+
     private void OpenStub(string title, Button from)
     {
         _returnFocus = from;
@@ -144,7 +166,7 @@ public class MainMenuController : MonoBehaviour
 
     void Update()
     {
-        if (stubGroup != null && stubGroup.interactable && UICancel.Pressed()) CloseStub();
+        if (!SaveSlotsPanel.IsOpen && stubGroup != null && stubGroup.interactable && UICancel.Pressed()) CloseStub();
     }
 
     private IEnumerator Swap(CanvasGroup from, CanvasGroup to, System.Action done)

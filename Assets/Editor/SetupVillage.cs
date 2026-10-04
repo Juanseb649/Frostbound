@@ -103,6 +103,7 @@ public static class SetupVillage
         SetupSteve.Add(_root, spots.steveFire);
         PlacePlayer();
         EnsureHUD();
+        SetupProceduralVillage.ConvertOpenScene();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
