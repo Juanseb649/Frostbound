@@ -35,6 +35,18 @@ public class NPCInteractable : MonoBehaviour
 
     public bool Busy => InConversation || Time.time < TalkUntil;
 
+    // Opciones que ya tienen un sistema detrás. Comprar y Vender se habilitan con la tienda (F4).
+    public static bool IsImplemented(NPCOption o) => o == NPCOption.Hablar || o == NPCOption.Reparar;
+
+    public List<NPCOption> AvailableOptions()
+    {
+        var list = new List<NPCOption>();
+        foreach (NPCOption o in options)
+            if (IsImplemented(o) && !list.Contains(o)) list.Add(o);
+        if (list.Count == 0) list.Add(NPCOption.Hablar);
+        return list;
+    }
+
     public string NextLine()
     {
         if (lines == null || lines.Length == 0) return "...";
@@ -64,10 +76,6 @@ public class NPCInteractable : MonoBehaviour
             string text = n > 0 ? "¡Listo! " + (n == 1 ? "Tu arma quedó" : "Tus " + n + " armas quedaron") + " como nuevas." : "Tus armas están en perfecto estado.";
             TalkUntil = Time.time + 3.5f;
             hud.Say(transform, headHeight * transform.lossyScale.y, text, 3.5f);
-        }
-        else
-        {
-            hud.Toast(Label(option) + " — próximamente");
         }
     }
 

@@ -27,22 +27,14 @@ public class VillagerNPC : MonoBehaviour
     public Transform model;
     [Tooltip("Qué tan asustado está: 0 tranquilo, 1 temblando.")]
     [Range(0f, 1f)] public float fear = 0.6f;
-    public float shiverAmplitude = 0.02f;
-    public float shiverFrequency = 32f;
-    public float bobFrequency = 13f;
-    public float bobAmplitude = 0.07f;
-    public float rollAngle = 7f;
 
     private Vector3 _home;
     private Vector3 _target;
     private float _waitTimer;
-    private bool _walking;
-    private float _speedNorm;
     private float _phase;
-    private Vector3 _modelBasePos;
-    private Quaternion _modelBaseRot;
     private Transform _player;
     private NPCInteractable _interact;
+    private PenguinBodySway _sway;
 
     void Awake()
     {
@@ -52,11 +44,15 @@ public class VillagerNPC : MonoBehaviour
         _waitTimer = Random.Range(0.5f, 3f);
 
         if (model == null && transform.childCount > 0) model = transform.GetChild(0);
-        if (model != null)
+        _sway = GetComponent<PenguinBodySway>();
+        if (_sway == null)
         {
-            _modelBasePos = model.localPosition;
-            _modelBaseRot = model.localRotation;
+            _sway = gameObject.AddComponent<PenguinBodySway>();
+            _sway.model = model;
+            _sway.Configure(13f, 0.07f, 7f, 0f, true, 1.3f, 0.02f);
         }
+        _sway.referenceSpeed = walkSpeed;
+        _sway.fear = fear;
     }
 
     void Start()
@@ -90,7 +86,6 @@ public class VillagerNPC : MonoBehaviour
             }
         }
 
-        _walking = false;
         bool talking = _interact != null && _interact.Busy;
         if (talking && _player != null)
         {
@@ -121,8 +116,7 @@ public class VillagerNPC : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, look, turnSpeed * Time.deltaTime);
         }
 
-        _speedNorm = Mathf.MoveTowards(_speedNorm, _walking ? 1f : 0f, Time.deltaTime * 5f);
-        Animate(playerNear);
+        _sway.calm = playerNear ? 0.4f : 1f;
     }
 
     private Vector3 UpdatePacing(Vector3 currentForward)
@@ -132,7 +126,6 @@ public class VillagerNPC : MonoBehaviour
 
         if (toTarget.sqrMagnitude > 0.04f)
         {
-            _walking = true;
             Vector3 step = toTarget.normalized * walkSpeed * Time.deltaTime;
             if (step.sqrMagnitude > toTarget.sqrMagnitude) step = toTarget;
             transform.position += step;
@@ -162,25 +155,6 @@ public class VillagerNPC : MonoBehaviour
                 return candidate;
         }
         return transform.position;
-    }
-
-    private void Animate(bool playerNear)
-    {
-        if (model == null) return;
-
-        float t = Time.time + _phase;
-        float calm = playerNear ? 0.4f : 1f;
-        float shiver = fear * calm * (1f - _speedNorm);
-
-        float bob = Mathf.Abs(Mathf.Sin(t * bobFrequency * 0.5f)) * bobAmplitude * _speedNorm;
-        float roll = Mathf.Sin(t * bobFrequency * 0.5f) * rollAngle * _speedNorm;
-        float idle = Mathf.Sin(t * 1.3f) * 0.02f * (1f - _speedNorm);
-        float jitterX = (Mathf.PerlinNoise(t * shiverFrequency, 0f) - 0.5f) * 2f * shiverAmplitude * shiver;
-        float jitterRoll = (Mathf.PerlinNoise(0f, t * shiverFrequency) - 0.5f) * 6f * shiver;
-        float hunch = 6f * fear * calm * (1f - _speedNorm);
-
-        model.localPosition = _modelBasePos + new Vector3(jitterX, bob + idle, 0f);
-        model.localRotation = _modelBaseRot * Quaternion.Euler(hunch, 0f, roll + jitterRoll);
     }
 
     void OnDrawGizmosSelected()

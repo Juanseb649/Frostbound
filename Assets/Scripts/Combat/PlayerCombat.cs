@@ -47,7 +47,6 @@ public class PlayerCombat : MonoBehaviour
     private PenguinRigAnimator _rig;
     private WeaponHolder _holder;
     private PlayerDodge _dodge;
-    private GameHUD _hud;
     private Camera _cam;
 
     private float _readyAt;
@@ -217,7 +216,7 @@ public class PlayerCombat : MonoBehaviour
             if (Time.time > _brokenNoticeAt)
             {
                 _brokenNoticeAt = Time.time + 3f;
-                Hud()?.ShowMessage(weapon.item.displayName + " está rota: no hace daño. Llévala al herrero.", FrostboundUI.Negative);
+                Notifications.Show(weapon.item.displayName + " está rota: no hace daño. Llévala al herrero.", FrostboundUI.Negative);
             }
             return;
         }
@@ -353,7 +352,7 @@ public class PlayerCombat : MonoBehaviour
 
     private void OnWeaponBroke(ItemStack weapon)
     {
-        Hud()?.ShowMessage("¡" + weapon.item.displayName + " se rompió! Llévala al herrero.", FrostboundUI.Negative);
+        Notifications.Show("¡" + weapon.item.displayName + " se rompió! Llévala al herrero.", FrostboundUI.Negative);
     }
 
     void LateUpdate()
@@ -363,14 +362,9 @@ public class PlayerCombat : MonoBehaviour
         if (!_lowWarned && w.Durability01 <= 0.2f && !w.IsBroken)
         {
             _lowWarned = true;
-            Hud()?.ShowMessage(w.item.displayName + " está a punto de romperse", FrostboundUI.Gold);
+            Notifications.Show(w.item.displayName + " está a punto de romperse", FrostboundUI.Gold);
         }
         if (w.Durability01 > 0.2f) _lowWarned = false;
     }
 
-    private GameHUD Hud()
-    {
-        if (_hud == null) _hud = FindAnyObjectByType<GameHUD>();
-        return _hud;
-    }
 }

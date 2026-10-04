@@ -11,7 +11,7 @@ public static class SetupPenguinWardrobe
     public const string PrefabPath = "Assets/Prefabs/Penguin_Rigged.prefab";
     public const string ToonMatDir = "Assets/Materials/Toon";
     public const string OutfitDataDir = "Assets/Data/Outfits";
-    private const string ScenePath = "Assets/Scenes/SampleScene.unity";
+    private const string ScenePath = SceneIds.VillagePath;
 
     private static readonly (string asset, string display, string fbx, OutfitSlot slot, OutfitSlot[] also)[] Outfits =
     {
@@ -268,7 +268,7 @@ public static class SetupPenguinWardrobe
         model.transform.localPosition = Vector3.zero;
         model.transform.localRotation = Quaternion.identity;
 
-        PenguinAnimator anim = player.GetComponent<PenguinAnimator>();
+        PenguinBodySway anim = player.GetComponent<PenguinBodySway>();
         if (anim != null) anim.model = model.transform;
 
         CharacterStats stats = player.GetComponent<CharacterStats>();

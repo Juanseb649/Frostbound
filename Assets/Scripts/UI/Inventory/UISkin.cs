@@ -59,14 +59,5 @@ public class UISkin : ScriptableObject
         }
     }
 
-    public static Color StatColor(StatType type)
-    {
-        switch (type)
-        {
-            case StatType.Strength: return FrostboundUI.Hex("#F08A5D");
-            case StatType.Mana: return FrostboundUI.Hex("#6FA8FF");
-            case StatType.Agility: return FrostboundUI.Hex("#7FDB94");
-            default: return FrostboundUI.Hex("#F0646A");
-        }
-    }
+    public static Color StatColor(StatType type) => FrostboundUI.StatColor(type);
 }

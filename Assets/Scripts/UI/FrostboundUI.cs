@@ -39,6 +39,17 @@ public static class FrostboundUI
         }
     }
 
+    public static Color StatColor(StatType type)
+    {
+        switch (type)
+        {
+            case StatType.Strength: return Hex("#F08A5D");
+            case StatType.Mana: return Hex("#6FA8FF");
+            case StatType.Agility: return Hex("#7FDB94");
+            default: return Hex("#F0646A");
+        }
+    }
+
     public static string RichHex(Color c) => "#" + ColorUtility.ToHtmlStringRGB(c);
 
     public const float ReferenceWidth = 1440f;

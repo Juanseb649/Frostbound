@@ -10,7 +10,10 @@ using UnityEngine.Rendering;
 // Canal de comandos para automatizar el editor desde fuera (una línea por comando en FrostboundBridge/inbox.txt).
 // Comandos: refresh | menu <ruta> | open <escena> | play | stop | wait <s> | exec <Tipo.Metodo>
 //           shot <nombre> | camshot <nombre> px py pz tx ty tz [fov] | player x y z | save
+// Solo se activa con el símbolo FROSTBOUND_BRIDGE (Tools > Frostbound > Debug > Bridge de automatización).
+#if FROSTBOUND_BRIDGE
 [InitializeOnLoad]
+#endif
 public static class FrostboundBridge
 {
     public static bool Active { get; private set; }
@@ -22,6 +25,7 @@ public static class FrostboundBridge
     private static double _nextTick;
     private static double _waitUntil;
 
+#if FROSTBOUND_BRIDGE
     static FrostboundBridge()
     {
         Directory.CreateDirectory(Dir);
@@ -29,6 +33,7 @@ public static class FrostboundBridge
         Application.logMessageReceived += OnLog;
         Write(Outbox, "READY " + DateTime.Now.ToString("HH:mm:ss") + (EditorApplication.isPlaying ? " (play)" : ""));
     }
+#endif
 
     public static bool Dialog(string title, string message, string ok, string cancel = null)
     {

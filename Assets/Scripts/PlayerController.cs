@@ -241,17 +241,11 @@ public class PlayerController : MonoBehaviour
         if (item == null || !item.CanPickUp) return;
         string label = item.Label;
         if (item.TryPickUp(_inventory))
-            FindHud()?.ShowMessage("Recogiste " + label, FrostboundUI.Muted);
+            Notifications.Show("Recogiste " + label, FrostboundUI.Muted);
         else
-            FindHud()?.ShowMessage("La mochila está llena", FrostboundUI.Negative);
+            Notifications.Show("La mochila está llena", FrostboundUI.Negative);
     }
 
-    private GameHUD _hud;
-    private GameHUD FindHud()
-    {
-        if (_hud == null) _hud = FindAnyObjectByType<GameHUD>();
-        return _hud;
-    }
 
     private bool PickUpNearest()
     {

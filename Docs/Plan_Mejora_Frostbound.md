@@ -339,8 +339,8 @@ Assets/
 
 | Fase | Estado | Tag | Fecha |
 |---|---|---|---|
-| F0 Red de seguridad | ⬜ Pendiente | `v0.1-pre-refactor` | |
-| F1 Limpieza | ⬜ Pendiente | `v0.2-limpieza` | |
+| F0 Red de seguridad | 🟡 F0.1 hecha · F0.2 y F0.3 pendientes | `v0.1-pre-refactor` | 28-09-2026 |
+| F1 Limpieza | ✅ Terminada (rama `fase/1-limpieza`, sin merge) | `v0.2-limpieza` | 28-09-2026 |
 | F2 Arquitectura | ⬜ Pendiente | `v0.3-arquitectura` | |
 | F3 Combate | ⬜ Pendiente | `v0.4-combate` | |
 | F4 Economía y guardado | ⬜ Pendiente | `v0.5-economia` | |
@@ -356,3 +356,31 @@ Assets/
 | Que el NavMesh choque con la física de rodar | Desactivar `updatePosition` del agente durante el rodar y resincronizarlo con `Warp` al terminar |
 | Que regenerar el poblado borre los cambios manuales | Diálogo de confirmación y prefabs (F2.9) |
 | El alcance vuelve a crecer | Congelamiento de contenido hasta el final de F3 (regla 5) |
+
+## Anexo D — Registro de ejecución de F1 (28-09-2026)
+
+Rama `fase/1-limpieza`, 10 commits sobre `v0.1-pre-refactor`. Balance en `Scripts/` y `Editor/`: +478 / −1.110 líneas.
+
+| Tarea | Resultado |
+|---|---|
+| F1.1 | Se eliminaron `MenuManager`, sus 3 instancias y los 3 Canvas viejos del menú, además de `scene.unity`. Volumen, resolución y pantalla completa pasan a `Core/GameSettings` (con guardado). Se quitó `PlayerPrefs["username"]`. |
+| F1.2 | Se eliminó `MenuButtonEffects`: solo lo usaban los Canvas viejos. |
+| F1.3 | **Cambio respecto al plan:** `PenguinAnimator` no duplicaba a `PenguinRigAnimator` (uno mueve el cuerpo entero y el otro los huesos). El duplicado real era el balanceo del cuerpo, programado dos veces: en `PenguinAnimator` (héroe) y en `VillagerNPC` (aldeanos). Ahora los dos usan `Characters/PenguinBodySway`. Se conservó el GUID, así que el Player no perdió su configuración. |
+| F1.4 | `Notifications.Show()` es el único punto de avisos. Se quitaron el toast de `WorldHUD` y 2 búsquedas `FindAnyObjectByType<GameHUD>`. Se corrigió una suscripción sin quitar (`ExperienceGained`). |
+| F1.5 | La paleta ya estaba centralizada en `FrostboundUI`. Se movió `StatColor` y `WorldHUD` pasó a usar el `UISkin` en vez de sus 7 referencias propias a fuentes y sprites. |
+| F1.6 | Los generadores de texturas y de clases pasaron a `Editor/Legacy`, en el menú `Tools/Frostbound/Legacy`. Se eliminaron `SetupMainMenu` y `SetupPenguinPlayer`. `SetupSteve` se mantiene porque lo usa `SetupVillage`. |
+| F1.7 | Las escenas ahora son `00_MainMenu` y `01_Village` (mismo GUID). `SceneIds` reemplaza 9 strings sueltos. Build Settings corregido. |
+| F1.8 | Se quitaron `visualscripting`, `multiplayer.center` y `collab-proxy`, más `TutorialInfo/` y `Readme.asset`. **Se mantuvieron** `ai.assistant` y `ai.inference`: son una herramienta de trabajo del usuario y queda a su decisión. |
+| F1.9 | `ProgressionDebug` y `OutfitTester` están en `Scripts/Debug` y se desactivan fuera del editor y de las builds de desarrollo. |
+| F1.10 | El bridge solo arranca con `FROSTBOUND_BRIDGE`. Se activa o desactiva en `Tools/Frostbound/Debug/Bridge de automatización` (ahora está activo). |
+| F1.11 | Los NPC solo muestran opciones implementadas. **Corrección a la auditoría:** Reparar sí funcionaba (gratis). Se ocultan Comprar y Vender. |
+| F1.3b | Se corrigió el temblor al arrancar y al frenar. La fase del paso se calculaba como `Time.time × frecuencia × velocidad`, así que cada cambio de velocidad hacía saltar la fase y el cuerpo vibraba. Ahora la fase se acumula frame a frame. Medido con `SwaySampler`: el salto máximo de altura bajó de 0,357 m a 0,008 m, el del contoneo de 19,2° a 0,3°, y los cambios bruscos de 45 a 0. (El error venía del `PenguinAnimator` original.) |
+| Extra | Se agregaron `Editor/Checks/SmokeTest` (prueba de humo y detección de scripts faltantes) y se limpiaron las advertencias del compilador. |
+
+**No se tocó (con motivo):**
+- `CameraFollow` es la única cámara, no un duplicado. Se reorganiza en F2.1.
+- `Penguin.obj` lo usa la estatua del fundador en la fuente del poblado.
+- **Rocco ya existe como "Steve"**, el músico de la fogata del bosque (`SetupSteve`). No está pendiente.
+
+**Verificación:** compila sin errores ni advertencias, hay 0 scripts faltantes en las 2 escenas y la prueba de humo pasa (menú → selección de clase → poblado → HUD → inventario → herrera → reparar).
+**Pendiente conocido (F3.1, sin NavMesh):** si el héroe arranca lejos de Steve, se traba con el tronco y la fogata y cancela el acercamiento.
