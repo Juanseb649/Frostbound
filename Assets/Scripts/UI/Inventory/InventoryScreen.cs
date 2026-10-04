@@ -12,7 +12,6 @@ public class InventoryScreen : MonoBehaviour
 {
     public UISkin skin;
     public Equipment player;
-    public GameHUD hud;
 
     public bool IsOpen { get; private set; }
 
@@ -316,13 +315,16 @@ public class InventoryScreen : MonoBehaviour
         if (!has) return;
 
         bool equipped = view.IsEquipmentSlot;
-        _dName.text = item.displayName;
-        _dName.color = FrostboundUI.Rarity(item.rarity);
+        ItemStack shown = StackOf(view);
+        _dName.text = shown != null ? shown.DisplayName : item.displayName;
+        _dName.color = shown != null ? shown.DisplayColor : FrostboundUI.Rarity(item.rarity);
 
         string kind = item.IsWeapon
             ? "Arma · " + WeaponCatalog.HandlingName(item.Handling) + " · " + item.WeaponInfo.name
             : item.IsEquippable ? ItemDefinition.SlotName(item.equipSlot) : ItemDefinition.CategoryName(item.category);
-        _dMeta.text = ItemDefinition.RarityName(item.rarity) + "  ·  " + kind + (equipped ? "  ·  Equipado" : "");
+        string quality = shown != null && shown.quality != LootQuality.None ? LootQualityInfo.Name(shown.quality) : ItemDefinition.RarityName(item.rarity);
+        if (shown != null && shown.quality == LootQuality.Rare) kind = item.displayName + "  ·  " + kind;
+        _dMeta.text = quality + "  ·  " + kind + (equipped ? "  ·  Equipado" : "");
 
         _dBody.text = Describe(item, equipped ? null : player.Get(item.equipSlot), equipped, StackOf(view));
 
@@ -373,6 +375,12 @@ public class InventoryScreen : MonoBehaviour
             if (v == 0) continue;
             sb.Append("<color=").Append(v > 0 ? pos : neg).Append(">").Append(v > 0 ? "+" : "").Append(v).Append(" ").Append(StatBlock.DisplayName(t)).Append("</color>")
               .Append(Delta(v - other.Get(t), compareTo, item, pos, neg)).Append("\n");
+        }
+        if (stack != null && stack.affixes != null && stack.affixes.Count > 0)
+        {
+            string ac = FrostboundUI.RichHex(stack.quality == LootQuality.Worn ? FrostboundUI.Negative : LootQualityInfo.Magic);
+            foreach (RolledAffix a in stack.affixes)
+                sb.Append("<color=").Append(a.value < 0f ? neg : ac).Append(">").Append(a.Describe()).Append("</color>\n");
         }
         if (item.IsWeapon) DescribeWeapon(sb, item, stack, pos, neg, muted, gold);
         if (item.heal > 0f) sb.Append("Cura <b>").Append(item.heal.ToString("0")).Append("</b> de vida\n");
@@ -510,10 +518,10 @@ public class InventoryScreen : MonoBehaviour
             if (ok && item.IsRune)
             {
                 Select(_equipViews[EquipSlot.Weapon]);
-                if (hud != null && !string.IsNullOrEmpty(message)) hud.ShowMessage(message, FrostboundUI.Positive);
+                if (!string.IsNullOrEmpty(message)) Notifications.Show(message, FrostboundUI.Positive);
             }
         }
-        if (!ok && !string.IsNullOrEmpty(message) && hud != null) hud.ShowMessage(message, FrostboundUI.Negative);
+        if (!ok) Notifications.Show(message, FrostboundUI.Negative);
         _dirty = true;
     }
 
@@ -539,7 +547,7 @@ public class InventoryScreen : MonoBehaviour
             Vector3 origin = t.position + Vector3.up * 1.1f + t.forward * 0.5f;
             Vector3 velocity = t.forward * 2.2f + Vector3.up * 3f + Random.insideUnitSphere * 0.6f;
             WorldItem.Spawn(removed, origin, velocity, player.gameObject);
-            if (hud != null) hud.ShowMessage("Tiraste " + removed.item.displayName, FrostboundUI.Muted);
+            Notifications.Show("Tiraste " + removed.item.displayName, FrostboundUI.Muted);
         }
         Select(null);
     }

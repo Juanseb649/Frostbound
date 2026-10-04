@@ -111,6 +111,7 @@ public class CharacterStats : MonoBehaviour
     public bool IsDead => currentHealth <= 0f;
 
     [NonSerialized] public bool invulnerable;
+    [NonSerialized] public Vector3 lastHitDirection;
 
     public event Action StatsChanged;
     public event Action<int> LeveledUp;

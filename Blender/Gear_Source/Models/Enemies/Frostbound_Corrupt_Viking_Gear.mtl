@@ -1,0 +1,102 @@
+newmtl Corrupt_Barb_Iron
+Kd 0.2941 0.3216 0.3686
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_Bronze
+Kd 0.3569 0.3176 0.2863
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_Horn
+Kd 0.5765 0.5490 0.4863
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_Fur
+Kd 0.2510 0.2353 0.2431
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_FurLight
+Kd 0.3647 0.3451 0.3451
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_Leather
+Kd 0.1882 0.1804 0.2000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_Kilt
+Kd 0.1804 0.2392 0.2392
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_Wood
+Kd 0.2941 0.2667 0.2706
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Barb_Ice
+Kd 0.4353 0.6588 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.1216 0.3098 0.8196
+
+newmtl Corrupt_Crust
+Kd 0.1059 0.1647 0.2667
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.0392 0.1020 0.2275
+
+newmtl Corrupt_Frost
+Kd 0.7255 0.8275 0.9333
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Crystal
+Kd 0.4353 0.6588 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.1216 0.3098 0.8196
+
+newmtl Corrupt_EyeCore
+Kd 0.9333 0.9569 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.6157 0.7333 1.0000
+
+newmtl Corrupt_EyeCobalt
+Kd 0.1216 0.3098 0.8196
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.1216 0.3098 0.8196

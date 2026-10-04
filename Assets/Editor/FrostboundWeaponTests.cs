@@ -290,7 +290,6 @@ public static class FrostboundWeaponTests
     private static int _walkLeg;
     public static string _driftTag = "walkA";
     public static string TagB() { _driftTag = "walkB"; return "ok"; }
-    private static readonly Mesh _bake = null;
 
     private static void DriftTick()
     {
@@ -474,6 +473,23 @@ public static class FrostboundWeaponTests
     }
 
     public static string DropHelmet() => DropArmor();
+
+    public static string HudDrain()
+    {
+        Equipment eq = Player;
+        if (eq == null) return "sin Player";
+        eq.Stats.currentHealth = eq.Stats.MaxHealth * 0.35f;
+        eq.Stats.currentMana = eq.Stats.MaxMana * 0.6f;
+        return "vida " + eq.Stats.currentHealth.ToString("F0") + " maná " + eq.Stats.currentMana.ToString("F0");
+    }
+
+    public static string BeltUse1()
+    {
+        Equipment eq = Player;
+        PotionBelt b = eq.GetComponent<PotionBelt>();
+        bool ok = b.Use(0);
+        return (ok ? "usada" : "no usada") + " · vida " + eq.Stats.currentHealth.ToString("F0") + " · quedan " + b.Count(0);
+    }
 
     public static string CloseUp()
     {

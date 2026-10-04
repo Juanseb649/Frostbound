@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(BoxCollider))]
 public class ZoneExit : MonoBehaviour
 {
-    [Tooltip("Escena a cargar. Vacío = solo avisa en consola (zona aún no creada).")]
+    [Tooltip("Escena a cargar (usa los nombres de SceneIds). Vacío = solo avisa en consola.")]
     public string targetScene = "";
     public string zoneName = "The Foothills";
 

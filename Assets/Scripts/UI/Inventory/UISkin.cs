@@ -27,6 +27,18 @@ public class UISkin : ScriptableObject
     public Sprite iconAgility;
     public Sprite iconHealth;
 
+    [Header("HUD de orbes (estatuas de piedra)")]
+    public Sprite hudStatueLife;
+    public Sprite hudStatueMana;
+    public Sprite hudOrbBack;
+    public Sprite hudOrbFillLife;
+    public Sprite hudOrbFillMana;
+    public Sprite hudOrbFrameLife;
+    public Sprite hudOrbFrameMana;
+    public Sprite hudBar;
+
+    public bool HasOrbHud => hudBar != null && hudStatueLife != null && hudStatueMana != null && hudOrbFillLife != null && hudOrbFillMana != null;
+
     [Header("Ranuras vacías")]
     public Sprite slotHead;
     public Sprite slotChest;
@@ -59,14 +71,5 @@ public class UISkin : ScriptableObject
         }
     }
 
-    public static Color StatColor(StatType type)
-    {
-        switch (type)
-        {
-            case StatType.Strength: return FrostboundUI.Hex("#F08A5D");
-            case StatType.Mana: return FrostboundUI.Hex("#6FA8FF");
-            case StatType.Agility: return FrostboundUI.Hex("#7FDB94");
-            default: return FrostboundUI.Hex("#F0646A");
-        }
-    }
+    public static Color StatColor(StatType type) => FrostboundUI.StatColor(type);
 }

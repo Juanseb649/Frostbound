@@ -18,8 +18,8 @@ public static class FrostboundMenuBuilder
     private const string FontDir = UIRoot + "/Fonts";
     private const string SpriteDir = UIRoot + "/Sprites";
     private const string BackgroundDir = UIRoot + "/Backgrounds";
-    private const string MenuScene = "Assets/Scenes/Main menu.unity";
-    private const string GameScene = "Assets/Scenes/SampleScene.unity";
+    private const string MenuScene = SceneIds.MainMenuPath;
+    private const string GameScene = SceneIds.VillagePath;
     private const string PreviewLayer = "UIPreview";
 
     private static TMP_FontAsset _cinzel600, _cinzel800, _nunito500, _nunito700, _nunito800;
@@ -66,7 +66,6 @@ public static class FrostboundMenuBuilder
         select.penguinPrefab = penguin;
         select.palette = palette;
         select.classes = classes;
-        select.gameScene = Path.GetFileNameWithoutExtension(GameScene);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -188,7 +187,7 @@ public static class FrostboundMenuBuilder
         foreach (GameObject go in scene.GetRootGameObjects())
         {
             if (go.name == "MainMenuCanvas") { Object.DestroyImmediate(go); continue; }
-            bool isOldUi = go.GetComponentInChildren<Canvas>(true) != null || go.GetComponentInChildren<MenuManager>(true) != null;
+            bool isOldUi = go.GetComponentInChildren<Canvas>(true) != null;
             if (isOldUi && go.GetComponent<EventSystem>() == null) go.SetActive(false);
         }
     }
@@ -206,7 +205,7 @@ public static class FrostboundMenuBuilder
     {
         int layer = LayerMask.NameToLayer(PreviewLayer);
         if (layer < 0) return;
-        foreach (Camera cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Camera cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
             cam.cullingMask &= ~(1 << layer);
     }
 

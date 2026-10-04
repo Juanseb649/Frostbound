@@ -290,6 +290,15 @@ public class Equipment : MonoBehaviour
 
     // ----- Estadísticas y modelo -----
 
+    // Suma de un afijo en todo el equipo puesto (sin contar lo roto).
+    public float AffixSum(AffixKind kind)
+    {
+        float total = 0f;
+        foreach (ItemStack s in _equipped.Values)
+            if (s != null && s.item != null && !s.IsBroken) total += s.AffixSum(kind);
+        return total;
+    }
+
     public void Apply()
     {
         Recalculate();
@@ -318,6 +327,14 @@ public class Equipment : MonoBehaviour
                     if (r != null && r.runeEffect == RuneEffect.Sharpness) d *= 1f + r.runePower;
             damage += d;
             if (item.armorSet != null) sets.Add(item.armorSet);
+
+            // Afijos del botín (spec §5.5).
+            bonus.Add(StatType.Strength, Mathf.RoundToInt(s.AffixSum(AffixKind.Strength)));
+            bonus.Add(StatType.Mana, Mathf.RoundToInt(s.AffixSum(AffixKind.Mana)));
+            bonus.Add(StatType.Agility, Mathf.RoundToInt(s.AffixSum(AffixKind.Agility)));
+            bonus.Add(StatType.Health, Mathf.RoundToInt(s.AffixSum(AffixKind.Health)));
+            armor += Mathf.RoundToInt(s.AffixSum(AffixKind.Armor));
+            damage += s.AffixSum(AffixKind.Damage);
         }
 
         foreach (ArmorSet set in sets)

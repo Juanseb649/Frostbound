@@ -19,7 +19,7 @@ public static class SetupWeapons
     private const string WeaponItemDir = ItemDir + "/Weapons";
     private const string RuneItemDir = ItemDir + "/Runes";
     private const string DatabasePath = ItemDir + "/ItemDatabase.asset";
-    private const string ScenePath = "Assets/Scenes/SampleScene.unity";
+    private const string ScenePath = SceneIds.VillagePath;
 
     private static readonly Dictionary<string, Color> Colors = new Dictionary<string, Color>
     {

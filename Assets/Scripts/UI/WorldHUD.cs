@@ -13,13 +13,15 @@ public class WorldHUD : MonoBehaviour
     private static readonly List<NameTag> Tags = new List<NameTag>();
 
     [Header("Fuentes y sprites")]
-    public TMP_FontAsset nameFont;
-    public TMP_FontAsset textFont;
-    public TMP_FontAsset subFont;
-    public Sprite roundSprite;
-    public Sprite bubbleSprite;
-    public Sprite tailSprite;
-    public Sprite pillSprite;
+    public UISkin skin;
+
+    private TMP_FontAsset nameFont => skin.nunito800;
+    private TMP_FontAsset textFont => skin.nunito700;
+    private TMP_FontAsset subFont => skin.nunito500;
+    private Sprite roundSprite => skin.round12;
+    private Sprite bubbleSprite => skin.round16;
+    private Sprite tailSprite => skin.diamond;
+    private Sprite pillSprite => skin.pill;
 
     [Header("Nombres")]
     public Color nameColor = new Color(0.07f, 0.13f, 0.24f);
@@ -63,7 +65,7 @@ public class WorldHUD : MonoBehaviour
 
     private readonly Dictionary<NameTag, Label> _labels = new Dictionary<NameTag, Label>();
     private readonly List<NameTag> _scratch = new List<NameTag>();
-    private RectTransform _canvasRt, _namesLayer, _itemLayer, _numbersLayer, _bubbleLayer, _menuLayer, _toastLayer;
+    private RectTransform _canvasRt, _namesLayer, _itemLayer, _numbersLayer, _bubbleLayer, _menuLayer;
 
     private class PopupEntry
     {
@@ -98,9 +100,6 @@ public class WorldHUD : MonoBehaviour
     private float _menuOpenedAt;
     private readonly List<System.Action> _menuActions = new List<System.Action>();
 
-    private CanvasGroup _toast;
-    private TextMeshProUGUI _toastText;
-    private float _toastUntil;
 
     void Awake()
     {
@@ -108,7 +107,6 @@ public class WorldHUD : MonoBehaviour
         BuildCanvas();
         BuildBubble();
         BuildMenu();
-        BuildToast();
     }
 
     void OnDestroy()
@@ -137,7 +135,6 @@ public class WorldHUD : MonoBehaviour
         _numbersLayer = Layer("Numeros");
         _bubbleLayer = Layer("Globos");
         _menuLayer = Layer("Menu");
-        _toastLayer = Layer("Avisos");
     }
 
     private RectTransform Layer(string layerName)
@@ -256,22 +253,6 @@ public class WorldHUD : MonoBehaviour
         _menu.gameObject.SetActive(false);
     }
 
-    private void BuildToast()
-    {
-        RectTransform rt = Rect("Aviso", _toastLayer);
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
-        rt.pivot = new Vector2(0.5f, 0f);
-        rt.anchoredPosition = new Vector2(0f, 90f);
-        rt.sizeDelta = new Vector2(360f, 44f);
-        _toast = rt.gameObject.AddComponent<CanvasGroup>();
-        _toast.blocksRaycasts = false;
-        Image bg = Img(rt, "Fondo", pillSprite != null ? pillSprite : roundSprite, new Color(FrostboundUI.Surface.r, FrostboundUI.Surface.g, FrostboundUI.Surface.b, 0.92f));
-        Stretch(bg.rectTransform, 0f);
-        _toastText = Text(rt, "Texto", textFont, 16f, FrostboundUI.Text, TextAlignmentOptions.Center);
-        Stretch(_toastText.rectTransform, 8f);
-        _toast.alpha = 0f;
-    }
-
     // ---------- API ----------
 
     public void Say(Transform speaker, float height, string text, float seconds)
@@ -290,14 +271,6 @@ public class WorldHUD : MonoBehaviour
         UpdateBubble();
     }
 
-    public void Toast(string text)
-    {
-        _toastText.text = text;
-        Vector2 pref = _toastText.GetPreferredValues(text);
-        ((RectTransform)_toast.transform).sizeDelta = new Vector2(pref.x + 48f, 44f);
-        _toastUntil = Time.time + 2.2f;
-    }
-
     public void OpenMenu(NPCInteractable npc)
     {
         if (npc == null) return;
@@ -314,7 +287,8 @@ public class WorldHUD : MonoBehaviour
 
         GameObject first = null;
         int index = 1;
-        foreach (NPCOption option in npc.options)
+        List<NPCOption> available = npc.AvailableOptions();
+        foreach (NPCOption option in available)
         {
             NPCOption o = option;
             GameObject b = MenuButton(index, NPCInteractable.Label(o), () => npc.Choose(o));
@@ -323,7 +297,7 @@ public class WorldHUD : MonoBehaviour
         }
         MenuButton(index, "Adiós", CloseMenu);
 
-        int buttons = npc.options.Count + 1;
+        int buttons = available.Count + 1;
         bool hasRole = !string.IsNullOrEmpty(npc.role);
         float height = 12f + 26f + 6f + (hasRole ? 18f + 6f : 0f) + 1f + 6f + 4f + buttons * 38f + (buttons - 1) * 6f + 14f;
         _menu.sizeDelta = new Vector2(240f, height);
@@ -385,9 +359,6 @@ public class WorldHUD : MonoBehaviour
         UpdateBubble();
         UpdateMenu();
         UpdateMenuKeys();
-
-        float a = Time.time < _toastUntil ? 1f : 0f;
-        _toast.alpha = Mathf.MoveTowards(_toast.alpha, a, Time.deltaTime / FrostboundUI.FadeDuration);
     }
 
     private bool ToCanvas(Vector3 world, out Vector2 local)

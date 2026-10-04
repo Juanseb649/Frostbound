@@ -2,10 +2,10 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// Tools > Frostbound > Agregar rodar al jugador: añade PlayerDodge al Player de SampleScene.
+// Tools > Frostbound > Agregar rodar al jugador: añade PlayerDodge al Player del poblado.
 public static class SetupDodge
 {
-    private const string ScenePath = "Assets/Scenes/SampleScene.unity";
+    private const string ScenePath = SceneIds.VillagePath;
 
     [MenuItem("Tools/Frostbound/Agregar rodar al jugador")]
     public static void Setup()

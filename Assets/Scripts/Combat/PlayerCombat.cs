@@ -47,7 +47,6 @@ public class PlayerCombat : MonoBehaviour
     private PenguinRigAnimator _rig;
     private WeaponHolder _holder;
     private PlayerDodge _dodge;
-    private GameHUD _hud;
     private Camera _cam;
 
     private float _readyAt;
@@ -148,7 +147,7 @@ public class PlayerCombat : MonoBehaviour
         {
             float baseSpeed = HasWeapon ? Weapon.item.attackSpeed : unarmedAttackSpeed;
             float swift = _eq.RunePower(RuneEffect.Swiftness);
-            return baseSpeed * (1f + _stats.Agility * agilityAttackSpeed) * (1f + swift);
+            return baseSpeed * (1f + _stats.Agility * agilityAttackSpeed) * (1f + swift) * (1f + _eq.AffixSum(AffixKind.AttackSpeed));
         }
     }
 
@@ -217,7 +216,7 @@ public class PlayerCombat : MonoBehaviour
             if (Time.time > _brokenNoticeAt)
             {
                 _brokenNoticeAt = Time.time + 3f;
-                Hud()?.ShowMessage(weapon.item.displayName + " está rota: no hace daño. Llévala al herrero.", FrostboundUI.Negative);
+                Notifications.Show(weapon.item.displayName + " está rota: no hace daño. Llévala al herrero.", FrostboundUI.Negative);
             }
             return;
         }
@@ -276,6 +275,10 @@ public class PlayerCombat : MonoBehaviour
         target.TakeHit(new DamageInfo { amount = damage, type = DamageType.Physical, source = gameObject, direction = dir, critical = critical });
 
         if (weapon == null || weapon.IsBroken) return;
+        float steal = weapon.AffixSum(AffixKind.Lifesteal);
+        if (steal > 0f) _stats.Heal(damage * steal);
+        float frost = weapon.AffixSum(AffixKind.FrostChance);
+        if (frost > 0f && Random.value < frost) target.ApplySlow(0.35f, 2f);
         foreach (ItemDefinition rune in weapon.runes)
         {
             if (rune == null) continue;
@@ -353,7 +356,7 @@ public class PlayerCombat : MonoBehaviour
 
     private void OnWeaponBroke(ItemStack weapon)
     {
-        Hud()?.ShowMessage("¡" + weapon.item.displayName + " se rompió! Llévala al herrero.", FrostboundUI.Negative);
+        Notifications.Show("¡" + weapon.item.displayName + " se rompió! Llévala al herrero.", FrostboundUI.Negative);
     }
 
     void LateUpdate()
@@ -363,14 +366,9 @@ public class PlayerCombat : MonoBehaviour
         if (!_lowWarned && w.Durability01 <= 0.2f && !w.IsBroken)
         {
             _lowWarned = true;
-            Hud()?.ShowMessage(w.item.displayName + " está a punto de romperse", FrostboundUI.Gold);
+            Notifications.Show(w.item.displayName + " está a punto de romperse", FrostboundUI.Gold);
         }
         if (w.Durability01 > 0.2f) _lowWarned = false;
     }
 
-    private GameHUD Hud()
-    {
-        if (_hud == null) _hud = FindAnyObjectByType<GameHUD>();
-        return _hud;
-    }
 }
