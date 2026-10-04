@@ -32,8 +32,11 @@ public class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     private readonly List<Image> _pips = new List<Image>();
 
     // Barra de durabilidad (solo si está gastada) y rombos de las ranuras de runa.
+    private ItemStack _stack;
+
     public void ShowState(ItemStack s)
     {
+        _stack = s;
         bool durable = s != null && s.item != null && s.item.HasDurability;
         if (durable || _durBg != null)
         {
@@ -124,6 +127,7 @@ public class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     {
         Color b = Item != null ? FrostboundUI.Rarity(Item.rarity) : FrostboundUI.Border;
         if (Item != null && Item.rarity == ItemRarity.Common) b = FrostboundUI.Border;
+        if (Item != null && _stack != null && _stack.item == Item && _stack.quality > LootQuality.Normal) b = _stack.DisplayColor;
         if (Selected) b = FrostboundUI.Ice;
         else if (_hover) b = Color.Lerp(b, FrostboundUI.Ice, 0.6f);
         border.color = b;

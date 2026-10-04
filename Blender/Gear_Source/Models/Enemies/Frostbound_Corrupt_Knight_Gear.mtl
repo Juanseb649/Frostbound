@@ -1,0 +1,89 @@
+newmtl Corrupt_Knight_Steel
+Kd 0.2941 0.3216 0.3686
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Knight_Iron
+Kd 0.1882 0.2118 0.2588
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Knight_Gold
+Kd 0.3647 0.3490 0.3059
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Knight_Cloth
+Kd 0.1608 0.1961 0.2588
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Knight_Leather
+Kd 0.1686 0.1686 0.1922
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Knight_Slit
+Kd 0.9333 0.9569 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.6157 0.7333 1.0000
+
+newmtl Corrupt_Knight_Frost
+Kd 0.4353 0.6588 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.1216 0.3098 0.8196
+
+newmtl Corrupt_Crust
+Kd 0.1059 0.1647 0.2667
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.0392 0.1020 0.2275
+
+newmtl Corrupt_Frost
+Kd 0.7255 0.8275 0.9333
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Corrupt_Crystal
+Kd 0.4353 0.6588 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.1216 0.3098 0.8196
+
+newmtl Corrupt_EyeCore
+Kd 0.9333 0.9569 1.0000
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.6157 0.7333 1.0000
+
+newmtl Corrupt_EyeCobalt
+Kd 0.1216 0.3098 0.8196
+Ka 0 0 0
+Ks 0 0 0
+d 1
+illum 1
+Ke 0.1216 0.3098 0.8196

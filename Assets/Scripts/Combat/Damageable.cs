@@ -72,6 +72,39 @@ public class Damageable : MonoBehaviour
 
     public Vector3 PopupPoint => transform.position + Vector3.up * popupHeight;
 
+    // Vida llena (al aparecer o al volver a su campamento).
+    public void ResetHealth()
+    {
+        Health = maxHealth;
+        IsDead = false;
+    }
+
+    public void Heal(float amount)
+    {
+        if (IsDead) return;
+        Health = Mathf.Min(maxHealth, Health + amount);
+    }
+
+    // Vuelve a leer los colores base (por ejemplo, después de teñir el plumaje con PenguinAppearance).
+    public void RefreshBaseColors()
+    {
+        if (visual == null) return;
+        _renderers = visual.GetComponentsInChildren<Renderer>();
+        _baseColors = new Color[_renderers.Length][];
+        for (int i = 0; i < _renderers.Length; i++) _baseColors[i] = new Color[_renderers[i].sharedMaterials.Length];
+        var block = new MaterialPropertyBlock();
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            if (_renderers[i] == null) continue;
+            _renderers[i].GetPropertyBlock(block);
+            bool tinted = block.HasColor(BaseColorId);
+            Color tint = tinted ? block.GetColor(BaseColorId) : Color.white;
+            Material[] mats = _renderers[i].sharedMaterials;
+            for (int m = 0; m < mats.Length && m < _baseColors[i].Length; m++)
+                _baseColors[i][m] = tinted ? tint : (mats[m] != null && mats[m].HasProperty(BaseColorId) ? mats[m].GetColor(BaseColorId) : Color.white);
+        }
+    }
+
     public void TakeHit(DamageInfo info)
     {
         if (IsDead || info.amount <= 0f) return;

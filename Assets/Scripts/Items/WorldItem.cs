@@ -14,8 +14,8 @@ public class WorldItem : MonoBehaviour
 
     public bool CanPickUp => Time.time - _spawnTime > pickupDelay;
     public string Label => stack == null || stack.item == null ? "" :
-        stack.item.displayName + (stack.quantity > 1 ? " ×" + stack.quantity : "") + (stack.IsBroken ? " (rota)" : "");
-    public Color LabelColor => stack == null || stack.item == null ? Color.white : FrostboundUI.Rarity(stack.item.rarity);
+        stack.DisplayName + (stack.quantity > 1 ? " ×" + stack.quantity : "") + (stack.IsBroken ? " (rota)" : "");
+    public Color LabelColor => stack == null || stack.item == null ? Color.white : stack.DisplayColor;
     public bool Highlighted { get; set; }
 
     private Rigidbody _rb;
@@ -90,12 +90,22 @@ public class WorldItem : MonoBehaviour
             box.size = new Vector3(size, size, 0.05f);
         }
 
+        if (LootQualityInfo.HasBeam(stack)) AddBeam(stack.DisplayColor);
+
         _rb = gameObject.AddComponent<Rigidbody>();
         _rb.mass = 1f;
         _rb.linearDamping = 0.1f;
         _rb.angularDamping = 0.6f;
         _rb.interpolation = RigidbodyInterpolation.Interpolate;
         _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+    }
+
+    // Haz de luz vertical del color de la rareza (raro o superior). No gira con el objeto.
+    private void AddBeam(Color color)
+    {
+        var go = new GameObject("Haz");
+        go.transform.SetParent(transform, false);
+        go.AddComponent<LootBeam>().Init(color);
     }
 
     // Pieza de armadura tal como se ve puesta (casco, peto, botas...), en vez del icono.

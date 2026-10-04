@@ -113,3 +113,7 @@ InitTestScene*.unity*
 # Canal de comandos del editor (local)
 /FrostboundBridge/
 /Captures/
+
+# Escenas de recuperación que Unity crea tras un cierre inesperado
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta

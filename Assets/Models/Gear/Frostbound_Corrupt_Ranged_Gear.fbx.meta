@@ -1,0 +1,519 @@
+fileFormatVersion: 2
+guid: 3092ccc2078e0e140b4bd0086211970e
+ModelImporter:
+  serializedVersion: 24501
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Bronze
+    second: {fileID: 2100000, guid: fd83aacb877ec5a46937eaa88a80c3d2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Fur
+    second: {fileID: 2100000, guid: 08e6321af20c3e8489d6ea92e17ea49e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_FurLight
+    second: {fileID: 2100000, guid: d723f5ff6cdd80d4faa444a0fa06ca24, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Horn
+    second: {fileID: 2100000, guid: cd94668a4b55c8e4586cb60ced9db2fc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Ice
+    second: {fileID: 2100000, guid: 29bbc70e037cd5947825400e6e1fe3b1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Iron
+    second: {fileID: 2100000, guid: 2a5a9ac18cf6ff746bf6865617eb91b4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Kilt
+    second: {fileID: 2100000, guid: 3483fbc4dda3041428ed1e6981306f37, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Leather
+    second: {fileID: 2100000, guid: 3ac856155e34c77489b6a96426fa1479, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Barb_Wood
+    second: {fileID: 2100000, guid: 9af1bd004026cce48b9f7547047321f1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Bronze
+    second: {fileID: 2100000, guid: 898c911ec60c2844c9bc5f0b4962d117, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Fur
+    second: {fileID: 2100000, guid: f6d58fe512897324db255a273d0d16f1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_FurLight
+    second: {fileID: 2100000, guid: 3afca38f670774240b18faf02d23a47b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Horn
+    second: {fileID: 2100000, guid: df505545afaaf86479081599ed68962d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Ice
+    second: {fileID: 2100000, guid: c960101247940d5438a2a7579453ce11, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Iron
+    second: {fileID: 2100000, guid: 955cafc087687fb40aa74beb0fe08905, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Kilt
+    second: {fileID: 2100000, guid: eee012597930fca47889b17a1231a9d8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Leather
+    second: {fileID: 2100000, guid: ed3ffc5618bd55b498e20f856bd3fc1b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Wood
+    second: {fileID: 2100000, guid: 9aebfa5cec821ee45a54ea8dc8a354d7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Crust
+    second: {fileID: 2100000, guid: acc003834b423834989d9aec1a97d422, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Crystal
+    second: {fileID: 2100000, guid: 83f9186547be17a4eb12ad809438a1b9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_EyeCobalt
+    second: {fileID: 2100000, guid: cd6454c18833b2a42affe14bd5963c35, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_EyeCore
+    second: {fileID: 2100000, guid: 3e9c746e8e830444781150bbccf580ec, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Frost
+    second: {fileID: 2100000, guid: f658528648bac5d45be1cc22d85a7069, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_IceWeapon
+    second: {fileID: 2100000, guid: 90eb00770246866409e5caac5b4eff9b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Cloth
+    second: {fileID: 2100000, guid: 79da0859345ccb74e8521851cb87ed5e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Frost
+    second: {fileID: 2100000, guid: 7c7e0d314644b1f4b88f4c2f376b89c3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Gold
+    second: {fileID: 2100000, guid: d973ad5143e863f47876e8ddc8a51e53, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Iron
+    second: {fileID: 2100000, guid: 2cd19203200f4104ea24a853d1cf6718, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Leather
+    second: {fileID: 2100000, guid: 202ae4ae1d63b2746b874df0b0539c57, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Slit
+    second: {fileID: 2100000, guid: 78a2593b7f5f35f4d97fef9077f31546, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Steel
+    second: {fileID: 2100000, guid: 33478149f819fd546b2a3c457144c7f1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Leather
+    second: {fileID: 2100000, guid: 1738fcb96650e5246b9b548a9c3e8ac6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Beard
+    second: {fileID: 2100000, guid: 414ff44b43407684b8dcbcf8e8458b97, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Cloak
+    second: {fileID: 2100000, guid: 47b87c7faf788844d8bd2bce6a9daad2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Crystal
+    second: {fileID: 2100000, guid: 7841a6c178b101f49854ac821a42beb3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Leather
+    second: {fileID: 2100000, guid: af7b16d947c09f3458ff41cb814ff591, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Patch
+    second: {fileID: 2100000, guid: 0d3d962ca6e91a54bb0de229fb60a40b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Robe
+    second: {fileID: 2100000, guid: a419ceddb392c3e47912de7bebe04bdc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Silver
+    second: {fileID: 2100000, guid: fa69871b0859d8e4ba789679cae15b95, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Wood
+    second: {fileID: 2100000, guid: d15dba086ccc0d940bdadda0f2874f92, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Black
+    second: {fileID: 2100000, guid: a017269784744e24db9a7be97af03cfc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Charcoal
+    second: {fileID: 2100000, guid: b21e46fc6a7525c45a4531a0c7323aae, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Cord
+    second: {fileID: 2100000, guid: 04edcac40819d704b90e3b680413c298, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_DarkSteel
+    second: {fileID: 2100000, guid: 92786cb0b39565e4bb4f2dd8d2296035, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_IceEdge
+    second: {fileID: 2100000, guid: 415f286e2b2694c42bd02d98d64881b5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Steel
+    second: {fileID: 2100000, guid: 8057fa34ad45efb48a1670320d074f8c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Rag
+    second: {fileID: 2100000, guid: e2cad11b402fcc04ebed04321b8fd45b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_String
+    second: {fileID: 2100000, guid: 22b33af8ffae6de49a206c22dbf7d465, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Wood
+    second: {fileID: 2100000, guid: 906ebf8e0e775bd4297537c3131653c7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Cloth
+    second: {fileID: 2100000, guid: f5defdb82cd1e4b4d9fb924bc7383e01, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Frost
+    second: {fileID: 2100000, guid: 41ac741f9b8a43f4ea79ffd27c09bc1f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Gold
+    second: {fileID: 2100000, guid: 3b1ad3be51fb5c248a71929c9310165e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Iron
+    second: {fileID: 2100000, guid: 64886897253b0124b816b16dc786237b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Leather
+    second: {fileID: 2100000, guid: feb4715541a1a4a489b3f4a88f354f4c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Slit
+    second: {fileID: 2100000, guid: d75d486624c87994396587db97f9366d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Knight_Steel
+    second: {fileID: 2100000, guid: 1da7195f86be0bf40aad7601c25c86e9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Beard
+    second: {fileID: 2100000, guid: 3526a5061f9a41a45ac6082198628907, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Cloak
+    second: {fileID: 2100000, guid: 0dd94b8f18f72f44ba72068ea09a966e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Crystal
+    second: {fileID: 2100000, guid: 5026981123183df42a4f2ad390ec14db, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Leather
+    second: {fileID: 2100000, guid: 2da4a494132a2934ca0a8e2e546506e5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Patch
+    second: {fileID: 2100000, guid: 84532463b4211654cbb462267aee2480, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Robe
+    second: {fileID: 2100000, guid: 54c8b8cde32372c489f8ba19c6a6a221, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Silver
+    second: {fileID: 2100000, guid: b7b259eb878820a46975219f08ddc466, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Wood
+    second: {fileID: 2100000, guid: 874871cc6bf50284ebb24623b0833944, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ninja_Black
+    second: {fileID: 2100000, guid: 976a332fe77ecab43a80849333a95a3d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ninja_Charcoal
+    second: {fileID: 2100000, guid: 14b8854b593112b4fa9b5d553d0a25a6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ninja_Cord
+    second: {fileID: 2100000, guid: 28ed49fbec1e0144db3401ff27a42061, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ninja_DarkSteel
+    second: {fileID: 2100000, guid: e3b0c6b2e70a30c4691e666d351bb0b1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ninja_IceEdge
+    second: {fileID: 2100000, guid: 74dee6250497870409b455472ab9e95d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ninja_Steel
+    second: {fileID: 2100000, guid: 5b23eb653533ab64484abed45ed52552, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Coat
+    second: {fileID: 2100000, guid: 344b8b53d9f59a844b401dd595a565e9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_CoatEdge
+    second: {fileID: 2100000, guid: a9e673cf94e70604e90e2904e2ed92f6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Crystal
+    second: {fileID: 2100000, guid: 7032f0088ad575c4db0454e3704e9669, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Frame
+    second: {fileID: 2100000, guid: 06e95aa762fb74746afe90aaacd18240, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Guitar
+    second: {fileID: 2100000, guid: f5d611eac5e8bf04cb99b45be50291f4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Hair
+    second: {fileID: 2100000, guid: 0a800533ee4fca24ebe2d13baa0fe50f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_HairDark
+    second: {fileID: 2100000, guid: 0ae4d74fc7d47c04080cb5d41d5e75d0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_HairSolid
+    second: {fileID: 2100000, guid: 206d7cbb03220194a9e47813f60517d4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Lens
+    second: {fileID: 2100000, guid: 67e8d220045960e40a420bb4e44c4b87, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Silver
+    second: {fileID: 2100000, guid: 539e7f13d5a551f4fbe4557be6df844a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rocker_Strap
+    second: {fileID: 2100000, guid: 3474da063cd71ee4081d9906c4e3519c, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 2
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 0
+  referencedClips: []
+  importAnimation: 0
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

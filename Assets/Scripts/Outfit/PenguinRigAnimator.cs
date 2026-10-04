@@ -142,7 +142,10 @@ public class PenguinRigAnimator : MonoBehaviour
 
     // ---------- API para otros sistemas (emotes, NPC, cinemáticas) ----------
 
-    public void PlayAction(IdleAction action)
+    // Los derivados (PenguinLocomotionAnimator) pueden quedarse solo con la locomoción.
+    protected virtual bool AllowsIdleActions => true;
+
+    public virtual void PlayAction(IdleAction action)
     {
         if (action == IdleAction.None) return;
         _action = action;
@@ -151,13 +154,13 @@ public class PenguinRigAnimator : MonoBehaviour
     }
 
     // Pose de las aletas al llevar un arma (WeaponHolder la fija al equipar).
-    public void SetWeaponPose(bool armed, WeaponGrip grip, Vector3 tipRest)
+    public virtual void SetWeaponPose(bool armed, WeaponGrip grip, Vector3 tipRest)
     {
         _tipRest = tipRest.sqrMagnitude > 0.001f ? tipRest.normalized : Vector3.up;
         SetWeaponPose(armed, grip);
     }
 
-    public void SetWeaponPose(bool armed, WeaponGrip grip)
+    public virtual void SetWeaponPose(bool armed, WeaponGrip grip)
     {
         _armed = armed;
         _grip = grip;
@@ -165,7 +168,7 @@ public class PenguinRigAnimator : MonoBehaviour
 
     // Golpe o disparo: la duración es la de un ataque completo.
     // Combo de espada estilo Prince of Persia: 1 tajo derecha→izquierda, 2 tajo izquierda→derecha agachado, 3 giro de 360°.
-    public void PlaySwordCombo(int step, float duration)
+    public virtual void PlaySwordCombo(int step, float duration)
     {
         PlayAttack(duration);
         _comboStep = Mathf.Clamp(step, 1, 3);
@@ -173,7 +176,7 @@ public class PenguinRigAnimator : MonoBehaviour
 
     public int ComboStep => _comboStep;
 
-    public void PlayAttack(float duration)
+    public virtual void PlayAttack(float duration)
     {
         _comboStep = 0;
         _attackDuration = Mathf.Max(0.12f, duration);
@@ -184,6 +187,12 @@ public class PenguinRigAnimator : MonoBehaviour
     }
 
     public bool IsAttacking => _attackTime < _attackDuration;
+
+    // Capa extra de pose para los derivados. Ángulos en grados; extraCrouch en metros.
+    protected virtual void ModifyPose(ref float swingL, ref float swingR, ref float outL, ref float outR,
+        ref float spineYaw, ref float headPitch, ref float headRoll, ref float lean, ref float extraCrouch) { }
+
+    protected static float SmoothStep01(float a, float b, float x) => Smooth(a, b, x);
 
     public static float ActionDuration(IdleAction action)
     {
@@ -219,7 +228,7 @@ public class PenguinRigAnimator : MonoBehaviour
         else
         {
             _idleTime += dt;
-            if (enableIdleActions && _action == IdleAction.None && _idleTime >= _nextActionAt)
+            if (enableIdleActions && AllowsIdleActions && _action == IdleAction.None && _idleTime >= _nextActionAt)
             {
                 float roll = Random.value;
                 PlayAction(roll < 0.65f ? IdleAction.Search : roll < 0.85f ? IdleAction.FootTap : IdleAction.Shrug);
@@ -381,8 +390,11 @@ public class PenguinRigAnimator : MonoBehaviour
             _comboArmWeight = cw;
         }
         else _comboArmWeight = 0f;
+
+        float extraCrouch = 0f;
+        ModifyPose(ref swingL, ref swingR, ref outL, ref outR, ref spineYaw, ref headPitch, ref headRoll, ref lean, ref extraCrouch);
         if (_hips != null)
-            _hips.t.position = transform.TransformPoint(_hips.restPos + Vector3.down * (crouchDepth * combo.crouch * combo.weight));
+            _hips.t.position = transform.TransformPoint(_hips.restPos + Vector3.down * (crouchDepth * combo.crouch * combo.weight + extraCrouch));
 
         Quaternion spineDelta = Quaternion.AngleAxis(spineYaw, Vector3.up);
         SetRot(_spine, spineDelta * Quaternion.Euler(lean, 0f, 0f));
