@@ -147,7 +147,7 @@ public class PlayerCombat : MonoBehaviour
         {
             float baseSpeed = HasWeapon ? Weapon.item.attackSpeed : unarmedAttackSpeed;
             float swift = _eq.RunePower(RuneEffect.Swiftness);
-            return baseSpeed * (1f + _stats.Agility * agilityAttackSpeed) * (1f + swift);
+            return baseSpeed * (1f + _stats.Agility * agilityAttackSpeed) * (1f + swift) * (1f + _eq.AffixSum(AffixKind.AttackSpeed));
         }
     }
 
@@ -275,6 +275,10 @@ public class PlayerCombat : MonoBehaviour
         target.TakeHit(new DamageInfo { amount = damage, type = DamageType.Physical, source = gameObject, direction = dir, critical = critical });
 
         if (weapon == null || weapon.IsBroken) return;
+        float steal = weapon.AffixSum(AffixKind.Lifesteal);
+        if (steal > 0f) _stats.Heal(damage * steal);
+        float frost = weapon.AffixSum(AffixKind.FrostChance);
+        if (frost > 0f && Random.value < frost) target.ApplySlow(0.35f, 2f);
         foreach (ItemDefinition rune in weapon.runes)
         {
             if (rune == null) continue;

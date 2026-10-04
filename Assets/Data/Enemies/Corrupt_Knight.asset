@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80759fd820ee7244cb7ab91a3dd0137f, type: 3}
+  m_Name: Corrupt_Knight
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDefinition
+  id: Corrupt_Knight
+  displayName: Caballero corrupto por el Frost
+  prefab: {fileID: 6442747888653486596, guid: daff689bbb78129448b70f4e45f71c8f, type: 3}
+  gear: {fileID: 11400000, guid: 70f49f3d3b8f92f479c7f7f81e3f0784, type: 2}
+  elite: 1
+  maxHealth: 225
+  damage: {x: 9, y: 12}
+  moveSpeed: 2.8
+  experience: 54
+  ranged: 0
+  attackRange: 2
+  windup: 1
+  cooldown: 3.2
+  hitsPerAttack: 1
+  areaRadius: 0
+  projectileSpeed: 14
+  projectileMaterial: {fileID: 2100000, guid: 90eb00770246866409e5caac5b4eff9b, type: 2}
+  preferredDistance: {x: 6, y: 9}
+  sightRange: 10
+  lootPicks: 3

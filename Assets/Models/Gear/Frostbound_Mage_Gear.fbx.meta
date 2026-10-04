@@ -52,6 +52,206 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Bronze
+    second: {fileID: 2100000, guid: 898c911ec60c2844c9bc5f0b4962d117, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Fur
+    second: {fileID: 2100000, guid: f6d58fe512897324db255a273d0d16f1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_FurLight
+    second: {fileID: 2100000, guid: 3afca38f670774240b18faf02d23a47b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Horn
+    second: {fileID: 2100000, guid: df505545afaaf86479081599ed68962d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Ice
+    second: {fileID: 2100000, guid: c960101247940d5438a2a7579453ce11, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Iron
+    second: {fileID: 2100000, guid: 955cafc087687fb40aa74beb0fe08905, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Kilt
+    second: {fileID: 2100000, guid: eee012597930fca47889b17a1231a9d8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Leather
+    second: {fileID: 2100000, guid: ed3ffc5618bd55b498e20f856bd3fc1b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Barb_Wood
+    second: {fileID: 2100000, guid: 9aebfa5cec821ee45a54ea8dc8a354d7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Crust
+    second: {fileID: 2100000, guid: acc003834b423834989d9aec1a97d422, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Crystal
+    second: {fileID: 2100000, guid: 83f9186547be17a4eb12ad809438a1b9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_EyeCobalt
+    second: {fileID: 2100000, guid: cd6454c18833b2a42affe14bd5963c35, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_EyeCore
+    second: {fileID: 2100000, guid: 3e9c746e8e830444781150bbccf580ec, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Frost
+    second: {fileID: 2100000, guid: f658528648bac5d45be1cc22d85a7069, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_IceWeapon
+    second: {fileID: 2100000, guid: 90eb00770246866409e5caac5b4eff9b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Cloth
+    second: {fileID: 2100000, guid: 79da0859345ccb74e8521851cb87ed5e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Frost
+    second: {fileID: 2100000, guid: 7c7e0d314644b1f4b88f4c2f376b89c3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Gold
+    second: {fileID: 2100000, guid: d973ad5143e863f47876e8ddc8a51e53, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Iron
+    second: {fileID: 2100000, guid: 2cd19203200f4104ea24a853d1cf6718, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Leather
+    second: {fileID: 2100000, guid: 202ae4ae1d63b2746b874df0b0539c57, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Slit
+    second: {fileID: 2100000, guid: 78a2593b7f5f35f4d97fef9077f31546, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Knight_Steel
+    second: {fileID: 2100000, guid: 33478149f819fd546b2a3c457144c7f1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Leather
+    second: {fileID: 2100000, guid: 1738fcb96650e5246b9b548a9c3e8ac6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Beard
+    second: {fileID: 2100000, guid: 414ff44b43407684b8dcbcf8e8458b97, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Cloak
+    second: {fileID: 2100000, guid: 47b87c7faf788844d8bd2bce6a9daad2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Crystal
+    second: {fileID: 2100000, guid: 7841a6c178b101f49854ac821a42beb3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Leather
+    second: {fileID: 2100000, guid: af7b16d947c09f3458ff41cb814ff591, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Patch
+    second: {fileID: 2100000, guid: 0d3d962ca6e91a54bb0de229fb60a40b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Robe
+    second: {fileID: 2100000, guid: a419ceddb392c3e47912de7bebe04bdc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Silver
+    second: {fileID: 2100000, guid: fa69871b0859d8e4ba789679cae15b95, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Mage_Wood
+    second: {fileID: 2100000, guid: d15dba086ccc0d940bdadda0f2874f92, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Black
+    second: {fileID: 2100000, guid: a017269784744e24db9a7be97af03cfc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Charcoal
+    second: {fileID: 2100000, guid: b21e46fc6a7525c45a4531a0c7323aae, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Cord
+    second: {fileID: 2100000, guid: 04edcac40819d704b90e3b680413c298, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_DarkSteel
+    second: {fileID: 2100000, guid: 92786cb0b39565e4bb4f2dd8d2296035, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_IceEdge
+    second: {fileID: 2100000, guid: 415f286e2b2694c42bd02d98d64881b5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Ninja_Steel
+    second: {fileID: 2100000, guid: 8057fa34ad45efb48a1670320d074f8c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Rag
+    second: {fileID: 2100000, guid: e2cad11b402fcc04ebed04321b8fd45b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_String
+    second: {fileID: 2100000, guid: 22b33af8ffae6de49a206c22dbf7d465, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Corrupt_Wood
+    second: {fileID: 2100000, guid: 906ebf8e0e775bd4297537c3131653c7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Knight_Cloth
     second: {fileID: 2100000, guid: f5defdb82cd1e4b4d9fb924bc7383e01, type: 2}
   - first:

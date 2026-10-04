@@ -28,6 +28,14 @@ MonoBehaviour:
   iconMana: {fileID: 21300000, guid: be878b4b34aea134d83540d5b396ad4c, type: 3}
   iconAgility: {fileID: 21300000, guid: a074fd58807e0074eb17d7905bca5bc2, type: 3}
   iconHealth: {fileID: 21300000, guid: 5982ec913c7aa7c47b4e4aadf86c3f4c, type: 3}
+  hudStatueLife: {fileID: 21300000, guid: fb62a733fc336aa4ca89f70c0dcdcd22, type: 3}
+  hudStatueMana: {fileID: 21300000, guid: fb662484e97d34645b5876ec00e0f9d6, type: 3}
+  hudOrbBack: {fileID: 21300000, guid: bb637eda4150ce148969a5c896938f4e, type: 3}
+  hudOrbFillLife: {fileID: 21300000, guid: 8d28e7c856e878d438e1a56fc13d14d7, type: 3}
+  hudOrbFillMana: {fileID: 21300000, guid: c842aa63944fc204084b869e8e02a202, type: 3}
+  hudOrbFrameLife: {fileID: 21300000, guid: f60c9334ba370644cbfad2bbf2ae2ac2, type: 3}
+  hudOrbFrameMana: {fileID: 21300000, guid: bf83a519555a67f40b8f4f5d4e9e2c60, type: 3}
+  hudBar: {fileID: 21300000, guid: 343464c4b9b25fb40ae183b8cabf81e1, type: 3}
   slotHead: {fileID: 21300000, guid: 2b613e4293990a34c9d33b2483e63708, type: 3}
   slotChest: {fileID: 21300000, guid: c7e5dcd234d009f4e83d3a95b616ff2d, type: 3}
   slotFeet: {fileID: 21300000, guid: 309ce91c80b10b040a2f8d8dcdbdef94, type: 3}

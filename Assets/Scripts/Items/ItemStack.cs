@@ -10,6 +10,11 @@ public class ItemStack
     [UnityEngine.Tooltip("Durabilidad actual. -1 = nueva (se llena al usarla por primera vez).")]
     public float durability = -1f;
     public List<ItemDefinition> runes = new List<ItemDefinition>();
+    [UnityEngine.Tooltip("Calidad con la que cayó (botín). None = objeto fijo.")]
+    public LootQuality quality = LootQuality.None;
+    public List<RolledAffix> affixes = new List<RolledAffix>();
+    [UnityEngine.Tooltip("Nombre generado de los objetos raros.")]
+    public string rareName = "";
 
     public ItemStack(ItemDefinition item, int quantity)
     {
@@ -22,11 +27,54 @@ public class ItemStack
     public int SpaceLeft => item == null ? 0 : item.maxStack - quantity;
 
     // Estado propio: no se apila con otras copias del mismo objeto.
-    public bool HasInstanceData => item != null && (item.HasDurability || item.runeSlots > 0);
+    public bool HasInstanceData => item != null && (item.HasDurability || item.runeSlots > 0 || quality != LootQuality.None);
+
+    public string DisplayName
+    {
+        get
+        {
+            if (item == null) return "";
+            switch (quality)
+            {
+                case LootQuality.Rare: return string.IsNullOrEmpty(rareName) ? item.displayName : rareName;
+                case LootQuality.Superior: return item.displayName + " superior";
+                case LootQuality.Worn: return item.displayName + " (desgastado)";
+                case LootQuality.Magic:
+                    string pre = "", suf = "";
+                    foreach (RolledAffix a in affixes)
+                    {
+                        if (LootRoller.IsPrefix(a.id)) pre = " " + LootRoller.AffixLabel(a.id);
+                        else suf = " " + LootRoller.AffixLabel(a.id);
+                    }
+                    return item.displayName + pre + suf;
+                default: return item.displayName;
+            }
+        }
+    }
+
+    public UnityEngine.Color DisplayColor
+    {
+        get
+        {
+            if (item == null) return UnityEngine.Color.white;
+            if (quality != LootQuality.None && quality != LootQuality.Normal) return LootQualityInfo.Color(quality);
+            if (item.IsRune) return LootQualityInfo.Rune;
+            return FrostboundUI.Rarity(item.rarity);
+        }
+    }
+
+    public float AffixSum(AffixKind kind)
+    {
+        float total = 0f;
+        if (affixes == null) return 0f;
+        foreach (RolledAffix a in affixes) if (a.kind == kind) total += a.value;
+        return total;
+    }
 
     public void EnsureInstance()
     {
         if (runes == null) runes = new List<ItemDefinition>();
+        if (affixes == null) affixes = new List<RolledAffix>();
         if (item != null && item.HasDurability && durability < 0f) durability = item.maxDurability;
     }
 
@@ -51,7 +99,9 @@ public class ItemStack
 
     public ItemStack Clone()
     {
-        var c = new ItemStack(item, quantity) { durability = durability };
+        var c = new ItemStack(item, quantity) { durability = durability, quality = quality, rareName = rareName };
+        c.affixes = new List<RolledAffix>();
+        if (affixes != null) foreach (RolledAffix a in affixes) c.affixes.Add(new RolledAffix(a.id, a.kind, a.value));
         c.runes = new List<ItemDefinition>(runes ?? new List<ItemDefinition>());
         return c;
     }

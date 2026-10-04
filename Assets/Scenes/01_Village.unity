@@ -3720,6 +3720,69 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 47499300}
   m_Mesh: {fileID: 4300000, guid: 648a84985ab43a949a5818338b8830bb, type: 2}
+--- !u!1 &47680605
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 47680606}
+  - component: {fileID: 47680607}
+  m_Layer: 0
+  m_Name: Campamento_Paso_Oeste
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &47680606
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 47680605}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -42, y: 0, z: 44}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &47680607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 47680605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552562a34ae5dfd4d9fe5483544333d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCamp
+  campId: Campamento_Paso_Oeste
+  melee: {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  ranged: {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  elites:
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  groupSize: {x: 4, y: 6}
+  rangedFraction: 0.3
+  eliteChance: 0.25
+  eliteMinPlayerLevel: 3
+  championChance: 0.05
+  monsterLevel: {x: 2, y: 3}
+  palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
+  radius: 5
+  activateDistance: 55
+  respawnSeconds: 150
+  respawnMinPlayerDistance: 70
 --- !u!1 &48277228
 GameObject:
   m_ObjectHideFlags: 0
@@ -40159,6 +40222,9 @@ MonoBehaviour:
     quantity: 1
     durability: 40
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &435521613
@@ -47671,6 +47737,69 @@ Transform:
   - {fileID: 1287797538}
   m_Father: {fileID: 605337407}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &533764555
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 533764556}
+  - component: {fileID: 533764557}
+  m_Layer: 0
+  m_Name: Campamento_Noreste
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &533764556
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 533764555}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 40, y: 0, z: 42}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &533764557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 533764555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552562a34ae5dfd4d9fe5483544333d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCamp
+  campId: Campamento_Noreste
+  melee: {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  ranged: {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  elites:
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  groupSize: {x: 4, y: 6}
+  rangedFraction: 0.3
+  eliteChance: 0.25
+  eliteMinPlayerLevel: 3
+  championChance: 0.05
+  monsterLevel: {x: 2, y: 3}
+  palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
+  radius: 5
+  activateDistance: 55
+  respawnSeconds: 150
+  respawnMinPlayerDistance: 70
 --- !u!1 &533956532
 GameObject:
   m_ObjectHideFlags: 0
@@ -48919,6 +49048,9 @@ MonoBehaviour:
     quantity: 1
     durability: -1
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &546760317
@@ -52464,6 +52596,52 @@ Transform:
   - {fileID: 1606714196}
   m_Father: {fileID: 605337407}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &584483380
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 584483381}
+  - component: {fileID: 584483382}
+  m_Layer: 0
+  m_Name: Zona_Segura_Campamento
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &584483381
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 584483380}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &584483382
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 584483380}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 018057aedfae8c24bb4432d7bc8f2a97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SafeZone
+  zoneName: Zona_Segura_Campamento
+  radius: 38
 --- !u!1 &584932473
 GameObject:
   m_ObjectHideFlags: 0
@@ -81149,6 +81327,70 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 945778118}
   m_Mesh: {fileID: 4300000, guid: 648a84985ab43a949a5818338b8830bb, type: 2}
+--- !u!1 &946530160
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 946530161}
+  - component: {fileID: 946530162}
+  m_Layer: 0
+  m_Name: NavMesh_Enemigos
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &946530161
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 946530160}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &946530162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 946530160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
+  m_SerializedVersion: 0
+  m_AgentTypeID: 0
+  m_CollectObjects: 1
+  m_Size: {x: 200, y: 16, z: 200}
+  m_Center: {x: 0, y: 4, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_UseGeometry: 1
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.16666667
+  m_MinRegionArea: 2
+  m_NavMeshData: {fileID: 23800000, guid: a226470e75919bd4da503d258831c62e, type: 2}
+  m_BuildHeightMesh: 0
 --- !u!1 &949475340
 GameObject:
   m_ObjectHideFlags: 0
@@ -81657,6 +81899,7 @@ GameObject:
   - component: {fileID: 952827400}
   - component: {fileID: 952827402}
   - component: {fileID: 952827403}
+  - component: {fileID: 952827404}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -81910,242 +82153,422 @@ MonoBehaviour:
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   - item: {fileID: 0}
     quantity: 0
     durability: 0
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
 --- !u!114 &952827402
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -82196,6 +82619,21 @@ MonoBehaviour:
   invulnerable: 1
   model: {fileID: 0}
   pivotHeight: -1
+--- !u!114 &952827404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 952827389}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18966a20c543ef84dbdd8a922d2b60fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerRespawn
+  respawnPoint: {fileID: 0}
+  delay: 2.5
+  durabilityLoss: 0.1
 --- !u!1 &955027714
 GameObject:
   m_ObjectHideFlags: 0
@@ -87801,6 +88239,69 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1033711140}
   m_Mesh: {fileID: 4300000, guid: 648a84985ab43a949a5818338b8830bb, type: 2}
+--- !u!1 &1034164163
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1034164164}
+  - component: {fileID: 1034164165}
+  m_Layer: 0
+  m_Name: Campamento_Sureste
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1034164164
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1034164163}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 45, y: 0, z: -40}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1034164165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1034164163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552562a34ae5dfd4d9fe5483544333d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCamp
+  campId: Campamento_Sureste
+  melee: {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  ranged: {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  elites:
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  groupSize: {x: 4, y: 5}
+  rangedFraction: 0.3
+  eliteChance: 0.1
+  eliteMinPlayerLevel: 3
+  championChance: 0.05
+  monsterLevel: {x: 1, y: 2}
+  palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
+  radius: 5
+  activateDistance: 55
+  respawnSeconds: 150
+  respawnMinPlayerDistance: 70
 --- !u!1 &1034653152
 GameObject:
   m_ObjectHideFlags: 0
@@ -89631,6 +90132,9 @@ MonoBehaviour:
     quantity: 1
     durability: -1
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &1060663916
@@ -91136,6 +91640,69 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1077454775}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1078134753
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1078134754}
+  - component: {fileID: 1078134755}
+  m_Layer: 0
+  m_Name: Campamento_Oeste
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1078134754
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1078134753}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -54, y: 0, z: 10}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1078134755
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1078134753}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552562a34ae5dfd4d9fe5483544333d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCamp
+  campId: Campamento_Oeste
+  melee: {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  ranged: {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  elites:
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  groupSize: {x: 4, y: 6}
+  rangedFraction: 0.3
+  eliteChance: 0.15
+  eliteMinPlayerLevel: 3
+  championChance: 0.05
+  monsterLevel: {x: 1, y: 2}
+  palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
+  radius: 5
+  activateDistance: 55
+  respawnSeconds: 150
+  respawnMinPlayerDistance: 70
 --- !u!1 &1078500641
 GameObject:
   m_ObjectHideFlags: 0
@@ -94511,6 +95078,52 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1116389252}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1116484011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1116484012}
+  - component: {fileID: 1116484013}
+  m_Layer: 0
+  m_Name: Zona_Segura_Steve
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1116484012
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1116484011}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -12.2618685, y: 0, z: -48.802135}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1116484013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1116484011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 018057aedfae8c24bb4432d7bc8f2a97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SafeZone
+  zoneName: Zona_Segura_Steve
+  radius: 20
 --- !u!1 &1116646834
 GameObject:
   m_ObjectHideFlags: 0
@@ -101439,6 +102052,69 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1206620531}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1207232991
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1207232992}
+  - component: {fileID: 1207232993}
+  m_Layer: 0
+  m_Name: Campamento_Norte
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1207232992
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1207232991}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 18, y: 0, z: 56}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1207232993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1207232991}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552562a34ae5dfd4d9fe5483544333d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCamp
+  campId: Campamento_Norte
+  melee: {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  ranged: {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  elites:
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  groupSize: {x: 5, y: 7}
+  rangedFraction: 0.3
+  eliteChance: 0.3
+  eliteMinPlayerLevel: 3
+  championChance: 0.05
+  monsterLevel: {x: 2, y: 3}
+  palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
+  radius: 5
+  activateDistance: 55
+  respawnSeconds: 150
+  respawnMinPlayerDistance: 70
 --- !u!1 &1208720428
 GameObject:
   m_ObjectHideFlags: 0
@@ -106850,6 +107526,9 @@ MonoBehaviour:
     quantity: 1
     durability: 45
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &1261437222
@@ -108880,6 +109559,9 @@ MonoBehaviour:
     quantity: 1
     durability: -1
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &1279907452
@@ -115981,6 +116663,7 @@ MonoBehaviour:
   player: {fileID: 952827399}
   inventoryScreen: {fileID: 1824006446}
   showDebugHints: 1
+  orbStatueScale: 0.46
 --- !u!224 &1386567977
 RectTransform:
   m_ObjectHideFlags: 0
@@ -116589,6 +117272,9 @@ MonoBehaviour:
     quantity: 1
     durability: 55
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &1399187908
@@ -125120,6 +125806,51 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1493650840}
   m_Mesh: {fileID: 4300000, guid: 648a84985ab43a949a5818338b8830bb, type: 2}
+--- !u!1 &1493820800
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1493820801}
+  - component: {fileID: 1493820802}
+  m_Layer: 0
+  m_Name: Botin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1493820801
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1493820800}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1493820802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1493820800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c5db035f4ea77f4797161fa9c6787a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LootDirector
+  database: {fileID: 11400000, guid: b67b0cac156a03249a89b5c5f283e450, type: 2}
 --- !u!1 &1495446388
 GameObject:
   m_ObjectHideFlags: 0
@@ -129905,6 +130636,48 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1554284061}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1555965729
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1555965730}
+  m_Layer: 0
+  m_Name: Enemigos
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1555965730
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1555965729}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 584483381}
+  - {fileID: 1116484012}
+  - {fileID: 1493820801}
+  - {fileID: 1728194650}
+  - {fileID: 1207232992}
+  - {fileID: 533764556}
+  - {fileID: 47680606}
+  - {fileID: 1835640808}
+  - {fileID: 1078134754}
+  - {fileID: 1034164164}
+  - {fileID: 946530161}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1559202705
 GameObject:
   m_ObjectHideFlags: 0
@@ -131502,6 +132275,9 @@ MonoBehaviour:
     quantity: 1
     durability: -1
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &1590408904
@@ -136541,6 +137317,9 @@ MonoBehaviour:
     quantity: 1
     durability: 30
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &1645837746
@@ -143440,6 +144219,69 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6547925961462727086, guid: fd2c52740e49f0a4a8e0be67f7beef44, type: 3}
   m_PrefabInstance: {fileID: 1726965646}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1728194649
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1728194650}
+  - component: {fileID: 1728194651}
+  m_Layer: 0
+  m_Name: Campamento_Noroeste
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1728194650
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728194649}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -16, y: 0, z: 50}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1728194651
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728194649}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552562a34ae5dfd4d9fe5483544333d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCamp
+  campId: Campamento_Noroeste
+  melee: {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  ranged: {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  elites:
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  groupSize: {x: 4, y: 6}
+  rangedFraction: 0.3
+  eliteChance: 0.25
+  eliteMinPlayerLevel: 3
+  championChance: 0.05
+  monsterLevel: {x: 2, y: 3}
+  palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
+  radius: 5
+  activateDistance: 55
+  respawnSeconds: 150
+  respawnMinPlayerDistance: 70
 --- !u!1 &1730032966
 GameObject:
   m_ObjectHideFlags: 0
@@ -152269,8 +153111,74 @@ MonoBehaviour:
     quantity: 1
     durability: -1
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
+--- !u!1 &1835640807
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1835640808}
+  - component: {fileID: 1835640809}
+  m_Layer: 0
+  m_Name: Campamento_Este
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1835640808
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1835640807}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 52, y: 0, z: 12}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1555965730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1835640809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1835640807}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552562a34ae5dfd4d9fe5483544333d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCamp
+  campId: Campamento_Este
+  melee: {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  ranged: {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  elites:
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  groupSize: {x: 4, y: 6}
+  rangedFraction: 0.3
+  eliteChance: 0.15
+  eliteMinPlayerLevel: 3
+  championChance: 0.05
+  monsterLevel: {x: 1, y: 2}
+  palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
+  radius: 5
+  activateDistance: 55
+  respawnSeconds: 150
+  respawnMinPlayerDistance: 70
 --- !u!1 &1837162284
 GameObject:
   m_ObjectHideFlags: 0
@@ -154392,6 +155300,9 @@ MonoBehaviour:
     quantity: 1
     durability: 30
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &1859585158
@@ -174151,6 +175062,9 @@ MonoBehaviour:
     quantity: 1
     durability: 45
     runes: []
+    quality: 0
+    affixes: []
+    rareName: 
   spriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   pickupDelay: 0.6
 --- !u!1 &2109215760
@@ -177950,3 +178864,4 @@ SceneRoots:
   - {fileID: 655447398}
   - {fileID: 759317706}
   - {fileID: 1552012706}
+  - {fileID: 1555965730}

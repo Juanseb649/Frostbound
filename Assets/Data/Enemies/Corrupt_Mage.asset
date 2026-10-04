@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80759fd820ee7244cb7ab91a3dd0137f, type: 3}
+  m_Name: Corrupt_Mage
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDefinition
+  id: Corrupt_Mage
+  displayName: Mago corrupto por el Frost
+  prefab: {fileID: 1372244218744399835, guid: ff78838ea8c37b7448eada27e73c17a5, type: 3}
+  gear: {fileID: 11400000, guid: f0f42bebc40e89e4e877bab4b845df10, type: 2}
+  elite: 1
+  maxHealth: 90
+  damage: {x: 5.5, y: 8}
+  moveSpeed: 3
+  experience: 36
+  ranged: 1
+  attackRange: 10
+  windup: 0.9
+  cooldown: 2.6
+  hitsPerAttack: 1
+  areaRadius: 0
+  projectileSpeed: 10
+  projectileMaterial: {fileID: 2100000, guid: 90eb00770246866409e5caac5b4eff9b, type: 2}
+  preferredDistance: {x: 7, y: 10}
+  sightRange: 13
+  lootPicks: 2

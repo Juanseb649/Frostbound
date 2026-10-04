@@ -28,6 +28,12 @@ if "--" in sys.argv:
     RIG_BLEND, GEAR_DIR, OUT_DIR, PENGUIN_OBJ = (a + [RIG_BLEND, GEAR_DIR, OUT_DIR, PENGUIN_OBJ][len(a):])[:4]
 
 GEAR_FILES = [
+    os.path.join("Enemies", "Frostbound_Corrupt_Melee_Gear.obj"),
+    os.path.join("Enemies", "Frostbound_Corrupt_Ranged_Gear.obj"),
+    os.path.join("Enemies", "Frostbound_Corrupt_Knight_Gear.obj"),
+    os.path.join("Enemies", "Frostbound_Corrupt_Mage_Gear.obj"),
+    os.path.join("Enemies", "Frostbound_Corrupt_Ninja_Gear.obj"),
+    os.path.join("Enemies", "Frostbound_Corrupt_Viking_Gear.obj"),
     "Frostbound_Knight_Gear.obj",
     "Frostbound_Mage_Gear.obj",
     "Frostbound_Ninja_Gear.obj",
@@ -35,8 +41,9 @@ GEAR_FILES = [
     os.path.join("NPC", "Frostbound_NPC_Rocker_Gear.obj"),
 ]
 
-HEAD = {"Helm", "Hat", "Hood", "Hair", "Glasses", "Beard"}
-SPINE = {"Katana_Back", "Pendant", "Shoulder_L", "Shoulder_R"}
+HEAD = {"Helm", "Hat", "Hood", "Hair", "Glasses", "Beard", "Eyes"}
+SPINE = {"Katana_Back", "Pendant", "Shoulder_L", "Shoulder_R", "Quiver"}
+ANY = {"Frost_Icicles", "Frost_Crystals", "Frost_Crust"}
 ARMS = {"Gauntlet_L", "Gauntlet_R", "Wraps_L", "Wraps_R", "Sleeve_L", "Sleeve_R"}
 WEAPON_SIDE = {"Weapon_R": "R", "Weapon_L": "L", "Offhand_L": "L"}
 
@@ -85,6 +92,7 @@ def weight_sources(parts):
         "body": body,
         "L": body + collect(parts["Flipper_L"]),
         "R": body + collect(parts["Flipper_R"]),
+        "all": body + collect(parts["Flipper_L"]) + collect(parts["Flipper_R"]) + (collect(parts["Head"]) if "Head" in parts else []),
     }
     trees = {}
     for key, data in sources.items():
@@ -146,6 +154,8 @@ def convert(gear_path, arm, parts, offset, trees):
             rigid(obj, "Flipper_" + WEAPON_SIDE[name])
         elif name in SPINE:
             rigid(obj, "Spine")
+        elif name in ANY:
+            copy_weights(obj, trees["all"])
         elif name in ARMS:
             copy_weights(obj, trees[name[-1]])
         else:

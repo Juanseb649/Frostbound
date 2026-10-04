@@ -13,6 +13,8 @@ public class Inventory : MonoBehaviour
 
     public event Action Changed;
     public event Action<ItemDefinition, int> ItemAdded;
+    // Casilla que se está añadiendo mientras se dispara ItemAdded (para mostrar su nombre y color de botín).
+    public ItemStack LastAddedStack { get; private set; }
 
     public int Capacity => slots.Count;
 
@@ -108,7 +110,9 @@ public class Inventory : MonoBehaviour
             if (!IsEmptySlot(i)) continue;
             stack.EnsureInstance();
             slots[i] = stack;
+            LastAddedStack = stack;
             ItemAdded?.Invoke(stack.item, stack.quantity);
+            LastAddedStack = null;
             Changed?.Invoke();
             return true;
         }
