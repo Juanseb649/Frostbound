@@ -16,7 +16,6 @@ public static class SwaySampler
     private static Rigidbody _rb;
     private static int _frames;
     private static Vector3 _origin;
-    private static bool _stopIssued;
 
     public static string Start()
     {
@@ -26,7 +25,6 @@ public static class SwaySampler
         _rb = player.GetComponent<Rigidbody>();
         Samples.Clear();
         _frames = 0;
-        _stopIssued = false;
         _origin = player.transform.position;
         player.MoveTo(_origin + player.transform.forward * 7f);
         EditorApplication.update -= Tick;
