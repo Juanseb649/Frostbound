@@ -31,7 +31,7 @@ public class ThroneEncounter : MonoBehaviour
         EnemyBrain b = EnemySpawner.Spawn(ninja, seat, 180f, parent, level + 2, false, rng);
         if (b != null)
         {
-            _boss = BossController.Make(b, "Kagero, el Ninja Maldito", "Comandante de la tropa de élite", 5f, 1.15f, 1.3f, def =>
+            _boss = BossController.Make(b, "Smeagol, el Ninja Maldito", "Comandante de la tropa de élite", 5f, 1.15f, 1.3f, def =>
             {
                 def.moveSpeed += 0.8f;
                 def.cooldown = 1.5f;
@@ -76,7 +76,7 @@ public class ThroneEncounter : MonoBehaviour
     private void Begin()
     {
         _started = true;
-        BonfireBanner.Show("KAGERO, EL NINJA MALDITO", BonfireBanner.Threat);
+        BonfireBanner.Show("SMEAGOL, EL NINJA MALDITO", BonfireBanner.Threat);
         _boss.Brain.paused = false;
         _boss.Brain.Alert();
         foreach (EnemyBrain e in _escort)
