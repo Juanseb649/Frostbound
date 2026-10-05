@@ -51,7 +51,7 @@ MonoBehaviour:
   gold: {fileID: 2100000, guid: b5df8a13f49fe2a4d827ba1c02a6fbc4, type: 2}
   rock: {fileID: 2100000, guid: 6970410de037a4a4ca0cacbfe8697c71, type: 2}
   snow: {fileID: 2100000, guid: c6ad525112b521d47ab65dd46a28a3a8, type: 2}
-  ice: {fileID: 2100000, guid: aae74a4b85d4d254c8868b85f5388c58, type: 2}
+  ice: {fileID: 2100000, guid: 4685e348311751946b9e888e7563c602, type: 2}
   door: {fileID: 2100000, guid: 3978eaf5e9a1ac7419591828d1688087, type: 2}
   lampGlow: {fileID: 2100000, guid: 476aad4cc64308d44b49abf8a531ede4, type: 2}
   cone: {fileID: 4300000, guid: 648a84985ab43a949a5818338b8830bb, type: 2}

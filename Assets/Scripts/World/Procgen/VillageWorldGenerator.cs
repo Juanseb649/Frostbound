@@ -53,7 +53,8 @@ public class VillageWorldGenerator : MonoBehaviour
         {
             CastleBuilder castle = Instantiate(castlePrefab, root);
             castle.name = "Castillo";
-            castle.Build(Layout.castle);
+            castle.Build(Layout.castle, Layout.town);
+            BuildCastleGameplay(root, castle);
         }
 
         SpawnBonfire(root, Layout.castleBonfire, Bonfire.CastleId, "Hoguera del castillo");
@@ -78,7 +79,59 @@ public class VillageWorldGenerator : MonoBehaviour
                 mound.transform.localScale = new Vector3(s.scale * 1.4f, s.scale * 0.6f, s.scale);
             }
 
-        if (navMesh != null) navMesh.BuildNavMesh();
+        if (navMesh != null)
+        {
+            // El volumen del NavMesh cubre toda la zona (el castillo y su poblado quedan lejos del centro).
+            float size = VillageLayout.GroundHalfSize * 2f + 10f;
+            navMesh.center = navMesh.transform.InverseTransformPoint(new Vector3(0f, 12f, 0f));
+            navMesh.size = new Vector3(size, 44f, size);
+            navMesh.BuildNavMesh();
+        }
+
+        var map = new GameObject("Mapa").AddComponent<MapSystem>();
+        map.transform.SetParent(transform, false);
+        map.Setup(Layout);
+        AdventureHUD.Ensure();
+
+        GameObject steve = GameObject.Find(MapSystem.SteveName);
+        if (steve != null && steve.GetComponent<NPCInteractable>() != null && steve.GetComponent<QuestGiver>() == null) steve.AddComponent<QuestGiver>();
+    }
+
+    // Puerta sellada, interior (se genera al entrar), asedio de la ciudadela y la guardia del poblado en ruinas.
+    private void BuildCastleGameplay(Transform root, CastleBuilder castle)
+    {
+        var entrance = new GameObject("Puerta_Castillo").AddComponent<CastleEntrance>();
+        entrance.transform.SetParent(root, true);
+        entrance.Setup(Layout.castle, castle.ice);
+
+        CastleInterior interior = new GameObject("Interior_Castillo").AddComponent<CastleInterior>();
+        interior.transform.SetParent(transform, false);
+        interior.Seed = Seed;
+        interior.stone = castle.stone; interior.trim = castle.trim; interior.roof = castle.roof; interior.glass = castle.glass;
+        interior.gold = castle.gold; interior.ice = castle.ice; interior.door = castle.door; interior.lampGlow = castle.lampGlow;
+        interior.cone = castle.cone; interior.prism = castle.prism;
+        interior.ExitPoint = Layout.castle.Door + Quaternion.Euler(0f, Layout.castle.yaw, 0f) * Vector3.forward * 3.5f;
+        interior.ExitRotation = Quaternion.Euler(0f, Layout.castle.yaw, 0f);
+
+        CitadelSiege siege = new GameObject("Asedio_Ciudadela").AddComponent<CitadelSiege>();
+        siege.transform.SetParent(root, true);
+        siege.Setup(Layout.castle, Layout.town, Seed);
+
+        GameDatabase db = GameDatabase.Instance;
+        if (db == null) return;
+        var guardGo = new GameObject("Campamento_Ciudadela");
+        guardGo.transform.SetParent(root, true);
+        guardGo.transform.position = Layout.castle.ToWorld(Layout.town.camp[0]);
+        EnemyCamp guard = guardGo.AddComponent<EnemyCamp>();
+        guard.campId = "ciudadela";
+        guard.melee = db.FindEnemy("Corrupt_Melee");
+        guard.ranged = db.FindEnemy("Corrupt_Ranged");
+        guard.palette = db.palette;
+        guard.groupSize = new Vector2Int(4, 6);
+        guard.rangedFraction = 0.35f;
+        guard.monsterLevel = new Vector2Int(2, 3);
+        guard.radius = 10f;
+        guard.activateDistance = 45f;
     }
 
     private Bonfire SpawnBonfire(Transform parent, VillageLayout.Spot spot, string id, string label)

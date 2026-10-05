@@ -88,14 +88,14 @@ public static class SetupProceduralVillage
         Material template = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/Stone.mat");
         var go = new GameObject("Castillo");
         var b = go.AddComponent<CastleBuilder>();
-        b.stone = CastleMat("Gothic_Stone", template, new Color(0.83f, 0.84f, 0.86f), 0.12f);
-        b.trim = CastleMat("Gothic_Trim", template, new Color(0.58f, 0.61f, 0.66f), 0.15f);
-        b.roof = CastleMat("Gothic_Roof", template, new Color(0.19f, 0.24f, 0.33f), 0.25f);
-        b.glass = CastleMat("Gothic_Glass", template, new Color(0.35f, 0.55f, 0.95f), 0.8f, new Color(0.35f, 0.75f, 1.6f));
-        b.gold = CastleMat("Gothic_Gold", template, new Color(0.86f, 0.70f, 0.36f), 0.7f, new Color(0.25f, 0.18f, 0.05f));
-        b.rock = CastleMat("Gothic_Rock", template, new Color(0.33f, 0.37f, 0.45f), 0.08f);
+        b.stone = CastleMat("Gothic_Stone", template, new Color(0.17f, 0.18f, 0.22f), 0.18f);
+        b.trim = CastleMat("Gothic_Trim", template, new Color(0.25f, 0.26f, 0.31f), 0.22f);
+        b.roof = CastleMat("Gothic_Roof", template, new Color(0.055f, 0.06f, 0.085f), 0.55f);
+        b.glass = CastleMat("Gothic_Glass", template, new Color(0.08f, 0.35f, 0.6f), 0.85f, new Color(0.15f, 0.75f, 2.2f));
+        b.gold = CastleMat("Gothic_Gold", template, new Color(0.3f, 0.29f, 0.32f), 0.6f);
+        b.rock = CastleMat("Gothic_Rock", template, new Color(0.15f, 0.17f, 0.21f), 0.1f);
         b.snow = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/Snow.mat");
-        b.ice = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/IceStatue.mat");
+        b.ice = CastleMat("Frost_Corrupt", template, new Color(0.03f, 0.05f, 0.12f), 0.92f, new Color(0.08f, 0.35f, 1.4f));
         b.door = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/WoodDark.mat");
         b.lampGlow = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/WindowGlow.mat");
         b.cone = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Meshes/Cone_LowPoly.asset");
@@ -203,6 +203,9 @@ public static class SetupProceduralVillage
         db.items = AssetDatabase.LoadAssetAtPath<ItemDatabase>("Assets/Data/Items/ItemDatabase.asset");
         db.palette = AssetDatabase.LoadAssetAtPath<PlumagePalette>("Assets/Data/PlumagePalette.asset");
         db.uiSkin = AssetDatabase.LoadAssetAtPath<UISkin>("Assets/Data/UI/UISkin.asset");
+        db.enemies = AssetDatabase.FindAssets("t:EnemyDefinition", new[] { "Assets/Data/Enemies" })
+            .Select(g => AssetDatabase.LoadAssetAtPath<EnemyDefinition>(AssetDatabase.GUIDToAssetPath(g)))
+            .Where(e => e != null).OrderBy(e => e.name).ToList();
         EditorUtility.SetDirty(db);
         return db;
     }

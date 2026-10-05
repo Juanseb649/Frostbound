@@ -12,16 +12,21 @@ public class BonfireBanner : MonoBehaviour
     private CanvasGroup _group;
     private TextMeshProUGUI _title;
 
-    public static void Show(string text = "HOGUERA ENCENDIDA")
+    public static readonly Color Victory = new Color32(0xE8, 0xC8, 0x6A, 0xFF);
+    public static readonly Color Threat = new Color32(0xB8, 0x2E, 0x2E, 0xFF);
+
+    public static void Show(string text = "HOGUERA ENCENDIDA") => Show(text, Ember);
+
+    public static void Show(string text, Color color)
     {
         if (_current != null) Destroy(_current.gameObject);
         var go = new GameObject("BonfireBanner", typeof(RectTransform));
         _current = go.AddComponent<BonfireBanner>();
-        _current.Build(text);
+        _current.Build(text, color);
         _current.StartCoroutine(_current.Play());
     }
 
-    private void Build(string text)
+    private void Build(string text, Color color)
     {
         var canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -40,7 +45,7 @@ public class BonfireBanner : MonoBehaviour
         band.type = Image.Type.Simple;
         UIFactory.Anchored(band.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 60f), new Vector2(4000f, 200f));
 
-        _title = UIFactory.Text(band.transform, "Titulo", text, skin != null ? skin.cinzel600 : null, 78f, Ember, TextAlignmentOptions.Center, 8f);
+        _title = UIFactory.Text(band.transform, "Titulo", text, skin != null ? skin.cinzel600 : null, text.Length > 22 ? 58f : 78f, color, TextAlignmentOptions.Center, 8f);
         UIFactory.Stretch(_title.rectTransform);
         _group.alpha = 0f;
     }

@@ -4,7 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// NPC Steve: el rockero que toca junto a su fogata, en un claro del bosque al sur del poblado.
+// NPC Steve: el explorador que acampa junto a su fogata, en un claro del bosque al sur del poblado.
 public static class SetupSteve
 {
     private const string ScenePath = SceneIds.VillagePath;
@@ -13,9 +13,9 @@ public static class SetupSteve
 
     public static readonly string[] Dialogue =
     {
-        "¿Otra vez esa luz azul en la montaña? Mientras suene esta fogata, aquí nadie se congela.",
-        "Antes tocaba para cien pingüinos en la plaza. Ahora prefiero el bosque: los pinos no se asustan.",
-        "Si subes al Frostspire, cántale algo al viento. Dicen que el hielo escucha."
+        "¿Otra vez esa luz azul en la montaña? Mientras arda esta fogata, aquí nadie se congela.",
+        "Antes vivía en la plaza. Ahora prefiero el bosque: desde aquí se ve todo lo que baja de la montaña.",
+        "Si subes al Frostspire, no te fíes del viento. Dicen que el hielo escucha."
     };
 
     [MenuItem("Tools/Frostbound/Agregar a Steve en el bosque")]
@@ -33,7 +33,7 @@ public static class SetupSteve
         if (Add(town.transform, fire) == null) return;
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        FrostboundBridge.Dialog("Frostbound", "Steve está tocando junto a su fogata, en el bosque al sur del poblado.", "OK");
+        FrostboundBridge.Dialog("Frostbound", "Steve acampa junto a su fogata, en el bosque al sur del poblado.", "OK");
     }
 
     public static GameObject Add(Transform town, Transform fire)
@@ -58,7 +58,7 @@ public static class SetupSteve
         var spec = new SetupVillage.NpcSpec
         {
             name = "Steve",
-            role = "Músico",
+            role = "Explorador",
             showRole = true,
             mood = VillagerMood.Huddle,
             pos = pos,

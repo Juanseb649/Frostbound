@@ -20,3 +20,10 @@ MonoBehaviour:
   items: {fileID: 11400000, guid: b67b0cac156a03249a89b5c5f283e450, type: 2}
   palette: {fileID: 11400000, guid: 3dd9f5c368dfbab4aa6ea339465f7fbb, type: 2}
   uiSkin: {fileID: 11400000, guid: 1f1ceb1136ad50045bc3d4088f3e2040, type: 2}
+  enemies:
+  - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
+  - {fileID: 11400000, guid: b9ec5972652a43d47aae658b2c1a89e3, type: 2}
+  - {fileID: 11400000, guid: 9ad3a994113221a40b351d407ae4ec4a, type: 2}
+  - {fileID: 11400000, guid: a0e100abb3b86214ab9a2d25fa2d3ef1, type: 2}
+  - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}

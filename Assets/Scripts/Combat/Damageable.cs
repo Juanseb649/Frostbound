@@ -28,6 +28,9 @@ public class Damageable : MonoBehaviour
     public Transform visual;
 
     public float Health { get; private set; }
+    // Jefes: la vida no baja de este valor (para su discurso final) y no recibe daño mientras invulnerable.
+    [NonSerialized] public float healthFloor;
+    [NonSerialized] public bool invulnerable;
     public bool IsDead { get; private set; }
     public bool IsFrozen => Time.time < _frozenUntil;
     public bool IsBurning => Time.time < _burnUntil;
@@ -107,8 +110,9 @@ public class Damageable : MonoBehaviour
 
     public void TakeHit(DamageInfo info)
     {
-        if (IsDead || info.amount <= 0f) return;
+        if (IsDead || info.amount <= 0f || invulnerable) return;
         Health -= info.amount;
+        if (healthFloor > 0f && Health < healthFloor) Health = healthFloor;
         _lastHit = Time.time;
         if (!info.periodic) _shake = info.critical ? 1.6f : 1f;
 
@@ -133,6 +137,19 @@ public class Damageable : MonoBehaviour
             if (hud != null) hud.Popup(PopupPoint + Vector3.up * 0.4f, "¡Derribado!", FrostboundUI.Gold, 1.1f);
             return;
         }
+        IsDead = true;
+        Died?.Invoke();
+    }
+
+    // Muerte forzada (jefes al terminar su discurso).
+    public void Kill(GameObject source, Vector3 direction)
+    {
+        if (IsDead) return;
+        healthFloor = 0f;
+        invulnerable = false;
+        _lastHit = Time.time;
+        Health = 0f;
+        Damaged?.Invoke(new DamageInfo { amount = 0.01f, source = source, direction = direction });
         IsDead = true;
         Died?.Invoke();
     }

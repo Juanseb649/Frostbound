@@ -27,6 +27,15 @@ public class EnemyBrain : MonoBehaviour
     public int Slot { get; set; }
     public bool IsDead => Current == State.Dead;
 
+    // Ajustes para oleadas y jefes.
+    [System.NonSerialized] public float leashOverride;
+    [System.NonSerialized] public float damageMultiplier = 1f;
+    [System.NonSerialized] public bool ignoreSafeZone;
+    [System.NonSerialized] public bool paused;
+    public event System.Action<EnemyBrain> Killed;
+    public event System.Action<CharacterStats> HitPlayerEvent;
+    private float LeashDistance => leashOverride > 0f ? leashOverride : Leash;
+
     private static readonly List<EnemyBrain> Active = new List<EnemyBrain>();
     private static int _meleeAttackers;
     private static Transform _player;
@@ -52,6 +61,22 @@ public class EnemyBrain : MonoBehaviour
     private static readonly Color EyeCharge = new Color(0.12f, 0.31f, 0.82f) * 4f;
 
     public static IReadOnlyList<EnemyBrain> All => Active;
+    public Color Plumage => _plumage;
+    public static Transform Player => FindPlayer() ? _player : null;
+
+    // Teletransporte (el ninja maldito aparece a la espalda del héroe).
+    public void Blink(Vector3 to)
+    {
+        if (_agent != null && _agent.isOnNavMesh) _agent.Warp(to);
+        else transform.position = to;
+    }
+
+    // Golpe inmediato para habilidades de jefe (no pasa por la preparación normal).
+    public void ForceAttack()
+    {
+        if (Current == State.Dead || paused) return;
+        StartAttack(1f);
+    }
 
     public void Setup(EnemyDefinition def, EnemyCamp camp, int level, bool champion, Color plumage)
     {
@@ -144,6 +169,11 @@ public class EnemyBrain : MonoBehaviour
     void Update()
     {
         if (definition == null || Current == State.Dead || !_agent.isOnNavMesh) return;
+        if (paused)
+        {
+            _agent.isStopped = true;
+            return;
+        }
         if (!FindPlayer()) return;
 
         float frenzy = Time.time < _frenzyUntil ? 1f + 0.15f * _frenzyStacks : 1f;
@@ -166,7 +196,7 @@ public class EnemyBrain : MonoBehaviour
                 break;
 
             case State.Chase:
-                if (playerGone || (transform.position - _home).magnitude > Leash || SafeZone.Contains(transform.position, 2f))
+                if (playerGone || (transform.position - _home).magnitude > LeashDistance || (!ignoreSafeZone && SafeZone.Contains(transform.position, 2f)))
                 {
                     GoHome();
                     break;
@@ -201,7 +231,7 @@ public class EnemyBrain : MonoBehaviour
                     _dmg.Heal(_dmg.maxHealth);
                 }
                 else if (!playerGone && dist < definition.sightRange * 0.7f && !SafeZone.Contains(transform.position, 2f)
-                         && (transform.position - _home).magnitude < Leash * 0.6f)
+                         && (transform.position - _home).magnitude < LeashDistance * 0.6f)
                     Alert();
                 break;
         }
@@ -347,7 +377,7 @@ public class EnemyBrain : MonoBehaviour
 
     private float RollDamage()
     {
-        return Random.Range(definition.damage.x, definition.damage.y) * definition.DamageScaleAt(Level) * (Champion ? 1.3f : 1f);
+        return Random.Range(definition.damage.x, definition.damage.y) * definition.DamageScaleAt(Level) * (Champion ? 1.3f : 1f) * damageMultiplier;
     }
 
     private void HitPlayer(Vector3 toPlayer)
@@ -355,7 +385,11 @@ public class EnemyBrain : MonoBehaviour
         if (_playerStats == null || _playerStats.IsDead) return;
         if (_playerDodge != null && _playerDodge.IsRolling) return;
         DamagePlayer(_playerStats, RollDamage(), toPlayer);
+        HitPlayerEvent?.Invoke(_playerStats);
     }
+
+    // Vuelve a fijar el punto al que regresa (las oleadas lo ponen en la plaza).
+    public void SetHome(Vector3 home) => _home = home;
 
     public static void DamagePlayer(CharacterStats stats, float amount, Vector3 direction = default)
     {
@@ -455,6 +489,7 @@ public class EnemyBrain : MonoBehaviour
             foreach (EnemyBrain b in Active)
                 if (b != this && (b.transform.position - transform.position).sqrMagnitude < 36f) b.Frenzy();
 
+        Killed?.Invoke(this);
         Vector3 center = transform.position + Vector3.up * 0.6f;
         EnemyLoot.Drop(this, center);
         // Estallido de hielo solo si lo mató un arma con runa de hielo; si no, el cuerpo cae con física.

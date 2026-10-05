@@ -115,6 +115,8 @@ public class PlayerRespawn : MonoBehaviour
         _stats.Heal(_stats.MaxHealth);
         _stats.RestoreMana(_stats.MaxMana);
         _stats.lastHitDirection = Vector3.zero;
+        PlayerAfflictions afflictions = GetComponent<PlayerAfflictions>();
+        if (afflictions != null) afflictions.Cure();
         ResumeControl();
         SetHudVisible(true, null);
 
@@ -149,7 +151,8 @@ public class PlayerRespawn : MonoBehaviour
             return;
         }
         _hiddenHud.Clear();
-        Canvas[] canvases = { hud != null ? hud.GetComponentInParent<Canvas>() : null, WorldHUD.Instance != null ? WorldHUD.Instance.GetComponent<Canvas>() : null };
+        Canvas[] canvases = { hud != null ? hud.GetComponentInParent<Canvas>() : null, WorldHUD.Instance != null ? WorldHUD.Instance.GetComponent<Canvas>() : null,
+            AdventureHUD.Instance != null ? AdventureHUD.Instance.Canvas : null };
         foreach (Canvas c in canvases)
         {
             if (c == null || !c.enabled) continue;

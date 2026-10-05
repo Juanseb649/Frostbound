@@ -10,6 +10,7 @@ public class GameDatabase : ScriptableObject
     public ItemDatabase items;
     public PlumagePalette palette;
     public UISkin uiSkin;
+    public List<EnemyDefinition> enemies = new List<EnemyDefinition>();
 
     private static GameDatabase _instance;
 
@@ -20,6 +21,13 @@ public class GameDatabase : ScriptableObject
             if (_instance == null) _instance = Resources.Load<GameDatabase>("GameDatabase");
             return _instance;
         }
+    }
+
+    public EnemyDefinition FindEnemy(string id)
+    {
+        foreach (EnemyDefinition e in enemies)
+            if (e != null && (e.id == id || e.name == id)) return e;
+        return null;
     }
 
     public CharacterClass FindClass(string id)

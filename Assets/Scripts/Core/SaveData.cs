@@ -32,7 +32,26 @@ public class SaveData
     public string lastBonfire = "";
     public string zone = "";
 
+    public List<SavedQuest> quests = new List<SavedQuest>();
+    public List<SavedFog> explored = new List<SavedFog>();
+
     public bool HasProgress => level > 1 || experience > 0 || inventory.Count > 0;
+}
+
+[Serializable]
+public class SavedQuest
+{
+    public string id = "";
+    public int stage;
+}
+
+// Niebla de guerra de un mapa: bits de las celdas exploradas, en base64.
+[Serializable]
+public class SavedFog
+{
+    public string area = "";
+    public int size;
+    public string bits = "";
 }
 
 [Serializable]

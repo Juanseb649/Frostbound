@@ -19,6 +19,9 @@ public class NPCInteractable : MonoBehaviour
     // Otros sistemas (tienda, reparación, diálogos) se suscriben aquí.
     public static event Action<NPCInteractable, NPCOption> OptionChosen;
 
+    // Si devuelve true, otro sistema (una misión) se encargó de la charla.
+    public Func<bool> talkOverride;
+
     public bool InConversation { get; set; }
     public float TalkUntil { get; set; }
 
@@ -62,6 +65,7 @@ public class NPCInteractable : MonoBehaviour
         if (hud == null) return;
 
         hud.CloseMenu();
+        if (option == NPCOption.Hablar && talkOverride != null && talkOverride()) return;
         if (option == NPCOption.Hablar)
         {
             string text = NextLine();
