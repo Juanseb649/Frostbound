@@ -47,6 +47,12 @@ public class PotionBelt : MonoBehaviour
         return n;
     }
 
+    public void Restore(ItemDefinition[] saved)
+    {
+        for (int i = 0; i < Size; i++) slots[i] = saved != null && i < saved.Length ? saved[i] : null;
+        Changed?.Invoke();
+    }
+
     public void Assign(int slot, ItemDefinition item)
     {
         if (slot < 0 || slot >= Size) return;

@@ -200,7 +200,7 @@ public class DeathScreen : MonoBehaviour
 
     private static Sprite _vertical, _horizontal;
 
-    private static Sprite VerticalFade()
+    public static Sprite VerticalFade()
     {
         if (_vertical != null) return _vertical;
         var tex = new Texture2D(1, 64, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };

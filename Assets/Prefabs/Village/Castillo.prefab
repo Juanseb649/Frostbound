@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &364254221273874377
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6651300975825583296}
+  - component: {fileID: 2525135203801857993}
+  m_Layer: 0
+  m_Name: Castillo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6651300975825583296
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 364254221273874377}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2525135203801857993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 364254221273874377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90ff9c953ee4add4b854097d798b7b33, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CastleBuilder
+  stone: {fileID: 2100000, guid: 4465a50e7d5d7474384ccccd43ce2c9d, type: 2}
+  trim: {fileID: 2100000, guid: 59ff4eae94c3f7840904b18da369ab1d, type: 2}
+  roof: {fileID: 2100000, guid: 164777e1cc04f1547876a2121017ba4e, type: 2}
+  glass: {fileID: 2100000, guid: f2aed16169a2fb2448fc77bb5f1d2407, type: 2}
+  gold: {fileID: 2100000, guid: b5df8a13f49fe2a4d827ba1c02a6fbc4, type: 2}
+  rock: {fileID: 2100000, guid: 6970410de037a4a4ca0cacbfe8697c71, type: 2}
+  snow: {fileID: 2100000, guid: c6ad525112b521d47ab65dd46a28a3a8, type: 2}
+  ice: {fileID: 2100000, guid: 4685e348311751946b9e888e7563c602, type: 2}
+  door: {fileID: 2100000, guid: 3978eaf5e9a1ac7419591828d1688087, type: 2}
+  lampGlow: {fileID: 2100000, guid: 476aad4cc64308d44b49abf8a531ede4, type: 2}
+  cone: {fileID: 4300000, guid: 648a84985ab43a949a5818338b8830bb, type: 2}
+  prism: {fileID: 4300000, guid: 3a75abf2040e6644bb0b1e1c22275cf4, type: 2}

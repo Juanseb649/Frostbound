@@ -7,19 +7,36 @@ public class EnemyProjectile : MonoBehaviour
     private float _speed, _left, _damage;
     private GameObject _owner;
 
-    public static EnemyProjectile Launch(Vector3 origin, Vector3 direction, float speed, float range, float damage, Material material, GameObject owner)
+    public static EnemyProjectile Launch(Vector3 origin, Vector3 direction, float speed, float range, float damage, Material material, GameObject owner, GameObject model = null)
     {
         var go = new GameObject("FlechaDeHielo");
         go.transform.position = origin;
         Vector3 dir = direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.forward;
         go.transform.rotation = Quaternion.LookRotation(dir);
 
-        GameObject shard = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        Object.Destroy(shard.GetComponent<Collider>());
-        shard.transform.SetParent(go.transform, false);
-        shard.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        shard.transform.localScale = new Vector3(0.07f, 0.22f, 0.07f);
-        if (material != null) shard.GetComponent<Renderer>().sharedMaterial = material;
+        if (model != null)
+        {
+            // Flecha de verdad (la que llevaba encajada en el arco), helada.
+            GameObject arrow = Object.Instantiate(model, go.transform, false);
+            foreach (Collider c in arrow.GetComponentsInChildren<Collider>(true)) Object.Destroy(c);
+            arrow.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            if (material != null)
+                foreach (Renderer r in arrow.GetComponentsInChildren<Renderer>())
+                {
+                    var mats = new Material[r.sharedMaterials.Length];
+                    for (int i = 0; i < mats.Length; i++) mats[i] = material;
+                    r.sharedMaterials = mats;
+                }
+        }
+        else
+        {
+            GameObject shard = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.Destroy(shard.GetComponent<Collider>());
+            shard.transform.SetParent(go.transform, false);
+            shard.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            shard.transform.localScale = new Vector3(0.07f, 0.22f, 0.07f);
+            if (material != null) shard.GetComponent<Renderer>().sharedMaterial = material;
+        }
 
         var p = go.AddComponent<EnemyProjectile>();
         p._dir = dir;

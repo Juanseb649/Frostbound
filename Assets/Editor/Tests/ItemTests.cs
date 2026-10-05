@@ -73,4 +73,35 @@ public class ItemTests
         Assert.AreNotEqual(a.durability, b.durability);
         Assert.AreEqual(0, a.runes.Count);
     }
+
+    [Test]
+    public void ElArmaInicialPegaMenosYLasDeEnemigosDurosMas()
+    {
+        var starter = new ItemStack(_sword, 1);
+        var lvl1 = new ItemStack(_sword, 1) { itemLevel = 1 };
+        var lvl6 = new ItemStack(_sword, 1) { itemLevel = 6 };
+        Assert.Less(starter.BaseDamage, _sword.damage, "el arma inicial debe pegar menos que su base");
+        Assert.Less(starter.BaseDamage, lvl1.BaseDamage);
+        Assert.Less(lvl1.BaseDamage, lvl6.BaseDamage);
+        Assert.AreEqual(6, lvl6.Clone().itemLevel, "clonar conserva el nivel");
+        var back = SavedStack.From(lvl6).ToStack(AssetDatabase.LoadAssetAtPath<ItemDatabase>("Assets/Data/Items/ItemDatabase.asset"));
+        Assert.AreEqual(6, back.itemLevel, "el nivel se guarda en la partida");
+        Assert.GreaterOrEqual(_sword.maxDurability, 150, "las armas deben durar más");
+    }
+
+    [Test]
+    public void ElBotinDeArmasLlevaElNivelDelEnemigo()
+    {
+        var db = AssetDatabase.LoadAssetAtPath<ItemDatabase>("Assets/Data/Items/ItemDatabase.asset");
+        var rng = new DeterministicRng(7);
+        int weapons = 0;
+        for (int i = 0; i < 400; i++)
+            foreach (ItemStack s in LootRoller.Roll(db, 6, 2, true, 0f, rng))
+            {
+                if (s == null || s.item == null || !s.item.IsWeapon) continue;
+                weapons++;
+                Assert.AreEqual(6, s.itemLevel, s.item.id);
+            }
+        Assert.Greater(weapons, 10);
+    }
 }

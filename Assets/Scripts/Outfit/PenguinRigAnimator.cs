@@ -44,6 +44,7 @@ public class PenguinRigAnimator : MonoBehaviour
     }
 
     private Bone _spine, _head, _flipL, _flipR, _footL, _footR, _hips;
+    private Transform _anchorL;
     private Vector3 _handRestL, _handRestR;
     private Transform _mover;
     private Vector3 _lastPos;
@@ -96,6 +97,28 @@ public class PenguinRigAnimator : MonoBehaviour
     private float _attackTime = 1f;
     private float _attackDuration;
 
+    // Armas de dos manos (mandobles, hachas, mazos): combo pesado con las dos aletas en el mango.
+    private bool _heavy;
+    [Header("Combo pesado (dos manos)")]
+    [Tooltip("Muñeca más blanda con armas pesadas: la cabeza del arma se retrasa y latiguea al frenar.")]
+    public float heavyWristStiffness = 12f;
+    public float heavyWristDamping = 0.42f;
+    public float heavyRecover = 0.5f;
+
+    // Arco: tensar, apuntar y soltar. Funciona igual para el héroe y para los arqueros corruptos.
+    private bool _bowEquipped;
+    private float _bowTime = 99f, _bowDuration = 1f, _bowRelease = 0.62f;
+    private float _aimWeight, _aimUntil;
+    private Vector3 _drawDir, _drawVel;
+    private float _recoil, _recoilVel;
+    private bool _bowInit;
+    public bool HasBow => _bowEquipped;
+    public float BowAimWeight => _aimWeight;
+    public float BowDraw01 { get; private set; }
+    public bool BowNocked { get; private set; }
+    public float BowShotProgress => _bowDuration > 0f ? Mathf.Clamp01(_bowTime / _bowDuration) : 1f;
+    public event System.Action BowReleased;
+
     void Awake()
     {
         Init();
@@ -117,6 +140,7 @@ public class PenguinRigAnimator : MonoBehaviour
         _footL = Find("Foot_L");
         _footR = Find("Foot_R");
         Bone handL = Find("Anchor_Hand_L");
+        _anchorL = handL != null ? handL.t : null;
         Bone handR = Find("Anchor_Hand_R");
         foreach (Transform t in GetComponentsInChildren<Transform>(true))
             if (t.name.StartsWith("Anchor_Hand") && !_handRest.ContainsKey(t)) _handRest[t] = t.localRotation;
@@ -172,13 +196,42 @@ public class PenguinRigAnimator : MonoBehaviour
     {
         PlayAttack(duration);
         _comboStep = Mathf.Clamp(step, 1, 3);
+        _heavy = false;
     }
 
     public int ComboStep => _comboStep;
+    public bool HeavyCombo => _heavy && _comboStep > 0;
+
+    // Combo pesado de dos manos: 1 tajo vertical demoledor, 2 barrido horizontal con todo el cuerpo, 3 salto y aplastamiento.
+    public void PlayHeavyCombo(int step, float duration)
+    {
+        PlayAttack(duration);
+        _comboStep = Mathf.Clamp(step, 1, 3);
+        _heavy = true;
+    }
+
+    public void SetBow(bool equipped)
+    {
+        _bowEquipped = equipped;
+        if (!equipped) { _aimWeight = 0f; BowNocked = false; BowDraw01 = 0f; }
+    }
+
+    // Un disparo completo: coger la flecha, colocarla, tensar, apuntar y soltar en "release" (0–1).
+    public void PlayBowShot(float duration, float release)
+    {
+        _bowDuration = Mathf.Max(0.3f, duration);
+        _bowRelease = Mathf.Clamp(release, 0.35f, 0.9f);
+        _bowTime = 0f;
+        _aimUntil = Time.time + _bowDuration + 1.4f;
+        _action = IdleAction.None;
+        _idleTime = 0f;
+        _nextActionAt = idleActionDelay;
+    }
 
     public virtual void PlayAttack(float duration)
     {
         _comboStep = 0;
+        _heavy = false;
         _attackDuration = Mathf.Max(0.12f, duration);
         _attackTime = 0f;
         _action = IdleAction.None;
@@ -242,8 +295,22 @@ public class PenguinRigAnimator : MonoBehaviour
             if (_actionTime >= ActionDuration(_action)) _action = IdleAction.None;
         }
         _actionWeight = Mathf.MoveTowards(_actionWeight, _action != IdleAction.None ? 1f : 0f, dt * (moving ? 8f : 4f));
-        if (_attackTime < _attackDuration + (_comboStep > 0 ? comboRecover : 0f)) _attackTime += dt;
-        else if (_comboStep > 0 && _attackTime >= _attackDuration + comboRecover) _comboStep = 0;
+        float recoverTime = _heavy ? heavyRecover : comboRecover;
+        if (_attackTime < _attackDuration + (_comboStep > 0 ? recoverTime : 0f)) _attackTime += dt;
+        else if (_comboStep > 0 && _attackTime >= _attackDuration + recoverTime) { _comboStep = 0; _heavy = false; }
+
+        if (_bowTime < _bowDuration)
+        {
+            float before = _bowTime;
+            _bowTime += dt;
+            float rel = _bowRelease * _bowDuration;
+            if (before < rel && _bowTime >= rel)
+            {
+                _recoilVel += 9f;
+                BowReleased?.Invoke();
+            }
+        }
+        _aimWeight = Mathf.MoveTowards(_aimWeight, _bowEquipped && Time.time < _aimUntil ? 1f : 0f, dt * (Time.time < _aimUntil ? 6f : 2.5f));
 
         ApplyPose(Time.time + _seed);
     }
@@ -353,7 +420,8 @@ public class PenguinRigAnimator : MonoBehaviour
         {
             float cw = combo.weight;
             // El torso sigue a la hoja (giro de cadera y hombros) y la cabeza mira al frente.
-            float twist = Mathf.Clamp(Mathf.DeltaAngle(0f, combo.yaw) * 0.38f, -48f, 48f);
+            float twist = _heavy ? Mathf.Clamp(Mathf.DeltaAngle(0f, combo.yaw) * 0.5f, -62f, 62f)
+                                 : Mathf.Clamp(Mathf.DeltaAngle(0f, combo.yaw) * 0.38f, -48f, 48f);
             spineYaw += (twist + combo.spineYaw) * cw;
             // La cabeza acompaña el tajo (mira un poco hacia donde va la hoja) y se inclina con el giro.
             headYaw += twist * 0.25f * cw;
@@ -392,6 +460,9 @@ public class PenguinRigAnimator : MonoBehaviour
         else _comboArmWeight = 0f;
 
         float extraCrouch = 0f;
+        if (_bowEquipped && (_aimWeight > 0.001f || _bowTime < _bowDuration))
+            BowPose(ref spineYaw, ref headYaw, ref headPitch, ref lean, ref extraCrouch, ref saluteL, ref saluteR, swingL, swingR, outL, outR, time);
+        else { BowNocked = false; BowDraw01 = 0f; }
         ModifyPose(ref swingL, ref swingR, ref outL, ref outR, ref spineYaw, ref headPitch, ref headRoll, ref lean, ref extraCrouch);
         if (_hips != null)
             _hips.t.position = transform.TransformPoint(_hips.restPos + Vector3.down * (crouchDepth * combo.crouch * combo.weight + extraCrouch));
@@ -411,6 +482,100 @@ public class PenguinRigAnimator : MonoBehaviour
         SetFoot(_footR, footOffR, pitchR);
         AvoidHand();
         ApplyWrist(spineYaw);
+        TwoHandedGrip();
+    }
+
+    // ---------- Arco ----------
+
+    // Pose de tiro con arco. El torso se gira (hombro izquierdo hacia el blanco), la aleta izquierda extiende el arco
+    // y la derecha va a por la cuerda, la tensa hacia atrás y al soltar sale despedida (resorte con rebote).
+    private void BowPose(ref float spineYaw, ref float headYaw, ref float headPitch, ref float lean, ref float crouch,
+        ref Quaternion saluteL, ref Quaternion saluteR, float swingL, float swingR, float outL, float outR, float time)
+    {
+        float dt = Application.isPlaying ? Time.deltaTime : 0f;
+        float aim = _aimWeight;
+        bool shooting = _bowTime < _bowDuration;
+        float t = shooting ? Mathf.Clamp01(_bowTime / _bowDuration) : 1f;
+        float rel = _bowRelease;
+
+        float reach = shooting ? Smooth(0f, 0.2f, t) : 0f;
+        float draw = shooting && t < rel ? Smooth(0.2f, rel - 0.02f, t) : 0f;
+        BowDraw01 = draw;
+        BowNocked = shooting && t >= 0.16f && t < rel;
+
+        // Como en Minecraft Dungeons: de frente al blanco, el torso apenas gira; la aleta del arco extendida al frente
+        // y la otra tira de la cuerda hacia el pecho y el hombro, siempre por delante del cuerpo (nunca detrás de la cabeza).
+        spineYaw += 18f * aim;
+        headYaw += -16f * aim;
+        headPitch += -2f * aim;
+        lean += -3f * draw * aim;
+        crouch += 0.02f * aim + 0.012f * draw;
+
+        // Direcciones en el espacio del pingüino (yaw desde el frente, elevación).
+        Vector3 stance = Dir(-12f, -18f), atBow = Dir(-14f, 6f), fullDraw = Dir(62f, 8f), follow = Dir(84f, 22f);
+        Vector3 target;
+        if (!shooting) target = stance;
+        else if (t < 0.2f) target = Vector3.Slerp(stance, atBow, reach);
+        else if (t < rel) target = Vector3.Slerp(atBow, fullDraw, draw);
+        else target = Vector3.Slerp(follow, stance, Smooth(rel + 0.14f, 1f, t));
+
+        // Resorte de la aleta que tensa: controlado al tensar, latigazo al soltar.
+        if (!_bowInit || dt <= 0f) { _drawDir = target; _drawVel = Vector3.zero; _bowInit = true; }
+        else
+        {
+            bool tense = shooting && t < rel;
+            float w = tense ? 30f : 22f, z = tense ? 0.95f : 0.38f;
+            Vector3 acc = w * w * (target - _drawDir) - 2f * z * w * _drawVel;
+            _drawVel += acc * dt;
+            _drawDir += _drawVel * dt;
+        }
+
+        // Retroceso del arco al soltar (resorte amortiguado).
+        if (dt > 0f)
+        {
+            float acc = -160f * _recoil - 2f * 0.35f * 12.6f * _recoilVel;
+            _recoilVel += acc * dt;
+            _recoil += _recoilVel * dt;
+        }
+        float tremble = draw > 0.9f ? Mathf.Sin(time * 47f) * 0.5f * (draw - 0.9f) * 10f : 0f;
+        Vector3 bowArm = Dir(-4f, 6f + _recoil * 9f + tremble);
+
+        Quaternion spineD = Quaternion.AngleAxis(spineYaw, Vector3.up);
+        if (_flipL != null)
+        {
+            float sideL = Side(_flipL);
+            Quaternion baseL = Quaternion.AngleAxis(-swingL, Vector3.right) * Quaternion.AngleAxis(outL * sideL, Vector3.forward);
+            Vector3 restL = (_handRestL - _flipL.restPos).normalized;
+            if (restL.sqrMagnitude < 0.5f) restL = new Vector3(sideL * 0.4f, -1f, 0f).normalized;
+            Quaternion fullL = Quaternion.FromToRotation(baseL * restL, Quaternion.Inverse(spineD) * bowArm);
+            saluteL = Quaternion.Slerp(saluteL, fullL, aim);
+        }
+        if (_flipR != null)
+        {
+            float sideR = Side(_flipR);
+            Quaternion baseR = Quaternion.AngleAxis(-swingR, Vector3.right) * Quaternion.AngleAxis(outR * sideR, Vector3.forward);
+            Vector3 restR = (_handRestR - _flipR.restPos).normalized;
+            if (restR.sqrMagnitude < 0.5f) restR = new Vector3(sideR * 0.4f, -1f, 0f).normalized;
+            Vector3 dir = _drawDir.sqrMagnitude > 0.0001f ? _drawDir.normalized : target;
+            Quaternion fullR = Quaternion.FromToRotation(baseR * restR, Quaternion.Inverse(spineD) * dir);
+            saluteR = Quaternion.Slerp(saluteR, fullR, aim);
+        }
+    }
+
+    // ---------- Dos manos ----------
+
+    // La aleta izquierda agarra el mango por debajo de la derecha: las dos llevan el arma.
+    private void TwoHandedGrip()
+    {
+        if (_grip != WeaponGrip.TwoHand || !_armed || _wrist == null || _flipL == null || _anchorL == null) return;
+        Vector3 tip = _wrist.rotation * _tipLocal;
+        float reach = Mathf.Max(0.08f, _bladeLength * 0.11f);
+        Vector3 haft = _wrist.position - tip * reach;
+        Vector3 shoulder = _flipL.t.position;
+        Vector3 hand = _anchorL.position;
+        Vector3 from = hand - shoulder, to = haft - shoulder;
+        if (from.sqrMagnitude < 1e-6f || to.sqrMagnitude < 1e-6f) return;
+        _flipL.t.rotation = Quaternion.FromToRotation(from, to) * _flipL.t.rotation;
     }
 
     // Aletas al sujetar el arma y al atacar. Ángulos en grados: swing > 0 lleva la aleta hacia delante, out > 0 la abre.
@@ -532,6 +697,34 @@ public class PenguinRigAnimator : MonoBehaviour
         new Vector4(0.9f, 55f, 32f, 32f), new Vector4(1f, 25f, 48f, 48f)
     };
 
+    // ----- Combo pesado: el arma pesa. Preparación lenta con el arma colgando arriba, caída brutal, impacto en el suelo
+    // y recuperación arrastrándola. Claves: (tiempo, yaw, elevación de la hoja, elevación del brazo).
+
+    // 1) Tajo vertical: sube por el hombro derecho, cuelga detrás de la cabeza y cae recto contra el suelo.
+    private static readonly Vector4[] Heavy1 =
+    {
+        new Vector4(0f, 20f, 40f, 30f), new Vector4(0.14f, 45f, 72f, 55f), new Vector4(0.3f, 165f, 58f, 84f),
+        new Vector4(0.44f, 178f, 52f, 88f), new Vector4(0.53f, 95f, 86f, 82f), new Vector4(0.6f, 8f, 22f, 32f),
+        new Vector4(0.66f, 0f, -48f, -22f), new Vector4(0.84f, 2f, -44f, -18f), new Vector4(1f, 20f, 12f, 12f)
+    };
+
+    // 2) Hachazo diagonal: carga el arma a pulso sobre el hombro izquierdo, la sostiene arriba y la deja caer
+    // en diagonal contra el suelo delante a la derecha. Corto, pesado y seco (nada de barridos de espada).
+    private static readonly Vector4[] Heavy2 =
+    {
+        new Vector4(0f, 20f, 12f, 12f), new Vector4(0.2f, -55f, 50f, 55f), new Vector4(0.38f, -115f, 60f, 82f),
+        new Vector4(0.5f, -122f, 57f, 86f), new Vector4(0.6f, -45f, 48f, 62f), new Vector4(0.66f, 12f, -8f, 10f),
+        new Vector4(0.71f, 28f, -46f, -20f), new Vector4(0.87f, 30f, -42f, -18f), new Vector4(1f, 20f, 12f, 12f)
+    };
+
+    // 3) Salto y aplastamiento: el arma baja atrás, sube por detrás mientras salta y cae con todo el peso.
+    private static readonly Vector4[] Heavy3 =
+    {
+        new Vector4(0f, 20f, 12f, 12f), new Vector4(0.2f, 140f, -6f, 4f), new Vector4(0.36f, 172f, 44f, 70f),
+        new Vector4(0.48f, 178f, 60f, 90f), new Vector4(0.56f, 90f, 86f, 86f), new Vector4(0.63f, 5f, 18f, 30f),
+        new Vector4(0.68f, 0f, -52f, -26f), new Vector4(0.86f, 0f, -48f, -22f), new Vector4(1f, 20f, 12f, 12f)
+    };
+
     // Catmull-Rom sobre (yaw, elevación de la hoja, elevación del brazo): curva suave que pasa por todas las claves.
     private static Vector3 Sample(Vector4[] keys, float t)
     {
@@ -566,9 +759,10 @@ public class PenguinRigAnimator : MonoBehaviour
         float d = Mathf.Max(0.01f, _attackDuration);
         float t = Mathf.Clamp01(_attackTime / d);
         // Si no llega el siguiente golpe, vuelve a la guardia.
-        float recover = 1f - Smooth(d, d + comboRecover, _attackTime);
+        float recover = 1f - Smooth(d, d + (_heavy ? heavyRecover : comboRecover), _attackTime);
         Vector3 p;
         Vector4[] path;
+        if (_heavy) return HeavyPose(t, recover);
         switch (_comboStep)
         {
             case 1:
@@ -613,6 +807,49 @@ public class PenguinRigAnimator : MonoBehaviour
         return c;
     }
 
+    private Combo HeavyPose(float t, float recover)
+    {
+        var c = new Combo();
+        Vector4[] path;
+        switch (_comboStep)
+        {
+            case 1:
+                path = Heavy1;
+                c.weight = Smooth(0f, 0.12f, t) * recover;
+                // Echa el peso atrás al levantar y se vuelca hacia delante con el impacto.
+                c.lean = -12f * Bump(0.08f, 0.55f, t) + 26f * Smooth(0.56f, 0.66f, t) * (1f - Smooth(0.85f, 1f, t));
+                c.crouch = 0.15f * Bump(0.05f, 0.5f, t) + 1.15f * Smooth(0.58f, 0.67f, t) * (1f - 0.7f * Smooth(0.86f, 1f, t));
+                c.leftElevation = 10f;
+                break;
+            case 2:
+                path = Heavy2;
+                c.weight = recover;
+                // Se echa atrás al cargarla y se vuelca con el hachazo; las rodillas absorben el impacto.
+                c.lean = -10f * Bump(0.1f, 0.58f, t) + 24f * Smooth(0.6f, 0.71f, t) * (1f - Smooth(0.87f, 1f, t));
+                c.crouch = 0.2f * Bump(0.05f, 0.55f, t) + 1.1f * Smooth(0.62f, 0.72f, t) * (1f - 0.7f * Smooth(0.87f, 1f, t));
+                c.spineYaw = -12f * Bump(0.15f, 0.6f, t) + 10f * Bump(0.62f, 0.95f, t);
+                c.leftElevation = 10f;
+                break;
+            default:
+                path = Heavy3;
+                c.weight = recover;
+                // Salto: se agacha para impulsarse, sube (cadera arriba) y cae a plomo.
+                float air = Bump(0.2f, 0.62f, t);
+                c.crouch = 0.6f * Bump(0f, 0.22f, t) - 1.1f * air + 1.3f * Smooth(0.62f, 0.69f, t) * (1f - 0.75f * Smooth(0.86f, 1f, t));
+                c.lean = -14f * air + 30f * Smooth(0.6f, 0.69f, t) * (1f - Smooth(0.86f, 1f, t));
+                c.leftElevation = 15f;
+                break;
+        }
+        Vector3 p = Sample(path, t);
+        c.yaw = p.x;
+        c.elevation = p.y;
+        c.armElevation = p.z;
+        Vector3 next = Sample(path, Mathf.Min(1f, t + 0.04f));
+        c.nextYaw = next.x;
+        c.nextElevation = next.y;
+        return c;
+    }
+
     // Muñeca: la hoja sigue su propia trayectoria (con un resorte: se retrasa en los cortes rápidos y latiguea al frenar)
     // y gira sobre su eje para que el filo vaya por delante del movimiento, como en los tajos del Príncipe.
     private void ApplyWrist(float spineYaw)
@@ -633,7 +870,7 @@ public class PenguinRigAnimator : MonoBehaviour
             _bladeDir = target;
             _bladeVel = Vector3.zero;
         }
-        float w = wristStiffness, z = wristDamping;
+        float w = _heavy ? heavyWristStiffness : wristStiffness, z = _heavy ? heavyWristDamping : wristDamping;
         Vector3 acc = w * w * (target - _bladeDir) - 2f * z * w * _bladeVel;
         _bladeVel += acc * dt;
         _bladeDir += _bladeVel * dt;

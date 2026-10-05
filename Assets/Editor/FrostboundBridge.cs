@@ -31,6 +31,7 @@ public static class FrostboundBridge
         Directory.CreateDirectory(Dir);
         EditorApplication.update += Tick;
         Application.logMessageReceived += OnLog;
+        UnityEditor.Compilation.CompilationPipeline.assemblyCompilationFinished += OnCompiled;
         Write(Outbox, "READY " + DateTime.Now.ToString("HH:mm:ss") + (EditorApplication.isPlaying ? " (play)" : ""));
     }
 #endif
@@ -50,6 +51,16 @@ public static class FrostboundBridge
         if (!Active) return EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
         EditorSceneManager.SaveOpenScenes();
         return true;
+    }
+
+    // Errores de compilación a FrostboundBridge/compile.txt (se reescribe en cada compilación).
+    private static void OnCompiled(string assembly, UnityEditor.Compilation.CompilerMessage[] messages)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var m in messages)
+            if (m.type == UnityEditor.Compilation.CompilerMessageType.Error) sb.AppendLine(m.message);
+        string file = Path.Combine(Dir, "compile_" + Path.GetFileNameWithoutExtension(assembly) + ".txt");
+        try { File.WriteAllText(file, DateTime.Now.ToString("HH:mm:ss") + "\n" + sb); } catch { }
     }
 
     private static void OnLog(string msg, string stack, LogType type)

@@ -3,11 +3,12 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // Muerte del héroe: el cuerpo cae en ragdoll, la cámara se ralentiza un instante y aparece la pantalla
-// "HAS MUERTO". El jugador elige reaparecer junto a la hoguera (el equipo pierde durabilidad) o volver al título.
+// "HAS MUERTO". El jugador elige reaparecer en la hoguera encendida más cercana al lugar donde cayó
+// (o en el poblado si aún no encendió ninguna; el equipo pierde durabilidad) o volver al título.
 [RequireComponent(typeof(CharacterStats))]
 public class PlayerRespawn : MonoBehaviour
 {
-    [Tooltip("Dónde reaparece. Vacío = donde empezó la partida.")]
+    [Tooltip("Dónde reaparece si no hay ninguna hoguera en la escena. Vacío = donde empezó la partida.")]
     public Transform respawnPoint;
     [Tooltip("Segundos de cuerpo en el suelo antes de mostrar la pantalla de muerte.")]
     public float screenDelay = 1.2f;
@@ -19,6 +20,7 @@ public class PlayerRespawn : MonoBehaviour
     private Vector3 _start;
     private Quaternion _startRot;
     private bool _dying;
+    private Vector3 _deathPosition;
     private DeathScreen _screen;
     private readonly System.Collections.Generic.List<Behaviour> _paused = new System.Collections.Generic.List<Behaviour>();
     private readonly System.Collections.Generic.List<Canvas> _hiddenHud = new System.Collections.Generic.List<Canvas>();
@@ -45,6 +47,7 @@ public class PlayerRespawn : MonoBehaviour
     private IEnumerator Die()
     {
         _dying = true;
+        _deathPosition = transform.position;
         GameplayInput.Block();
         CloseMenus();
         PauseControl();
@@ -81,6 +84,13 @@ public class PlayerRespawn : MonoBehaviour
 
         Vector3 pos = respawnPoint != null ? respawnPoint.position : _start;
         Quaternion rot = respawnPoint != null ? respawnPoint.rotation : _startRot;
+        Bonfire bonfire = Bonfire.NearestLit(_deathPosition);
+        if (bonfire != null)
+        {
+            pos = bonfire.SpawnPoint;
+            rot = bonfire.SpawnRotation;
+        }
+        if (GameSession.Instance != null) GameSession.Instance.SetLastBonfire(bonfire != null ? bonfire.id : "");
         if (_rb != null)
         {
             _rb.position = pos;
@@ -105,6 +115,8 @@ public class PlayerRespawn : MonoBehaviour
         _stats.Heal(_stats.MaxHealth);
         _stats.RestoreMana(_stats.MaxMana);
         _stats.lastHitDirection = Vector3.zero;
+        PlayerAfflictions afflictions = GetComponent<PlayerAfflictions>();
+        if (afflictions != null) afflictions.Cure();
         ResumeControl();
         SetHudVisible(true, null);
 
@@ -113,13 +125,20 @@ public class PlayerRespawn : MonoBehaviour
         _screen = null;
         GameplayInput.Unblock();
         _dying = false;
-        Notifications.Show("Despiertas junto a la hoguera. Tu equipo se desgastó un poco.", FrostboundUI.Muted);
+        if (GameSession.Instance != null) GameSession.Instance.SaveNow();
+        Notifications.Show(bonfire != null ? "Despiertas junto a la hoguera. Tu equipo se desgastó un poco." : "Despiertas en el poblado. Tu equipo se desgastó un poco.", FrostboundUI.Muted);
     }
 
     private void ReturnToTitle()
     {
         Time.timeScale = 1f;
         GameplayInput.Unblock();
+        Bonfire bonfire = Bonfire.NearestLit(_deathPosition);
+        if (GameSession.Instance != null)
+        {
+            GameSession.Instance.SetLastBonfire(bonfire != null ? bonfire.id : "");
+            GameSession.Instance.EndGame();
+        }
         SceneManager.LoadScene(SceneIds.MainMenu);
     }
 
@@ -132,7 +151,8 @@ public class PlayerRespawn : MonoBehaviour
             return;
         }
         _hiddenHud.Clear();
-        Canvas[] canvases = { hud != null ? hud.GetComponentInParent<Canvas>() : null, WorldHUD.Instance != null ? WorldHUD.Instance.GetComponent<Canvas>() : null };
+        Canvas[] canvases = { hud != null ? hud.GetComponentInParent<Canvas>() : null, WorldHUD.Instance != null ? WorldHUD.Instance.GetComponent<Canvas>() : null,
+            AdventureHUD.Instance != null ? AdventureHUD.Instance.Canvas : null };
         foreach (Canvas c in canvases)
         {
             if (c == null || !c.enabled) continue;

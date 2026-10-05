@@ -5,12 +5,13 @@ using UnityEngine;
 // el cuerpo queda tendido un momento y se hunde en la nieve.
 public static class EnemyPhysicsDeath
 {
-    public static void Play(EnemyBrain enemy, Vector3 hitDirection)
+    // keepBody: el cuerpo se queda en el suelo para siempre (jefes).
+    public static void Play(EnemyBrain enemy, Vector3 hitDirection, bool keepBody = false)
     {
-        enemy.StartCoroutine(Run(enemy, hitDirection));
+        enemy.StartCoroutine(Run(enemy, hitDirection, keepBody));
     }
 
-    private static IEnumerator Run(EnemyBrain enemy, Vector3 dir)
+    private static IEnumerator Run(EnemyBrain enemy, Vector3 dir, bool keepBody)
     {
         GameObject go = enemy.gameObject;
         Damageable d = go.GetComponent<Damageable>();
@@ -34,6 +35,13 @@ public static class EnemyPhysicsDeath
         yield return new WaitForSeconds(1.5f);
 
         ragdoll.Freeze();
+        if (keepBody)
+        {
+            go.name += " (cuerpo)";
+            NameTag tag = go.GetComponent<NameTag>();
+            if (tag != null) tag.enabled = false;
+            yield break;
+        }
         t = 0f;
         Vector3 start = go.transform.position;
         while (t < 1.4f)

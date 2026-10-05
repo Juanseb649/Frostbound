@@ -129,13 +129,13 @@ public static class LootRoller
         if (q == LootQuality.Unique)
         {
             ItemDefinition u = PickBase(db, ilvl + 3, rng, it => it.IsEquippable && it.rarity == ItemRarity.Unique && it.armorSet == null);
-            if (u != null) return new ItemStack(u, 1) { quality = LootQuality.Unique };
+            if (u != null) return new ItemStack(u, 1) { quality = LootQuality.Unique, itemLevel = Mathf.Max(1, ilvl) };
             q = LootQuality.Rare;
         }
         if (q == LootQuality.Set)
         {
             ItemDefinition s = PickBase(db, ilvl + 3, rng, it => it.IsEquippable && it.armorSet != null);
-            if (s != null) return new ItemStack(s, 1) { quality = LootQuality.Set };
+            if (s != null) return new ItemStack(s, 1) { quality = LootQuality.Set, itemLevel = Mathf.Max(1, ilvl) };
             q = LootQuality.Rare;
         }
 
@@ -144,6 +144,7 @@ public static class LootRoller
         if (b == null) return null;
 
         var stack = new ItemStack(b, 1) { quality = q };
+        stack.itemLevel = Mathf.Max(1, ilvl);
         ApplyQuality(stack, ilvl, rng);
         return stack;
     }

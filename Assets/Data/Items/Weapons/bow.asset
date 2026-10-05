@@ -33,7 +33,7 @@ MonoBehaviour:
   requiredStats:
   - stat: 2
     value: 6
-  maxDurability: 40
+  maxDurability: 120
   runeSlots: 2
   weaponModel: {fileID: 919132149155446097, guid: 5f66a18eff7e62446a3bb5e34943c6fa, type: 3}
   projectileModel: {fileID: 919132149155446097, guid: abf1ff950f3a5de48b8ec9978bffe119, type: 3}

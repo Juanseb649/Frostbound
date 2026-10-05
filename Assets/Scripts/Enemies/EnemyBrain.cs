@@ -27,6 +27,15 @@ public class EnemyBrain : MonoBehaviour
     public int Slot { get; set; }
     public bool IsDead => Current == State.Dead;
 
+    // Ajustes para oleadas y jefes.
+    [System.NonSerialized] public float leashOverride;
+    [System.NonSerialized] public float damageMultiplier = 1f;
+    [System.NonSerialized] public bool ignoreSafeZone;
+    [System.NonSerialized] public bool paused;
+    public event System.Action<EnemyBrain> Killed;
+    public event System.Action<CharacterStats> HitPlayerEvent;
+    private float LeashDistance => leashOverride > 0f ? leashOverride : Leash;
+
     private static readonly List<EnemyBrain> Active = new List<EnemyBrain>();
     private static int _meleeAttackers;
     private static Transform _player;
@@ -52,6 +61,22 @@ public class EnemyBrain : MonoBehaviour
     private static readonly Color EyeCharge = new Color(0.12f, 0.31f, 0.82f) * 4f;
 
     public static IReadOnlyList<EnemyBrain> All => Active;
+    public Color Plumage => _plumage;
+    public static Transform Player => FindPlayer() ? _player : null;
+
+    // Teletransporte (el ninja maldito aparece a la espalda del héroe).
+    public void Blink(Vector3 to)
+    {
+        if (_agent != null && _agent.isOnNavMesh) _agent.Warp(to);
+        else transform.position = to;
+    }
+
+    // Golpe inmediato para habilidades de jefe (no pasa por la preparación normal).
+    public void ForceAttack()
+    {
+        if (Current == State.Dead || paused) return;
+        StartAttack(1f);
+    }
 
     public void Setup(EnemyDefinition def, EnemyCamp camp, int level, bool champion, Color plumage)
     {
@@ -84,6 +109,7 @@ public class EnemyBrain : MonoBehaviour
         foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
             if (r.name.StartsWith("Eyes")) _eyes.Add(r);
         SetEyes(EyeIdle);
+        if (def.ranged && def.projectileMaterial != null && def.id == "Corrupt_Ranged") EquipBow();
         PenguinAppearance look = GetComponentInChildren<PenguinAppearance>();
         if (look != null) look.SetPlumage(plumage);
         _dmg.RefreshBaseColors();
@@ -94,6 +120,41 @@ public class EnemyBrain : MonoBehaviour
             if (tag != null) tag.displayName = "Campeón " + def.displayName.ToLowerInvariant();
         }
     }
+
+    // Arquero corrupto: el arco y la flecha del equipo se cambian por un arco de verdad en la aleta,
+    // con cuerda que se tensa y flecha encajada (la misma animación de tiro que el héroe).
+    private ArcheryRig _archery;
+    private static readonly Color CorruptWood = new Color(0.36f, 0.42f, 0.55f);
+
+    private void EquipBow()
+    {
+        if (_rig == null) return;
+        ItemDefinition bow = GameDatabase.Instance != null && GameDatabase.Instance.items != null ? GameDatabase.Instance.items.Find("bow") : null;
+        if (bow == null || bow.weaponModel == null) return;
+        foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+            if (r.name.Contains("Weapon_L") || r.name.Contains("Weapon_R")) r.enabled = false;
+        WeaponHolder holder = _rig.GetComponent<WeaponHolder>();
+        if (holder == null) holder = _rig.gameObject.AddComponent<WeaponHolder>();
+        holder.stringColor = new Color(0.55f, 0.8f, 1f);
+        holder.Show(bow, null);
+        if (holder.MainModel != null)
+        {
+            var block = new MaterialPropertyBlock();
+            block.SetColor("_BaseColor", CorruptWood);
+            foreach (Renderer r in holder.MainModel.GetComponentsInChildren<Renderer>()) r.SetPropertyBlock(block);
+        }
+        _archery = _rig.GetComponent<ArcheryRig>();
+        _arrowModel = bow.projectileModel;
+        if (_archery != null && _archery.Arrow != null && definition.projectileMaterial != null)
+            foreach (Renderer r in _archery.Arrow.GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = new Material[r.sharedMaterials.Length];
+                for (int i = 0; i < mats.Length; i++) mats[i] = definition.projectileMaterial;
+                r.sharedMaterials = mats;
+            }
+    }
+
+    private GameObject _arrowModel;
 
     void Awake()
     {
@@ -144,6 +205,11 @@ public class EnemyBrain : MonoBehaviour
     void Update()
     {
         if (definition == null || Current == State.Dead || !_agent.isOnNavMesh) return;
+        if (paused)
+        {
+            _agent.isStopped = true;
+            return;
+        }
         if (!FindPlayer()) return;
 
         float frenzy = Time.time < _frenzyUntil ? 1f + 0.15f * _frenzyStacks : 1f;
@@ -166,7 +232,7 @@ public class EnemyBrain : MonoBehaviour
                 break;
 
             case State.Chase:
-                if (playerGone || (transform.position - _home).magnitude > Leash || SafeZone.Contains(transform.position, 2f))
+                if (playerGone || (transform.position - _home).magnitude > LeashDistance || (!ignoreSafeZone && SafeZone.Contains(transform.position, 2f)))
                 {
                     GoHome();
                     break;
@@ -201,7 +267,7 @@ public class EnemyBrain : MonoBehaviour
                     _dmg.Heal(_dmg.maxHealth);
                 }
                 else if (!playerGone && dist < definition.sightRange * 0.7f && !SafeZone.Contains(transform.position, 2f)
-                         && (transform.position - _home).magnitude < Leash * 0.6f)
+                         && (transform.position - _home).magnitude < LeashDistance * 0.6f)
                     Alert();
                 break;
         }
@@ -292,6 +358,8 @@ public class EnemyBrain : MonoBehaviour
         _hitsLeft = definition.hitsPerAttack;
         _struck = false;
         if (!definition.ranged && _rig != null) _rig.PlayBruteWindup(windup);
+        // Arquero: la flecha se suelta justo al terminar la preparación.
+        if (definition.ranged && _archery != null && _rig != null) _rig.PlayBowShot(windup / 0.66f, 0.66f);
         SetEyes(EyeCharge);
     }
 
@@ -347,7 +415,7 @@ public class EnemyBrain : MonoBehaviour
 
     private float RollDamage()
     {
-        return Random.Range(definition.damage.x, definition.damage.y) * definition.DamageScaleAt(Level) * (Champion ? 1.3f : 1f);
+        return Random.Range(definition.damage.x, definition.damage.y) * definition.DamageScaleAt(Level) * (Champion ? 1.3f : 1f) * damageMultiplier;
     }
 
     private void HitPlayer(Vector3 toPlayer)
@@ -355,7 +423,11 @@ public class EnemyBrain : MonoBehaviour
         if (_playerStats == null || _playerStats.IsDead) return;
         if (_playerDodge != null && _playerDodge.IsRolling) return;
         DamagePlayer(_playerStats, RollDamage(), toPlayer);
+        HitPlayerEvent?.Invoke(_playerStats);
     }
+
+    // Vuelve a fijar el punto al que regresa (las oleadas lo ponen en la plaza).
+    public void SetHome(Vector3 home) => _home = home;
 
     public static void DamagePlayer(CharacterStats stats, float amount, Vector3 direction = default)
     {
@@ -371,7 +443,7 @@ public class EnemyBrain : MonoBehaviour
 
     private void Shoot()
     {
-        Vector3 origin = transform.position + Vector3.up * 0.75f + transform.forward * 0.45f;
+        Vector3 origin = _archery != null && _archery.Ready ? _archery.LaunchPoint : transform.position + Vector3.up * 0.75f + transform.forward * 0.45f;
         Vector3 aim = _player.position + Vector3.up * 0.7f;
         Rigidbody rb = _player.GetComponent<Rigidbody>();
         if (rb != null)
@@ -381,7 +453,7 @@ public class EnemyBrain : MonoBehaviour
             aim += v * Mathf.Clamp((aim - origin).magnitude / definition.projectileSpeed, 0f, 0.6f) * 0.6f;
         }
         EnemyProjectile.Launch(origin, aim - origin, definition.projectileSpeed, definition.attackRange + 4f,
-            RollDamage(), definition.projectileMaterial, gameObject);
+            RollDamage(), definition.projectileMaterial, gameObject, _archery != null ? _arrowModel : null);
     }
 
     private void ReleaseAttackerSlot()
@@ -455,10 +527,13 @@ public class EnemyBrain : MonoBehaviour
             foreach (EnemyBrain b in Active)
                 if (b != this && (b.transform.position - transform.position).sqrMagnitude < 36f) b.Frenzy();
 
+        Killed?.Invoke(this);
         Vector3 center = transform.position + Vector3.up * 0.6f;
         EnemyLoot.Drop(this, center);
         // Estallido de hielo solo si lo mató un arma con runa de hielo; si no, el cuerpo cae con física.
-        if (FrostWeapon(_lastHit.source)) IceShatter.Play(this, model != null ? model : transform, center, _plumage);
-        else EnemyPhysicsDeath.Play(this, _lastHit.direction);
+        // Los jefes no estallan ni se hunden: su cuerpo se queda donde cayó.
+        bool boss = GetComponent<BossController>() != null;
+        if (!boss && FrostWeapon(_lastHit.source)) IceShatter.Play(this, model != null ? model : transform, center, _plumage);
+        else EnemyPhysicsDeath.Play(this, _lastHit.direction, boss);
     }
 }

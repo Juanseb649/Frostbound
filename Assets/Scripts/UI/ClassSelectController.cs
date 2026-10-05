@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -193,7 +194,7 @@ public class ClassSelectController : MonoBehaviour
     {
         if (!_open) return;
         if (nameField != null && nameField.isFocused) return;
-        if (UICancel.Pressed()) Back();
+        if (!SaveSlotsPanel.IsOpen && UICancel.Pressed()) Back();
     }
 
     public void Back()
@@ -208,9 +209,15 @@ public class ClassSelectController : MonoBehaviour
         CharacterClass cls = classes[_classIndex];
         string heroName = nameField != null ? nameField.text.Trim() : "";
         if (string.IsNullOrEmpty(heroName)) heroName = cls.displayName;
-        GameSession session = GameSession.Ensure();
-        session.SetHero(cls, palette.entries[_plumageIndex].id, heroName);
-        session.NewGame();
-        SceneManager.LoadScene(SceneIds.Village);
+        string plumage = palette.entries[_plumageIndex].id;
+        GameObject previous = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+        SaveSlotsPanel.Open(SaveSlotsPanel.Mode.New, slot =>
+        {
+            GameSession.Ensure().StartNewGame(slot, cls, plumage, heroName);
+            SceneManager.LoadScene(SceneIds.Village);
+        }, () =>
+        {
+            if (previous != null && EventSystem.current != null) EventSystem.current.SetSelectedGameObject(previous);
+        });
     }
 }
