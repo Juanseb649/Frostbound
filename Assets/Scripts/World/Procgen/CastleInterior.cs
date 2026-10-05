@@ -150,15 +150,15 @@ public class CastleInterior : MonoBehaviour
             _outside = Capture();
             _ambienceInside = true;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.09f, 0.11f, 0.17f);
+            RenderSettings.ambientLight = new Color(0.17f, 0.19f, 0.27f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.02f, 0.03f, 0.06f);
-            RenderSettings.fogStartDistance = 18f;
-            RenderSettings.fogEndDistance = 60f;
+            RenderSettings.fogStartDistance = 24f;
+            RenderSettings.fogEndDistance = 75f;
             if (_outside.sun != null)
             {
-                _outside.sun.intensity = _outside.sunIntensity * 0.16f;
+                _outside.sun.intensity = _outside.sunIntensity * 0.3f;
                 _outside.sun.color = new Color(0.55f, 0.65f, 0.95f);
             }
         }
@@ -318,6 +318,8 @@ public class CastleInterior : MonoBehaviour
             {
                 _kit.Box(p + Vector3.up * h * 0.5f, face.eulerAngles, new Vector3(0.7f, h, 0.4f), trim);
                 _kit.Cone(p + Vector3.up * (h + 0.3f), 0.5f, 1.4f, roof);
+                // Antorcha en la pilastra (una de cada tres), con su luz.
+                if ((i - from) % 6 == 2) Sconce(p + inward * 0.35f + Vector3.up * 2.6f, face);
             }
             else if (i < to && _rng.Chance(0.35f))
             {
@@ -369,6 +371,16 @@ public class CastleInterior : MonoBehaviour
         }
         _kit.ColliderBox(p + Vector3.up * 0.9f, Vector3.zero, new Vector3(0.6f, 1.8f, 0.6f));
         if (light) PointLight(p + Vector3.up * 2.6f, new Color(1f, 0.62f, 0.32f), 8f, 1.6f);
+    }
+
+    private int _sconces;
+
+    private void Sconce(Vector3 local, Quaternion face)
+    {
+        _kit.Box(local, face.eulerAngles, new Vector3(0.16f, 0.16f, 0.5f), gold);
+        _kit.Box(local + face * new Vector3(0f, 0.25f, 0.25f), (face * Quaternion.Euler(25f, 0f, 0f)).eulerAngles, new Vector3(0.12f, 0.55f, 0.12f), _wood);
+        _kit.Box(local + face * new Vector3(0f, 0.6f, 0.38f), (face * Quaternion.Euler(0f, 45f, 0f)).eulerAngles, new Vector3(0.2f, 0.32f, 0.2f), _flame);
+        if (_sconces++ < 70) PointLight(local + face * new Vector3(0f, 0.7f, 0.6f), new Color(1f, 0.6f, 0.3f), 8f, 1.5f);
     }
 
     private void PointLight(Vector3 local, Color color, float range, float intensity)

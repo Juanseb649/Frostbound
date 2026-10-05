@@ -29,6 +29,17 @@ public class PlayerCombat : MonoBehaviour
     [Range(0f, 0.2f)] public float spinCritChance = 0.03f;
     public float spinCritMultiplier = 2.5f;
 
+    [Header("Combo pesado (mandobles, hachas largas, mazos)")]
+    [Tooltip("Daño de cada golpe: tajo vertical, barrido, salto y aplastamiento.")]
+    public float[] heavyDamage = { 1.3f, 1.1f, 1.75f };
+    [Tooltip("Duración de cada golpe respecto a un ataque normal (lentos: el arma pesa).")]
+    public float[] heavyTiming = { 1.1f, 1.0f, 1.35f };
+    public float heavyComboWindow = 0.6f;
+
+    [Header("Arco")]
+    [Tooltip("Momento en que se suelta la flecha dentro del disparo (0–1).")]
+    [Range(0.4f, 0.85f)] public float bowRelease = 0.64f;
+
     [Header("Proyectiles")]
     public float projectileSpeed = 24f;
     [Tooltip("Proyectil por defecto de los arcos si el objeto no trae uno.")]
@@ -58,6 +69,7 @@ public class PlayerCombat : MonoBehaviour
     private float _comboDeadline;
     private float _attackMultiplier = 1f;
     private bool _spinAttack;
+    private int _heavyStep;
     private float _trailOn, _trailOff;
     private readonly List<Damageable> _scratch = new List<Damageable>();
     private readonly Collider[] _overlap = new Collider[48];
@@ -92,6 +104,7 @@ public class PlayerCombat : MonoBehaviour
 
         if (_holder != null) _holder.SetTrail(Time.time >= _trailOn && Time.time < _trailOff);
         if (_comboStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + comboWindow) _comboStep = 0;
+        if (_heavyStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + heavyComboWindow) _heavyStep = 0;
 
         if (_pending && Time.time >= _hitAt)
         {
@@ -141,6 +154,12 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    // Armas de dos manos con agarre a dos aletas: combo pesado.
+    public bool UsesHeavyCombo => HasWeapon && !Weapon.item.IsRanged && Weapon.item.Handling == WeaponHandling.TwoHanded
+                                  && Weapon.item.WeaponInfo.grip == WeaponGrip.TwoHand;
+
+    public bool UsesBow => HasWeapon && Weapon.item.WeaponInfo.grip == WeaponGrip.Bow;
+
     public float AttacksPerSecond
     {
         get
@@ -163,8 +182,23 @@ public class PlayerCombat : MonoBehaviour
 
         float duration = 1f / Mathf.Max(0.2f, AttacksPerSecond);
         if (UsesSwordCombo) return StartComboStep(duration);
+        if (UsesHeavyCombo) return StartHeavyStep(duration);
 
         _comboStep = 0;
+        _heavyStep = 0;
+        if (UsesBow)
+        {
+            // Coger flecha, colocarla, tensar y soltar: la flecha sale cuando la aleta suelta la cuerda.
+            float shot = Mathf.Max(0.55f, duration);
+            _attackMultiplier = 1f;
+            _spinAttack = false;
+            _readyAt = Time.time + shot;
+            _pending = true;
+            _hitAt = Time.time + shot * bowRelease;
+            if (_pc != null) _pc.FaceAndHold(_aimDir, shot * 0.95f);
+            if (_rig != null) _rig.PlayBowShot(shot, bowRelease);
+            return true;
+        }
         _attackMultiplier = 1f;
         _spinAttack = false;
         _readyAt = Time.time + duration;
@@ -180,6 +214,7 @@ public class PlayerCombat : MonoBehaviour
     {
         int step = Time.time <= _comboDeadline && _comboStep > 0 && _comboStep < 3 ? _comboStep + 1 : 1;
         _comboStep = step;
+        _heavyStep = 0;
         int i = step - 1;
         float[] minimum = { 0.4f, 0.45f, 0.78f };
         float duration = Mathf.Max(minimum[i], baseDuration * comboTiming[i]);
@@ -205,6 +240,37 @@ public class PlayerCombat : MonoBehaviour
         return true;
     }
 
+    // Tres golpes pesados: 1) tajo vertical contra el suelo, 2) barrido horizontal con todo el cuerpo, 3) salto y aplastamiento.
+    private bool StartHeavyStep(float baseDuration)
+    {
+        int step = Time.time <= _comboDeadline && _heavyStep > 0 && _heavyStep < 3 ? _heavyStep + 1 : 1;
+        _heavyStep = step;
+        _comboStep = 0;
+        int i = step - 1;
+        float[] minimum = { 0.95f, 0.9f, 1.25f };
+        float duration = Mathf.Max(minimum[i], baseDuration * heavyTiming[i]);
+        float[] hit = { 0.65f, 0.6f, 0.68f };
+        float[] stepMeters = { 0.4f, 0.55f, 1.3f };
+        float[] stepDelay = { 0.5f, 0.42f, 0.22f };
+
+        _attackMultiplier = heavyDamage[i];
+        _spinAttack = false;
+        _pending = true;
+        _hitAt = Time.time + duration * hit[i];
+        _readyAt = Time.time + duration * (step == 3 ? 1f : 0.92f);
+        _comboDeadline = step == 3 ? 0f : Time.time + duration + heavyComboWindow;
+        _trailOn = Time.time + duration * (step == 2 ? 0.46f : 0.5f);
+        _trailOff = Time.time + duration * (step == 2 ? 0.78f : 0.7f);
+
+        if (_pc != null)
+        {
+            _pc.FaceAndHold(_aimDir, duration * 0.95f);
+            _pc.Lunge(_aimDir, stepMeters[i], duration * stepDelay[i], duration * (step == 3 ? 0.42f : 0.2f));
+        }
+        if (_rig != null) _rig.PlayHeavyCombo(step, duration);
+        return true;
+    }
+
     private float _brokenNoticeAt;
 
     private void ResolveAttack()
@@ -226,6 +292,11 @@ public class PlayerCombat : MonoBehaviour
 
     private void Melee(ItemStack weapon)
     {
+        if (_heavyStep > 0 && UsesHeavyCombo)
+        {
+            HeavyMelee();
+            return;
+        }
         float range = Range;
         Vector3 origin = transform.position + Vector3.up * 0.6f;
         // Los tajos horizontales barren un arco ancho; el giro de 360° alcanza todo alrededor.
@@ -248,6 +319,60 @@ public class PlayerCombat : MonoBehaviour
         foreach (Damageable d in _scratch) Strike(d, _attackMultiplier * (crit ? spinCritMultiplier : 1f), true, crit);
         if (crit) StartCoroutine(HitStop());
         if (_scratch.Count > 0) _eq.WearWeapon(wearPerMeleeHit);
+    }
+
+    // Golpe pesado: el tajo vertical alcanza lejos y estrecho, el barrido muy ancho y el aplastamiento todo alrededor.
+    // Siempre hay impacto contra el suelo (anillo de nieve, temblor de cámara); si golpea a alguien, la pantalla se congela un instante.
+    private void HeavyMelee()
+    {
+        float range = Range;
+        int step = Mathf.Clamp(_heavyStep, 1, 3);
+        float[] arcs = { 32f, 115f, 181f };
+        float[] reach = { range + 0.6f, range + 0.2f, range + 1.1f };
+        float[] shake = { 0.22f, 0.12f, 0.36f };
+        float arc = arcs[step - 1], maxDist = reach[step - 1];
+        Vector3 impact = step == 2 ? transform.position + _aimDir * range * 0.6f : transform.position + _aimDir * (step == 3 ? 1.2f : range * 0.85f);
+        int n = Physics.OverlapSphereNonAlloc(transform.position + Vector3.up * 0.6f, maxDist + 0.4f, _overlap, ~0, QueryTriggerInteraction.Ignore);
+        _scratch.Clear();
+        for (int i = 0; i < n; i++)
+        {
+            Damageable d = _overlap[i].GetComponentInParent<Damageable>();
+            if (d == null || d.IsDead || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
+            Vector3 to = d.transform.position - transform.position;
+            to.y = 0f;
+            if (to.magnitude > maxDist + 0.4f) continue;
+            if (step == 1)
+            {
+                // Línea estrecha delante: lo que queda bajo el arma al caer.
+                float along = Vector3.Dot(to, _aimDir), side = Vector3.Cross(_aimDir, to).magnitude;
+                if (along < -0.3f || side > 0.95f) continue;
+            }
+            else if (step == 3)
+            {
+                if ((d.transform.position - impact).magnitude > maxDist) continue;
+            }
+            else if (to.sqrMagnitude > 0.04f && Vector3.Angle(_aimDir, to) > arc) continue;
+            _scratch.Add(d);
+        }
+        foreach (Damageable d in _scratch)
+        {
+            Strike(d, _attackMultiplier, true);
+            // Los golpes pesados empujan.
+            UnityEngine.AI.NavMeshAgent agent = d.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
+            {
+                Vector3 push = d.transform.position - (step == 3 ? impact : transform.position);
+                push.y = 0f;
+                agent.Move(push.normalized * (step == 3 ? 1.1f : 0.6f));
+            }
+        }
+        if (step != 2) GroundImpact.Spawn(new Vector3(impact.x, transform.position.y, impact.z), step == 3 ? 2.6f : 1.4f, step == 3 ? 1.5f : 1f);
+        CameraFollow.Shake(shake[step - 1] + (_scratch.Count > 0 ? 0.08f : 0f), step == 3 ? 0.4f : 0.28f);
+        if (_scratch.Count > 0)
+        {
+            StartCoroutine(HitStop(step == 3 ? 0.11f : 0.07f));
+            _eq.WearWeapon(wearPerMeleeHit);
+        }
     }
 
     private void Shoot(ItemStack weapon)
@@ -333,11 +458,11 @@ public class PlayerCombat : MonoBehaviour
     }
 
     // Golpe crítico: el tiempo casi se detiene un instante para que se sienta el impacto.
-    private System.Collections.IEnumerator HitStop()
+    private System.Collections.IEnumerator HitStop(float seconds = 0.08f)
     {
         float previous = Time.timeScale;
         Time.timeScale = 0.05f;
-        yield return new WaitForSecondsRealtime(0.08f);
+        yield return new WaitForSecondsRealtime(seconds);
         Time.timeScale = previous <= 0.05f ? 1f : previous;
     }
 

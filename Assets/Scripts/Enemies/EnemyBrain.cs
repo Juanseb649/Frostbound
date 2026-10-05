@@ -109,6 +109,7 @@ public class EnemyBrain : MonoBehaviour
         foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
             if (r.name.StartsWith("Eyes")) _eyes.Add(r);
         SetEyes(EyeIdle);
+        if (def.ranged && def.projectileMaterial != null && def.id == "Corrupt_Ranged") EquipBow();
         PenguinAppearance look = GetComponentInChildren<PenguinAppearance>();
         if (look != null) look.SetPlumage(plumage);
         _dmg.RefreshBaseColors();
@@ -119,6 +120,41 @@ public class EnemyBrain : MonoBehaviour
             if (tag != null) tag.displayName = "Campeón " + def.displayName.ToLowerInvariant();
         }
     }
+
+    // Arquero corrupto: el arco y la flecha del equipo se cambian por un arco de verdad en la aleta,
+    // con cuerda que se tensa y flecha encajada (la misma animación de tiro que el héroe).
+    private ArcheryRig _archery;
+    private static readonly Color CorruptWood = new Color(0.36f, 0.42f, 0.55f);
+
+    private void EquipBow()
+    {
+        if (_rig == null) return;
+        ItemDefinition bow = GameDatabase.Instance != null && GameDatabase.Instance.items != null ? GameDatabase.Instance.items.Find("bow") : null;
+        if (bow == null || bow.weaponModel == null) return;
+        foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+            if (r.name.Contains("Weapon_L") || r.name.Contains("Weapon_R")) r.enabled = false;
+        WeaponHolder holder = _rig.GetComponent<WeaponHolder>();
+        if (holder == null) holder = _rig.gameObject.AddComponent<WeaponHolder>();
+        holder.stringColor = new Color(0.55f, 0.8f, 1f);
+        holder.Show(bow, null);
+        if (holder.MainModel != null)
+        {
+            var block = new MaterialPropertyBlock();
+            block.SetColor("_BaseColor", CorruptWood);
+            foreach (Renderer r in holder.MainModel.GetComponentsInChildren<Renderer>()) r.SetPropertyBlock(block);
+        }
+        _archery = _rig.GetComponent<ArcheryRig>();
+        _arrowModel = bow.projectileModel;
+        if (_archery != null && _archery.Arrow != null && definition.projectileMaterial != null)
+            foreach (Renderer r in _archery.Arrow.GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = new Material[r.sharedMaterials.Length];
+                for (int i = 0; i < mats.Length; i++) mats[i] = definition.projectileMaterial;
+                r.sharedMaterials = mats;
+            }
+    }
+
+    private GameObject _arrowModel;
 
     void Awake()
     {
@@ -322,6 +358,8 @@ public class EnemyBrain : MonoBehaviour
         _hitsLeft = definition.hitsPerAttack;
         _struck = false;
         if (!definition.ranged && _rig != null) _rig.PlayBruteWindup(windup);
+        // Arquero: la flecha se suelta justo al terminar la preparación.
+        if (definition.ranged && _archery != null && _rig != null) _rig.PlayBowShot(windup / 0.66f, 0.66f);
         SetEyes(EyeCharge);
     }
 
@@ -405,7 +443,7 @@ public class EnemyBrain : MonoBehaviour
 
     private void Shoot()
     {
-        Vector3 origin = transform.position + Vector3.up * 0.75f + transform.forward * 0.45f;
+        Vector3 origin = _archery != null && _archery.Ready ? _archery.LaunchPoint : transform.position + Vector3.up * 0.75f + transform.forward * 0.45f;
         Vector3 aim = _player.position + Vector3.up * 0.7f;
         Rigidbody rb = _player.GetComponent<Rigidbody>();
         if (rb != null)
@@ -415,7 +453,7 @@ public class EnemyBrain : MonoBehaviour
             aim += v * Mathf.Clamp((aim - origin).magnitude / definition.projectileSpeed, 0f, 0.6f) * 0.6f;
         }
         EnemyProjectile.Launch(origin, aim - origin, definition.projectileSpeed, definition.attackRange + 4f,
-            RollDamage(), definition.projectileMaterial, gameObject);
+            RollDamage(), definition.projectileMaterial, gameObject, _archery != null ? _arrowModel : null);
     }
 
     private void ReleaseAttackerSlot()

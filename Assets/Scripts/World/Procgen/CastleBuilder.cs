@@ -23,7 +23,9 @@ public class CastleBuilder : MonoBehaviour
     public Mesh cone;
     public Mesh prism;
 
-    private Transform _visual, _colliders;
+    private Transform _visual, _colliders, _lights;
+    public static readonly Color FireLight = new Color(1f, 0.6f, 0.28f);
+    public static readonly Color FrostLight = new Color(0.35f, 0.62f, 1f);
     private VillageLayout.CastleDesign _d;
     private DeterministicRng _rng;
     private float _floor;
@@ -35,6 +37,7 @@ public class CastleBuilder : MonoBehaviour
         transform.SetPositionAndRotation(design.position, Quaternion.Euler(0f, design.yaw, 0f));
         _visual = Child("Piezas");
         _colliders = Child("Colisiones");
+        _lights = Child("Luces");
         _floor = design.plateauHeight + 0.6f;
 
         BuildPlateau();
@@ -46,7 +49,80 @@ public class CastleBuilder : MonoBehaviour
         BuildCornerTurrets();
         BuildCrystals();
         if (town != null) BuildTown(town);
+        BuildLighting();
         Combine();
+    }
+
+    // ---------- Iluminación ----------
+
+    // Luz para que el castillo oscuro se lea: braseros en el portal, vidrieras encendidas desde dentro,
+    // focos que suben por la fachada y faroles en las murallas. Las luces no proyectan sombras (rendimiento).
+    private void BuildLighting()
+    {
+        float f = _floor, H = _d.naveHeight, L = _d.NaveLength;
+
+        // Braseros a los lados del portal.
+        foreach (float side in new[] { -1f, 1f })
+        {
+            Vector3 b = new Vector3(side * 3.9f, f, 3.4f);
+            Cylinder(b + Vector3.up * 0.5f, 0.5f, 1f, trim, true);
+            Cylinder(b + Vector3.up * 1.1f, 1.1f, 0.25f, gold);
+            Cone(b + Vector3.up * 1.15f, 0.8f, 0.9f, lampGlow);
+            Lamp(b + Vector3.up * 1.9f, FireLight, 12f, 3f, true);
+        }
+        // Focos que suben por la fachada hasta el rosetón y las torres.
+        Spot(new Vector3(0f, f + 0.4f, 8f), new Vector3(0f, f + H - 4f, 1f), FrostLight, 45f, 55f, 4f);
+        foreach (float side in new[] { -1f, 1f })
+            Spot(new Vector3(side * 12f, f + 0.4f, 7f), new Vector3(side * (NaveWidth * 0.5f + 2.8f), f + _d.sideTowerHeight * 0.6f, -1.6f), new Color(0.55f, 0.6f, 0.9f), 55f, 40f, 3f);
+        // Vidrieras: luz cobalto saliendo de la nave por los dos lados.
+        for (int i = 0; i < _d.bays; i += 2)
+            foreach (float side in new[] { -1f, 1f })
+                Lamp(new Vector3(side * (NaveWidth * 0.5f + AisleWidth + 1.6f), f + AisleHeight * 0.5f, -2.5f - 5f * i), FrostLight, 9f, 1.6f, false);
+        // Rosetón y campanarios encendidos.
+        Lamp(new Vector3(0f, f + H - 5.2f, 3f), FrostLight, 12f, 2.4f, false);
+        float towerX = NaveWidth * 0.5f + 2.8f;
+        foreach (float side in new[] { -1f, 1f })
+            Lamp(new Vector3(side * towerX, f + _d.sideTowerHeight * 0.78f, -1.6f), FrostLight, 10f, 2.2f, false);
+        Lamp(new Vector3(0f, f + _d.centralTowerHeight * 0.8f, -3.4f), FrostLight, 12f, 2.6f, false);
+        // Faroles en las esquinas de la meseta y en el ábside.
+        float w = VillageLayout.CastleDesign.HalfWidth - 1.6f;
+        foreach (Vector3 c in new[] { new Vector3(-w, 0f, _d.BackZ + 1.6f), new Vector3(w, 0f, _d.BackZ + 1.6f), new Vector3(-w, 0f, VillageLayout.CastleDesign.Forecourt - 1.5f), new Vector3(w, 0f, VillageLayout.CastleDesign.Forecourt - 1.5f) })
+            Lamp(c + new Vector3(0f, _d.plateauHeight + 4f, 0f) + (c.x > 0 ? Vector3.left : Vector3.right) * 2.4f, FireLight, 10f, 2f, true);
+        Lamp(new Vector3(0f, f + 4f, -L - NaveWidth * 0.5f - 2.5f), FrostLight, 12f, 2f, false);
+        // Las espinas de hielo negro brillan un poco.
+        Lamp(new Vector3(0f, f + 1.2f, 2.6f), FrostLight, 8f, 1.6f, false);
+    }
+
+    private void Lamp(Vector3 local, Color color, float range, float intensity, bool flicker)
+    {
+        var go = new GameObject("Luz");
+        go.transform.SetParent(_lights, false);
+        go.transform.localPosition = local;
+        Light l = go.AddComponent<Light>();
+        l.type = LightType.Point;
+        l.color = color;
+        l.range = range;
+        l.intensity = intensity;
+        l.shadows = LightShadows.None;
+        if (!flicker) return;
+        FlickerLight fl = go.AddComponent<FlickerLight>();
+        fl.baseIntensity = intensity;
+        fl.intensityVariation = intensity * 0.22f;
+    }
+
+    private void Spot(Vector3 local, Vector3 lookAt, Color color, float range, float angle, float intensity)
+    {
+        var go = new GameObject("Foco");
+        go.transform.SetParent(_lights, false);
+        go.transform.localPosition = local;
+        go.transform.localRotation = Quaternion.LookRotation(lookAt - local);
+        Light l = go.AddComponent<Light>();
+        l.type = LightType.Spot;
+        l.color = color;
+        l.range = range;
+        l.spotAngle = angle;
+        l.intensity = intensity;
+        l.shadows = LightShadows.None;
     }
 
     // ---------- Poblado en ruinas al pie del castillo ----------
@@ -114,6 +190,16 @@ public class CastleBuilder : MonoBehaviour
             Box(l + Vector3.up * 1.6f, Vector3.zero, new Vector3(0.2f, 3.2f, 0.2f), trim, true);
             Box(l + Vector3.up * 3.3f, Vector3.zero, new Vector3(0.5f, 0.6f, 0.5f), glass, false);
             Cone(l + Vector3.up * 3.6f, 0.75f, 0.9f, roof);
+            Lamp(l + Vector3.up * 3.2f, FrostLight, 9f, 1.8f, false);
+        }
+        // La estatua rota de la plaza late con luz del Frost; antorchas en las torres de la puerta.
+        Lamp(new Vector3(0f, 3.4f, cz), FrostLight, 14f, 2.4f, false);
+        foreach (float side in new[] { -1f, 1f })
+        {
+            Vector3 torch = new Vector3(side * 4f, 2.6f, _d.GateZ + 1.6f);
+            Box(torch, Vector3.zero, new Vector3(0.14f, 0.7f, 0.14f), door, false);
+            Box(torch + Vector3.up * 0.45f, new Vector3(0f, 45f, 0f), new Vector3(0.22f, 0.3f, 0.22f), lampGlow, false);
+            Lamp(torch + Vector3.up * 0.6f, FireLight, 9f, 2f, true);
         }
 
         foreach (Vector3 c in town.crystals) Shards(c, _rng.NextInt(3, 7), 1.2f, 4.5f, 35f);
@@ -251,6 +337,7 @@ public class CastleBuilder : MonoBehaviour
             Box(lamp + Vector3.up * 1.4f, Vector3.zero, new Vector3(0.2f, 2.8f, 0.2f), trim, true);
             Box(lamp + Vector3.up * 2.95f, Vector3.zero, new Vector3(0.55f, 0.55f, 0.55f), lampGlow, false);
             Cone(lamp + Vector3.up * 3.2f, 0.7f, 0.6f, roof);
+            Lamp(lamp + Vector3.up * 2.9f, FireLight, 10f, 2.2f, true);
         }
     }
 

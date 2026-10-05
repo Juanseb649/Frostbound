@@ -52,6 +52,9 @@ public class WeaponHolder : MonoBehaviour
     private Matrix4x4 _restR, _restL;
     private bool _ready;
     private PenguinRigAnimator _rig;
+    private ArcheryRig _archery;
+    [Tooltip("Color de la cuerda del arco (los corruptos la llevan helada).")]
+    public Color stringColor = new Color(0.85f, 0.82f, 0.74f);
 
     void Awake() => Init();
 
@@ -79,6 +82,7 @@ public class WeaponHolder : MonoBehaviour
         get
         {
             Init();
+            if (CurrentGrip == WeaponGrip.Bow && _archery != null && _archery.Ready) return _archery.LaunchPoint;
             Transform hand = CurrentGrip == WeaponGrip.Bow ? _handL : _handR;
             return hand != null ? hand.position : transform.position + Vector3.up * 0.7f;
         }
@@ -119,6 +123,15 @@ public class WeaponHolder : MonoBehaviour
                 wrist ? MainModel.transform.localRotation * Vector3.right : Vector3.right);
             _rig.SetBladeLength(BladeLength);
         }
+        bool bow = Armed && MainModel != null && CurrentGrip == WeaponGrip.Bow;
+        if (_rig != null) _rig.SetBow(bow);
+        if (bow)
+        {
+            if (_archery == null) _archery = GetComponent<ArcheryRig>();
+            if (_archery == null) _archery = gameObject.AddComponent<ArcheryRig>();
+            _archery.Setup(MainModel.transform, main.projectileModel, _handR, stringColor);
+        }
+        else if (_archery != null) _archery.Clear();
         if (MainModel != null && main.IsWeapon && !main.IsRanged) AddTrail(MainModel);
         BladeCollider = null;
         BladeLength = 0f;
