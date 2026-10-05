@@ -15,6 +15,12 @@ public class ItemStack
     public List<RolledAffix> affixes = new List<RolledAffix>();
     [UnityEngine.Tooltip("Nombre generado de los objetos raros.")]
     public string rareName = "";
+    [UnityEngine.Tooltip("Nivel del enemigo que lo soltó. 0 = arma inicial o fija (pega menos).")]
+    public int itemLevel;
+
+    // El daño de un arma crece con el nivel del enemigo que la soltó; las iniciales pegan un 30 % menos.
+    public static float LevelMultiplier(int level) => level <= 0 ? 0.7f : 1f + 0.15f * (level - 1);
+    public float BaseDamage => item != null ? item.damage * (item.IsWeapon ? LevelMultiplier(itemLevel) : 1f) : 0f;
 
     public ItemStack(ItemDefinition item, int quantity)
     {
@@ -99,7 +105,7 @@ public class ItemStack
 
     public ItemStack Clone()
     {
-        var c = new ItemStack(item, quantity) { durability = durability, quality = quality, rareName = rareName };
+        var c = new ItemStack(item, quantity) { durability = durability, quality = quality, rareName = rareName, itemLevel = itemLevel };
         c.affixes = new List<RolledAffix>();
         if (affixes != null) foreach (RolledAffix a in affixes) c.affixes.Add(new RolledAffix(a.id, a.kind, a.value));
         c.runes = new List<ItemDefinition>(runes ?? new List<ItemDefinition>());

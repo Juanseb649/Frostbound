@@ -356,7 +356,7 @@ public class PlayerCombat : MonoBehaviour
 
     private void OnWeaponBroke(ItemStack weapon)
     {
-        Notifications.Show("¡" + weapon.item.displayName + " se rompió! Llévala al herrero.", FrostboundUI.Negative);
+        Notifications.Show("¡" + weapon.item.displayName + " se rompió! Se guardó en la mochila: llévala al herrero.", FrostboundUI.Negative);
     }
 
     void LateUpdate()

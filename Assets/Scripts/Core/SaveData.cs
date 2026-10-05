@@ -66,6 +66,7 @@ public class SavedStack
     public LootQuality quality;
     public List<SavedAffix> affixes = new List<SavedAffix>();
     public string rareName = "";
+    public int itemLevel;
 
     public static SavedStack From(ItemStack s)
     {
@@ -75,7 +76,8 @@ public class SavedStack
             quantity = s.quantity,
             durability = s.durability,
             quality = s.quality,
-            rareName = s.rareName ?? ""
+            rareName = s.rareName ?? "",
+            itemLevel = s.itemLevel
         };
         if (s.runes != null) foreach (ItemDefinition r in s.runes) if (r != null) d.runes.Add(r.id);
         if (s.affixes != null) foreach (RolledAffix a in s.affixes) d.affixes.Add(new SavedAffix { id = a.id, kind = a.kind, value = a.value });
@@ -86,7 +88,9 @@ public class SavedStack
     {
         ItemDefinition item = db != null ? db.Find(id) : null;
         if (item == null) return null;
-        var s = new ItemStack(item, Math.Max(1, quantity)) { quality = quality, rareName = rareName ?? "" };
+        // Partidas antiguas sin nivel: lo que vino del botín cuenta como nivel 1.
+        int level = itemLevel > 0 ? itemLevel : (quality != LootQuality.None ? 1 : 0);
+        var s = new ItemStack(item, Math.Max(1, quantity)) { quality = quality, rareName = rareName ?? "", itemLevel = level };
         if (item.HasDurability && durability >= 0f) s.durability = durability;
         s.runes = new List<ItemDefinition>();
         foreach (string r in runes)

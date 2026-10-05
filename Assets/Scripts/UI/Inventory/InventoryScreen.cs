@@ -364,7 +364,15 @@ public class InventoryScreen : MonoBehaviour
                    .Append(": ").Append(w.FreeRuneSlots).Append(" ranura(s) libre(s)</color></size>\n");
         }
 
-        if (item.damage > 0f) sb.Append("Daño  <b>+").Append(item.damage.ToString("0.#")).Append("</b>").Append(Delta(item.damage - (compareTo != null ? compareTo.damage : 0f), compareTo, item, pos, neg)).Append("\n");
+        if (item.damage > 0f)
+        {
+            float myDmg = stack != null ? stack.BaseDamage : item.damage;
+            ItemStack cmp = compareTo != null && player != null ? player.GetStack(compareTo.equipSlot) : null;
+            float theirDmg = cmp != null ? cmp.BaseDamage : (compareTo != null ? compareTo.damage : 0f);
+            sb.Append("Daño  <b>+").Append(myDmg.ToString("0.#")).Append("</b>").Append(Delta(myDmg - theirDmg, compareTo, null, pos, neg)).Append("\n");
+            if (item.IsWeapon && stack != null)
+                sb.Append("<size=13><color=").Append(muted).Append(">").Append(stack.itemLevel > 0 ? "Nivel del objeto " + stack.itemLevel : "Arma inicial").Append("</color></size>\n");
+        }
         if (item.armor > 0) sb.Append("Armadura  <b>").Append(item.armor).Append("</b>").Append(Delta(item.armor - (compareTo != null ? compareTo.armor : 0), compareTo, item, pos, neg)).Append("\n");
 
         StatBlock mine = item.StatBonus;

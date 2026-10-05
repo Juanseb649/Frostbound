@@ -199,13 +199,16 @@ public static class SetupWeapons
                "La herrera Brunna repara las armas (Reparar).";
     }
 
+    // Las armas duran el triple de lo que pone en las tablas de arriba.
+    public const int DurabilityScale = 3;
+
     private static void ApplyWeaponData(ItemDefinition item, WeaponType type, float speed, int durability, int runes,
         StatModifier[] req, string model, string projectile)
     {
         item.weaponType = type;
         item.attackSpeed = speed;
         item.damageSpread = 0.15f;
-        item.maxDurability = durability;
+        item.maxDurability = durability * DurabilityScale;
         item.runeSlots = runes;
         item.requiredStats = new List<StatModifier>(req ?? new StatModifier[0]);
         item.weaponModel = LoadModel(model);

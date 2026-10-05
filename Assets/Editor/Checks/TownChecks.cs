@@ -187,4 +187,32 @@ public static class TownChecks
         System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "../FrostboundBridge/map_" + a.id + ".png"), a.map.EncodeToPNG());
         return "ok";
     }
+
+    public static string BreakWeapon()
+    {
+        var eq = Player.GetComponent<Equipment>();
+        var w = eq.MainWeapon;
+        if (w == null) return "sin arma";
+        string name = w.item.displayName;
+        int before = eq.Inventory.UsedSlots;
+        eq.WearWeapon(w.durability + 1f);
+        return name + " rota · equipada " + (eq.MainWeapon != null ? eq.MainWeapon.item.displayName : "nada")
+            + " · mochila " + before + "→" + eq.Inventory.UsedSlots + " · daño arma " + Player.GetComponent<CharacterStats>().WeaponDamage.ToString("0.#");
+    }
+
+    public static string WeaponInfo()
+    {
+        var eq = Player.GetComponent<Equipment>();
+        var w = eq.MainWeapon;
+        if (w == null) return "sin arma";
+        return w.item.displayName + " nivel " + w.itemLevel + " daño " + w.BaseDamage.ToString("0.#") + " (base " + w.item.damage + ") dur " + w.durability + "/" + w.item.maxDurability;
+    }
+
+    public static string Bodies()
+    {
+        var sb = new StringBuilder();
+        foreach (var go in Object.FindObjectsByType<Transform>())
+            if (go.name.EndsWith("(cuerpo)")) sb.Append(go.name).Append(" en ").Append(go.position.ToString("0")).Append("; ");
+        return sb.Length > 0 ? sb.ToString() : "ningún cuerpo";
+    }
 }

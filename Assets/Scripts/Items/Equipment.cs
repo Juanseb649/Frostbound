@@ -276,6 +276,10 @@ public class Equipment : MonoBehaviour
         bool broke = w.Wear(amount);
         if (broke)
         {
+            // El arma rota se guarda sola en la mochila (o cae al suelo si no cabe).
+            _equipped.Remove(EquipSlot.Weapon);
+            if (_inventory.FreeSlots > 0) _inventory.AddStack(w);
+            else WorldItem.Spawn(w, transform.position + transform.forward * 0.8f + Vector3.up * 0.6f, transform.forward * 1.5f + Vector3.up * 2f, gameObject);
             Apply();
             WeaponBroke?.Invoke(w);
         }
@@ -331,7 +335,7 @@ public class Equipment : MonoBehaviour
             ItemDefinition item = s.item;
             bonus = bonus + item.StatBonus;
             armor += item.armor;
-            float d = item.damage;
+            float d = s.BaseDamage;
             if (item.equipSlot == EquipSlot.Weapon)
                 foreach (ItemDefinition r in s.runes)
                     if (r != null && r.runeEffect == RuneEffect.Sharpness) d *= 1f + r.runePower;

@@ -33,7 +33,7 @@ MonoBehaviour:
   attackSpeed: 1
   damageSpread: 0.15
   requiredStats: []
-  maxDurability: 40
+  maxDurability: 120
   runeSlots: 2
   weaponModel: {fileID: 919132149155446097, guid: 3062a019a46152745892540a13ef50c8, type: 3}
   projectileModel: {fileID: 0}

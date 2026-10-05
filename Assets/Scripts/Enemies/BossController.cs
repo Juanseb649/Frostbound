@@ -201,6 +201,16 @@ public class BossController : MonoBehaviour
 
     private void OnKilled(EnemyBrain b)
     {
+        // El encantamiento se apaga con su dueño.
+        if (_glow != null) _glow.enabled = false;
+        foreach (var (r, m) in _weapon)
+        {
+            if (r == null) continue;
+            r.GetPropertyBlock(_mpb, m);
+            _mpb.SetColor(EmissionId, Color.black);
+            _mpb.SetColor(BaseColorId, Color.white);
+            r.SetPropertyBlock(_mpb, m);
+        }
         Defeated?.Invoke(this);
         if (Active == this) Active = null;
     }

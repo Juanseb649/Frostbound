@@ -493,7 +493,9 @@ public class EnemyBrain : MonoBehaviour
         Vector3 center = transform.position + Vector3.up * 0.6f;
         EnemyLoot.Drop(this, center);
         // Estallido de hielo solo si lo mató un arma con runa de hielo; si no, el cuerpo cae con física.
-        if (FrostWeapon(_lastHit.source)) IceShatter.Play(this, model != null ? model : transform, center, _plumage);
-        else EnemyPhysicsDeath.Play(this, _lastHit.direction);
+        // Los jefes no estallan ni se hunden: su cuerpo se queda donde cayó.
+        bool boss = GetComponent<BossController>() != null;
+        if (!boss && FrostWeapon(_lastHit.source)) IceShatter.Play(this, model != null ? model : transform, center, _plumage);
+        else EnemyPhysicsDeath.Play(this, _lastHit.direction, boss);
     }
 }
