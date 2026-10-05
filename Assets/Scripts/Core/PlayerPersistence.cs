@@ -1,7 +1,7 @@
 using UnityEngine;
 
-// Une al héroe con la partida guardada: aparece junto a su última hoguera, se guarda cada cierto tiempo
-// y al salir del juego.
+// Une al héroe con la partida guardada: empieza en el poblado y, si ya encendió hogueras, aparece junto a la última.
+// Guarda cada cierto tiempo y al salir del juego.
 [DefaultExecutionOrder(100)]
 [RequireComponent(typeof(Equipment))]
 public class PlayerPersistence : MonoBehaviour
@@ -23,9 +23,9 @@ public class PlayerPersistence : MonoBehaviour
     void Start()
     {
         GameSession s = GameSession.Instance;
-        Bonfire b = Bonfire.Find(s != null ? s.LastBonfire : Bonfire.CastleId);
-        if (b == null) b = Bonfire.Find(Bonfire.CastleId);
-        if (b != null) MoveTo(b.SpawnPoint, b.SpawnRotation);
+        string last = s != null ? s.LastBonfire : "";
+        Bonfire b = string.IsNullOrEmpty(last) ? null : Bonfire.Find(last);
+        if (b != null && s.IsBonfireLit(b.id)) MoveTo(b.SpawnPoint, b.SpawnRotation);
         _nextSave = Time.time + autosaveSeconds;
     }
 

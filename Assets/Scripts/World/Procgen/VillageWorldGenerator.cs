@@ -4,7 +4,8 @@ using Unity.AI.Navigation;
 using UnityEngine;
 
 // Construye el exterior del poblado con la seed de la partida antes de que nada más arranque:
-// bosque, montones de nieve, posición de los campamentos y hogueras. Luego vuelve a hornear el NavMesh.
+// castillo gótico, bosque, montones de nieve, posición de los campamentos y hogueras repartidas por la zona.
+// Luego vuelve a hornear el NavMesh.
 [DefaultExecutionOrder(-900)]
 public class VillageWorldGenerator : MonoBehaviour
 {
@@ -13,9 +14,13 @@ public class VillageWorldGenerator : MonoBehaviour
     public GameObject moundPrefab;
     public GameObject bonfirePrefab;
 
+    public CastleBuilder castlePrefab;
+
     [Header("Escena")]
-    [Tooltip("Bancos y aldeanos que se reúnen alrededor de la hoguera del castillo (se mueven con ella).")]
+    [Tooltip("Bancos y aldeanos de la plaza: se reúnen alrededor de una fogata decorativa (no es un punto de control).")]
     public Transform bonfireCamp;
+    [Tooltip("Suelo de la zona: se agranda para que quepa el castillo.")]
+    public Transform ground;
     public NavMeshSurface navMesh;
     [Tooltip("Seed para probar la escena sin pasar por el menú.")]
     public int fallbackSeed = 12345;
@@ -40,13 +45,29 @@ public class VillageWorldGenerator : MonoBehaviour
         Transform root = new GameObject("Exterior_Generado").transform;
         root.SetParent(transform, false);
 
-        Bonfire castle = SpawnBonfire(root, Layout.castleBonfire, Bonfire.CastleId, "Hoguera del castillo");
-        if (bonfireCamp != null && castle != null)
+        if (ground != null)
         {
-            bonfireCamp.SetPositionAndRotation(castle.transform.position, castle.transform.rotation);
-            foreach (VillagerNPC v in bonfireCamp.GetComponentsInChildren<VillagerNPC>(true))
-                if (v.mood == VillagerMood.Huddle) v.focusPoint = castle.transform;
+            float scale = VillageLayout.GroundVisualHalfSize * 2f / 10f;
+            ground.localScale = new Vector3(scale, ground.localScale.y, scale);
         }
+
+        if (castlePrefab != null)
+        {
+            CastleBuilder castle = Instantiate(castlePrefab, root);
+            castle.name = "Castillo";
+            castle.Build(Layout.castle);
+        }
+
+        if (bonfireCamp != null && bonfirePrefab != null)
+        {
+            GameObject hearth = Instantiate(bonfirePrefab, bonfireCamp.position, bonfireCamp.rotation, bonfireCamp);
+            hearth.name = "Fogata_Plaza";
+            foreach (Bonfire b in hearth.GetComponentsInChildren<Bonfire>()) DestroyImmediate(b);
+            foreach (VillagerNPC v in bonfireCamp.GetComponentsInChildren<VillagerNPC>(true))
+                if (v.mood == VillagerMood.Huddle) v.focusPoint = hearth.transform;
+        }
+
+        SpawnBonfire(root, Layout.castleBonfire, Bonfire.CastleId, "Hoguera del castillo");
         for (int i = 0; i < Layout.bonfires.Count; i++)
             SpawnBonfire(root, Layout.bonfires[i], VillageLayout.BonfireId(i), "Hoguera");
 

@@ -8,10 +8,10 @@ public class Bonfire : MonoBehaviour
 {
     public const string CastleId = "hoguera_castillo";
 
-    public string id = CastleId;
+    public string id = "hoguera";
     public string displayName = "Hoguera";
     [Tooltip("Distancia a la que el héroe la enciende al pasar.")]
-    public float lightRadius = 3.5f;
+    public float lightRadius = 5f;
     [Tooltip("Distancia desde el centro donde reaparece el héroe.")]
     public float spawnDistance = 2.4f;
 
@@ -42,7 +42,7 @@ public class Bonfire : MonoBehaviour
     void Start()
     {
         GameSession s = GameSession.Instance;
-        SetLit(s != null ? s.IsBonfireLit(id) : id == CastleId);
+        SetLit(s != null && s.IsBonfireLit(id));
         _initialized = true;
     }
 
@@ -119,7 +119,7 @@ public class Bonfire : MonoBehaviour
             float d = (b.transform.position - position).sqrMagnitude;
             if (d < bestDist) { bestDist = d; best = b; }
         }
-        return best != null ? best : Find(CastleId);
+        return best;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 // Muerte del héroe: el cuerpo cae en ragdoll, la cámara se ralentiza un instante y aparece la pantalla
 // "HAS MUERTO". El jugador elige reaparecer en la hoguera encendida más cercana al lugar donde cayó
-// (el equipo pierde durabilidad) o volver al título.
+// (o en el poblado si aún no encendió ninguna; el equipo pierde durabilidad) o volver al título.
 [RequireComponent(typeof(CharacterStats))]
 public class PlayerRespawn : MonoBehaviour
 {
@@ -89,8 +89,8 @@ public class PlayerRespawn : MonoBehaviour
         {
             pos = bonfire.SpawnPoint;
             rot = bonfire.SpawnRotation;
-            if (GameSession.Instance != null) GameSession.Instance.SetLastBonfire(bonfire.id);
         }
+        if (GameSession.Instance != null) GameSession.Instance.SetLastBonfire(bonfire != null ? bonfire.id : "");
         if (_rb != null)
         {
             _rb.position = pos;
@@ -124,7 +124,7 @@ public class PlayerRespawn : MonoBehaviour
         GameplayInput.Unblock();
         _dying = false;
         if (GameSession.Instance != null) GameSession.Instance.SaveNow();
-        Notifications.Show("Despiertas junto a la hoguera. Tu equipo se desgastó un poco.", FrostboundUI.Muted);
+        Notifications.Show(bonfire != null ? "Despiertas junto a la hoguera. Tu equipo se desgastó un poco." : "Despiertas en el poblado. Tu equipo se desgastó un poco.", FrostboundUI.Muted);
     }
 
     private void ReturnToTitle()
@@ -134,7 +134,7 @@ public class PlayerRespawn : MonoBehaviour
         Bonfire bonfire = Bonfire.NearestLit(_deathPosition);
         if (GameSession.Instance != null)
         {
-            if (bonfire != null) GameSession.Instance.SetLastBonfire(bonfire.id);
+            GameSession.Instance.SetLastBonfire(bonfire != null ? bonfire.id : "");
             GameSession.Instance.EndGame();
         }
         SceneManager.LoadScene(SceneIds.MainMenu);

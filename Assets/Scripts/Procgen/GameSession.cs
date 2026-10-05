@@ -60,9 +60,8 @@ public class GameSession : MonoBehaviour
             heroName = heroName,
             classId = cls != null ? cls.name : "",
             plumageId = plumageId,
-            lastBonfire = Bonfire.CastleId
+            lastBonfire = ""
         };
-        Current.litBonfires.Add(Bonfire.CastleId);
         _playSeconds = 0f;
         PendingRestore = false;
         SaveSystem.Save(Current);
@@ -96,9 +95,9 @@ public class GameSession : MonoBehaviour
         PendingRestore = false;
     }
 
-    public string LastBonfire => Current != null && !string.IsNullOrEmpty(Current.lastBonfire) ? Current.lastBonfire : Bonfire.CastleId;
+    public string LastBonfire => Current != null ? Current.lastBonfire ?? "" : "";
 
-    public bool IsBonfireLit(string id) => id == Bonfire.CastleId || (Current != null && Current.litBonfires.Contains(id));
+    public bool IsBonfireLit(string id) => Current != null && Current.litBonfires.Contains(id);
 
     public void LightBonfire(string id)
     {
@@ -110,8 +109,8 @@ public class GameSession : MonoBehaviour
 
     public void SetLastBonfire(string id)
     {
-        if (Current == null || string.IsNullOrEmpty(id)) return;
-        Current.lastBonfire = id;
+        if (Current == null) return;
+        Current.lastBonfire = id ?? "";
     }
 
     public void RegisterPlayer(Equipment player) => _player = player;

@@ -12,8 +12,36 @@ public static class VillageLayout
         public float scale;
     }
 
+    // Diseño del castillo gótico. Espacio local: la fachada mira a +Z (hacia el poblado), la nave se extiende hacia -Z.
+    public struct CastleDesign
+    {
+        public Vector3 position;
+        public float yaw;
+        public int bays;
+        public bool transept;
+        public int chapels;
+        public float plateauHeight;
+        public float naveHeight;
+        public float sideTowerHeight;
+        public float centralTowerHeight;
+        public float spireRatio;
+        public int detailSeed;
+
+        public float NaveLength => bays * 5f;
+        public float ViaductLength => plateauHeight / Mathf.Tan(17f * Mathf.Deg2Rad);
+        public const float Forecourt = 9f;
+        public const float HalfWidth = 18f;
+        public float FrontZ => Forecourt + ViaductLength;
+        public float BackZ => -(NaveLength + 12f);
+
+        public Vector3 ToWorld(Vector3 local) => position + Quaternion.Euler(0f, yaw, 0f) * local;
+        public Vector3 Foot => ToWorld(new Vector3(0f, 0f, FrontZ));
+        public Vector3 Back => ToWorld(new Vector3(0f, 0f, BackZ));
+    }
+
     public class Result
     {
+        public CastleDesign castle;
         public Spot castleBonfire;
         public readonly List<Spot> bonfires = new List<Spot>();
         public readonly List<Vector3> camps = new List<Vector3>();
@@ -25,19 +53,24 @@ public static class VillageLayout
     public const float CampSafeRadius = 38f;
     public const float SteveSafeRadius = 20f;
     public const float CampRadius = 5f;
-    public const float ForestRadius = 85f;
+    public const float ForestRadius = 112f;
     public static readonly Vector3 SteveClearing = new Vector3(-11f, 0f, -47f);
 
-    public const int PineCount = 95;
+    public const int PineCount = 140;
     public const int MoundCount = 30;
     public const float MinCampDistance = CampSafeRadius + CampRadius + 4f;
     public const float MinCampFromSteve = SteveSafeRadius + CampRadius + 4f;
     public const float MinBonfireFromCamp = 20f;
+    public const float CastleClearance = CastleDesign.HalfWidth + 4f;
+    public const float MinBonfireFromVillage = 48f;
+    public const float MinBonfireSpacing = 35f;
+    public const float GroundHalfSize = 130f;
+    public const float GroundVisualHalfSize = 200f;
 
     public static Result Generate(int seed, IList<Vector3> campAnchors)
     {
         var r = new Result();
-        PlaceCastleBonfire(r, Stream(seed, "hoguera_castillo"));
+        PlaceCastle(r, Stream(seed, "castillo"));
         PlaceCamps(r, Stream(seed, "campamentos"), campAnchors);
         PlaceBonfires(r, Stream(seed, "hogueras"));
         PlacePines(r, Stream(seed, "bosque"));
@@ -49,12 +82,40 @@ public static class VillageLayout
 
     private static DeterministicRng Stream(int seed, string name) => new DeterministicRng(SeedUtil.Combine(seed, SeedUtil.FromString("poblado_" + name)));
 
-    private static void PlaceCastleBonfire(Result r, DeterministicRng rng)
+    private static void PlaceCastle(Result r, DeterministicRng rng)
     {
+        var d = new CastleDesign
+        {
+            bays = rng.NextInt(4, 7),
+            transept = rng.Chance(0.7f),
+            chapels = rng.NextInt(3, 6),
+            plateauHeight = rng.Range(5f, 6.5f),
+            naveHeight = rng.Range(14f, 17f),
+            sideTowerHeight = rng.Range(22f, 28f),
+            centralTowerHeight = rng.Range(31f, 38f),
+            spireRatio = rng.Range(0.5f, 0.75f),
+            detailSeed = rng.NextInt(1, int.MaxValue)
+        };
         float side = rng.Chance(0.5f) ? 1f : -1f;
-        float deg = side * rng.Range(15f, 21f);
-        Vector3 p = Polar(deg, WallRadius + rng.Range(6.5f, 7.5f));
-        r.castleBonfire = new Spot { position = p, yaw = Yaw(-p), scale = 1f };
+        float deg = side * rng.Range(36f, 54f);
+        float footRadius = rng.Range(50f, 56f);
+        Vector3 inward = -Polar(deg, 1f);
+        d.yaw = Yaw(inward);
+        d.position = Polar(deg, footRadius) - inward * d.FrontZ;
+        r.castle = d;
+
+        float bonfireSide = rng.Chance(0.5f) ? 1f : -1f;
+        Vector3 local = new Vector3(bonfireSide * rng.Range(5.5f, 7f), 0f, d.FrontZ + rng.Range(2f, 4f));
+        Vector3 p = d.ToWorld(local);
+        r.castleBonfire = new Spot { position = p, yaw = d.yaw, scale = 1f };
+    }
+
+    public static float DistanceToCastle(CastleDesign c, Vector3 p)
+    {
+        Vector3 a = c.Foot, b = c.Back;
+        Vector2 pa = new Vector2(p.x - a.x, p.z - a.z), ba = new Vector2(b.x - a.x, b.z - a.z);
+        float t = Mathf.Clamp01(Vector2.Dot(pa, ba) / Mathf.Max(0.001f, ba.sqrMagnitude));
+        return (pa - ba * t).magnitude;
     }
 
     private static void PlaceCamps(Result r, DeterministicRng rng, IList<Vector3> anchors)
@@ -65,12 +126,14 @@ public static class VillageLayout
             float baseDeg = Mathf.Atan2(anchor.x, anchor.z) * Mathf.Rad2Deg;
             float baseRadius = new Vector2(anchor.x, anchor.z).magnitude;
             Vector3 chosen = anchor;
-            for (int attempt = 0; attempt < 40; attempt++)
+            bool found = false;
+            for (int attempt = 0; attempt < 120 && !found; attempt++)
             {
-                Vector3 p = Polar(baseDeg + rng.Range(-16f, 16f), Mathf.Clamp(baseRadius + rng.Range(-5f, 7f), MinCampDistance + 0.5f, 66f));
+                float spread = attempt < 40 ? 16f : attempt < 80 ? 40f : 180f;
+                Vector3 p = Polar(baseDeg + rng.Range(-spread, spread), Mathf.Clamp(baseRadius + rng.Range(-5f, 9f), MinCampDistance + 0.5f, 72f));
                 if (!CampOk(r, p)) continue;
                 chosen = p;
-                break;
+                found = true;
             }
             r.camps.Add(chosen);
         }
@@ -82,30 +145,46 @@ public static class VillageLayout
         if (Dist(p, SteveClearing) < MinCampFromSteve) return false;
         if (Mathf.Abs(p.x) < 7f && p.z > 0f) return false;
         foreach (Vector3 c in r.camps) if (Dist(p, c) < 18f) return false;
+        if (DistanceToCastle(r.castle, p) < CastleClearance + CampRadius + 4f) return false;
         return Dist(p, r.castleBonfire.position) >= MinBonfireFromCamp;
     }
 
     private static void PlaceBonfires(Result r, DeterministicRng rng)
     {
         int count = rng.NextInt(2, 4);
-        for (int attempt = 0; attempt < 400 && r.bonfires.Count < count; attempt++)
+        float offset = rng.Range(0f, 360f);
+        for (int k = 0; k < count; k++)
         {
-            Vector3 p = Polar(rng.Range(0f, 360f), rng.Range(42f, 60f));
-            if (OnRoad(p) || Dist(p, SteveClearing) < SteveSafeRadius + 6f) continue;
-            if (Dist(p, r.castleBonfire.position) < 25f) continue;
-            bool ok = true;
-            foreach (Vector3 c in r.camps) if (Dist(p, c) < MinBonfireFromCamp) { ok = false; break; }
-            foreach (Spot b in r.bonfires) if (Dist(p, b.position) < 25f) { ok = false; break; }
-            if (!ok) continue;
-            r.bonfires.Add(new Spot { position = p, yaw = Yaw(-p), scale = 0.85f });
+            float center = offset + k * 360f / count;
+            for (int attempt = 0; attempt < 300; attempt++)
+            {
+                float halfSector = attempt < 150 ? 180f / count * 0.8f : 180f;
+                Vector3 p = Polar(center + rng.Range(-halfSector, halfSector), rng.Range(MinBonfireFromVillage + 2f, 88f));
+                if (!BonfireOk(r, p)) continue;
+                r.bonfires.Add(new Spot { position = p, yaw = Yaw(-p), scale = 0.85f });
+                break;
+            }
         }
+    }
+
+    private static bool BonfireOk(Result r, Vector3 p)
+    {
+        if (OnRoad(p) || Flat(p).magnitude < MinBonfireFromVillage) return false;
+        if (Mathf.Abs(p.x) > GroundHalfSize - 10f || Mathf.Abs(p.z) > GroundHalfSize - 10f) return false;
+        if (Dist(p, SteveClearing) < SteveSafeRadius + 6f) return false;
+        if (DistanceToCastle(r.castle, p) < CastleClearance + 4f) return false;
+        if (Dist(p, r.castleBonfire.position) < MinBonfireSpacing) return false;
+        foreach (Vector3 c in r.camps) if (Dist(p, c) < MinBonfireFromCamp) return false;
+        foreach (Spot b in r.bonfires) if (Dist(p, b.position) < MinBonfireSpacing) return false;
+        return true;
     }
 
     private static void PlacePines(Result r, DeterministicRng rng)
     {
-        for (int attempt = 0; attempt < 900 && r.pines.Count < PineCount; attempt++)
+        for (int attempt = 0; attempt < 1400 && r.pines.Count < PineCount; attempt++)
         {
             Vector3 p = Polar(rng.Range(0f, 360f), rng.Range(WallRadius + 4.5f, ForestRadius));
+            if (Mathf.Abs(p.x) > GroundHalfSize - 4f || Mathf.Abs(p.z) > GroundHalfSize - 4f) continue;
             if (!Clear(r, p, 10f, 7f, 5f)) continue;
             foreach (Spot o in r.pines) if (Dist(p, o.position) < 2.6f) { p = Vector3.positiveInfinity; break; }
             if (float.IsInfinity(p.x)) continue;
@@ -129,6 +208,7 @@ public static class VillageLayout
     private static bool Clear(Result r, Vector3 p, float fromSteve, float fromCamp, float fromBonfire)
     {
         if (OnRoad(p) || Dist(p, SteveClearing) < fromSteve) return false;
+        if (DistanceToCastle(r.castle, p) < CastleClearance + 2f) return false;
         foreach (Vector3 c in r.camps) if (Dist(p, c) < fromCamp) return false;
         if (Dist(p, r.castleBonfire.position) < fromBonfire + 3f) return false;
         foreach (Spot b in r.bonfires) if (Dist(p, b.position) < fromBonfire) return false;

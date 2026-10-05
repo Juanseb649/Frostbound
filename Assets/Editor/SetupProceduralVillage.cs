@@ -14,7 +14,9 @@ public static class SetupProceduralVillage
     public const string PinePath = PrefabFolder + "/Pino.prefab";
     public const string MoundPath = PrefabFolder + "/Monton_Nieve.prefab";
     public const string BonfirePath = PrefabFolder + "/Hoguera.prefab";
+    public const string CastlePath = PrefabFolder + "/Castillo.prefab";
     public const string DatabasePath = "Assets/Resources/GameDatabase.asset";
+    private const string CastleMatFolder = "Assets/Materials/Castle";
     private const string GeneratorName = "Generador_Exterior";
     private const string CampName = "Campamento_Hoguera";
 
@@ -68,6 +70,10 @@ public static class SetupProceduralVillage
         gen.bonfirePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BonfirePath);
         gen.bonfireCamp = camp;
         gen.navMesh = Object.FindAnyObjectByType<NavMeshSurface>();
+        gen.castlePrefab = EnsureCastlePrefab();
+        GameObject groundGo = GameObject.Find("Ground");
+        gen.ground = groundGo != null ? groundGo.transform : null;
+        if (camp != null) camp.position = SetupVillage.FirePos;
         EditorUtility.SetDirty(gen);
 
         GameObject player = GameObject.Find("Player");
@@ -75,7 +81,51 @@ public static class SetupProceduralVillage
 
         return "Exterior procedural listo: pino " + (gen.pinePrefab != null) + ", nieve " + (gen.moundPrefab != null)
             + ", hoguera " + (gen.bonfirePrefab != null) + ", campamento " + (camp != null ? camp.childCount + " piezas" : "no")
-            + ", NavMesh " + (gen.navMesh != null) + ", jugador " + (player != null);
+            + ", NavMesh " + (gen.navMesh != null) + ", castillo " + (gen.castlePrefab != null) + ", suelo " + (gen.ground != null) + ", jugador " + (player != null);
+    }
+
+    private static CastleBuilder EnsureCastlePrefab()
+    {
+        if (!AssetDatabase.IsValidFolder(CastleMatFolder)) AssetDatabase.CreateFolder("Assets/Materials", "Castle");
+        Material template = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/Stone.mat");
+        var go = new GameObject("Castillo");
+        var b = go.AddComponent<CastleBuilder>();
+        b.stone = CastleMat("Gothic_Stone", template, new Color(0.83f, 0.84f, 0.86f), 0.12f);
+        b.trim = CastleMat("Gothic_Trim", template, new Color(0.58f, 0.61f, 0.66f), 0.15f);
+        b.roof = CastleMat("Gothic_Roof", template, new Color(0.19f, 0.24f, 0.33f), 0.25f);
+        b.glass = CastleMat("Gothic_Glass", template, new Color(0.35f, 0.55f, 0.95f), 0.8f, new Color(0.35f, 0.75f, 1.6f));
+        b.gold = CastleMat("Gothic_Gold", template, new Color(0.86f, 0.70f, 0.36f), 0.7f, new Color(0.25f, 0.18f, 0.05f));
+        b.rock = CastleMat("Gothic_Rock", template, new Color(0.33f, 0.37f, 0.45f), 0.08f);
+        b.snow = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/Snow.mat");
+        b.ice = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/IceStatue.mat");
+        b.door = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/WoodDark.mat");
+        b.lampGlow = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/WindowGlow.mat");
+        b.cone = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Meshes/Cone_LowPoly.asset");
+        b.prism = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Meshes/Prism_Roof.asset");
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, CastlePath);
+        Object.DestroyImmediate(go);
+        return prefab.GetComponent<CastleBuilder>();
+    }
+
+    private static Material CastleMat(string name, Material template, Color color, float smoothness, Color? emission = null)
+    {
+        string path = CastleMatFolder + "/" + name + ".mat";
+        Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null)
+        {
+            m = template != null ? new Material(template) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            AssetDatabase.CreateAsset(m, path);
+        }
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+        if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smoothness);
+        if (emission.HasValue)
+        {
+            m.EnableKeyword("_EMISSION");
+            m.SetColor("_EmissionColor", emission.Value);
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+        }
+        EditorUtility.SetDirty(m);
+        return m;
     }
 
     private static Transform EnsureCamp(GameObject fire)
