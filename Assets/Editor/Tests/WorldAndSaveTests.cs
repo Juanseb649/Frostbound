@@ -31,7 +31,7 @@ public class WorldAndSaveTests
 
     private static string Fingerprint(VillageLayout.Result r)
     {
-        var parts = new List<string> { r.castleBonfire.position.ToString("F3") };
+        var parts = new List<string> { r.castleBonfire.position.ToString("F3"), r.castle.position.ToString("F3"), r.castle.bays + "/" + r.castle.transept + "/" + r.castle.centralTowerHeight.ToString("F2") };
         parts.AddRange(r.bonfires.Select(b => b.position.ToString("F3")));
         parts.AddRange(r.camps.Select(c => c.ToString("F3")));
         parts.AddRange(r.pines.Select(p => p.position.ToString("F3") + p.scale.ToString("F3")));
@@ -52,16 +52,25 @@ public class WorldAndSaveTests
         for (int seed = 1; seed <= 200; seed++)
         {
             VillageLayout.Result r = VillageLayout.Generate(seed * 7919, Anchors);
-            Vector3 castle = r.castleBonfire.position;
-            float castleR = new Vector2(castle.x, castle.z).magnitude;
-            Assert.That(castleR, Is.InRange(VillageLayout.WallRadius + 6f, VillageLayout.CampSafeRadius + 2f), "hoguera del castillo, seed " + seed);
-            Assert.IsFalse(VillageLayout.OnRoad(castle), "hoguera del castillo en el camino, seed " + seed);
+            VillageLayout.CastleDesign c0 = r.castle;
+            float half = VillageLayout.GroundHalfSize - 2f;
+            foreach (float lx in new[] { -VillageLayout.CastleDesign.HalfWidth, VillageLayout.CastleDesign.HalfWidth })
+                foreach (float lz in new[] { c0.FrontZ, c0.BackZ })
+                {
+                    Vector3 corner = c0.ToWorld(new Vector3(lx, 0f, lz));
+                    Assert.That(Mathf.Abs(corner.x) < half && Mathf.Abs(corner.z) < half, "castillo fuera del suelo, seed " + seed);
+                }
+            Assert.Greater(new Vector2(c0.Foot.x, c0.Foot.z).magnitude, VillageLayout.CampSafeRadius + 8f, "castillo pegado al poblado, seed " + seed);
+            Assert.Greater(VillageLayout.DistanceToCastle(c0, VillageLayout.SteveClearing), VillageLayout.CastleClearance, "castillo sobre el claro de Steve, seed " + seed);
+            Assert.Less(Vector3.Distance(r.castleBonfire.position, c0.Foot), 9f, "la hoguera del castillo debe estar al pie del viaducto, seed " + seed);
+            Assert.IsFalse(VillageLayout.OnRoad(r.castleBonfire.position), "hoguera del castillo en el camino, seed " + seed);
 
             Assert.AreEqual(Anchors.Count, r.camps.Count);
             foreach (Vector3 c in r.camps)
             {
                 Assert.GreaterOrEqual(new Vector2(c.x, c.z).magnitude, VillageLayout.MinCampDistance - 0.01f, "campamento en zona segura, seed " + seed);
                 Assert.GreaterOrEqual(Vector3.Distance(c, VillageLayout.SteveClearing), VillageLayout.MinCampFromSteve - 0.01f, "campamento junto a Steve, seed " + seed);
+                Assert.GreaterOrEqual(VillageLayout.DistanceToCastle(c0, c), VillageLayout.CastleClearance + VillageLayout.CampRadius, "campamento sobre el castillo, seed " + seed);
             }
 
             Assert.That(r.bonfires.Count, Is.InRange(2, 3), "hogueras, seed " + seed);
@@ -69,11 +78,16 @@ public class WorldAndSaveTests
             {
                 foreach (Vector3 c in r.camps) Assert.GreaterOrEqual(Vector3.Distance(b.position, c), VillageLayout.MinBonfireFromCamp - 0.01f, "hoguera junto a un campamento, seed " + seed);
                 Assert.IsFalse(VillageLayout.OnRoad(b.position));
+                Assert.GreaterOrEqual(new Vector2(b.position.x, b.position.z).magnitude, VillageLayout.MinBonfireFromVillage - 0.01f, "hoguera cerca del poblado, seed " + seed);
+                Assert.GreaterOrEqual(Vector3.Distance(b.position, r.castleBonfire.position), VillageLayout.MinBonfireSpacing - 0.01f, "hoguera pegada a la del castillo, seed " + seed);
+                foreach (VillageLayout.Spot o in r.bonfires)
+                    if (!o.Equals(b)) Assert.GreaterOrEqual(Vector3.Distance(b.position, o.position), VillageLayout.MinBonfireSpacing - 0.01f, "hogueras juntas, seed " + seed);
             }
 
-            Assert.Greater(r.pines.Count, 80, "pinos, seed " + seed);
+            Assert.Greater(r.pines.Count, 110, "pinos, seed " + seed);
             foreach (VillageLayout.Spot p in r.pines)
             {
+                Assert.Greater(VillageLayout.DistanceToCastle(c0, p.position), VillageLayout.CastleClearance, "pino dentro del castillo, seed " + seed);
                 Assert.IsFalse(VillageLayout.OnRoad(p.position), "pino en el camino, seed " + seed);
                 Assert.Greater(new Vector2(p.position.x, p.position.z).magnitude, VillageLayout.WallRadius + 4f, "pino dentro de la muralla, seed " + seed);
             }

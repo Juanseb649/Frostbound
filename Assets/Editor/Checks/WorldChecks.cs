@@ -73,7 +73,7 @@ public static class WorldChecks
         sb.Append(" · hogueras ");
         foreach (Bonfire b in Bonfire.Instances.OrderBy(b => b.id)) sb.Append(b.id).Append(b.IsLit ? "*" : "").Append(' ');
         Bonfire castle = Bonfire.Find(Bonfire.CastleId);
-        if (player != null && castle != null) sb.Append("· héroe a ").Append(Vector3.Distance(player.transform.position, castle.transform.position).ToString("F1")).Append(" m del castillo");
+        if (player != null) sb.Append("· héroe en ").Append(player.transform.position.ToString("F0"));
         sb.Append(" · NavMesh ").Append(NavMesh.CalculateTriangulation().indices.Length / 3).Append(" tri");
         sb.Append(" · ranura ").Append(session != null ? session.CurrentSlot + 1 : 0);
         return sb.ToString();
@@ -150,6 +150,57 @@ public static class WorldChecks
         Vector3 c = b.transform.position;
         Vector3 outward = new Vector3(c.x, 0f, c.z).normalized;
         return FrostboundBridge.CamShot("w_castle", c + outward * 11f + Vector3.up * 9f, c, 45f);
+    }
+
+    public static string CastleShots()
+    {
+        var gen = Object.FindAnyObjectByType<VillageWorldGenerator>();
+        VillageLayout.CastleDesign c = gen.Layout.castle;
+        Vector3 facade = c.ToWorld(new Vector3(0f, c.plateauHeight + 12f, 0f));
+        Vector3 front = c.ToWorld(new Vector3(-26f, 14f, c.FrontZ + 18f));
+        FrostboundBridge.CamShot("c_front", front, facade, 55f);
+        Vector3 side = c.ToWorld(new Vector3(-55f, 22f, -c.NaveLength * 0.5f));
+        FrostboundBridge.CamShot("c_side", side, c.ToWorld(new Vector3(0f, 14f, -c.NaveLength * 0.5f)), 50f);
+        Vector3 iso = c.ToWorld(new Vector3(30f, 45f, c.FrontZ + 30f));
+        FrostboundBridge.CamShot("c_iso", iso, c.ToWorld(new Vector3(0f, 6f, 0f)), 60f);
+        return "bahías " + c.bays + " · crucero " + c.transept + " · capillas " + c.chapels + " · torre " + c.centralTowerHeight.ToString("F0") + " m · a " + new Vector2(c.Foot.x, c.Foot.z).magnitude.ToString("F0") + " m del pueblo";
+    }
+
+    public static string WalkToCastle()
+    {
+        var gen = Object.FindAnyObjectByType<VillageWorldGenerator>();
+        VillageLayout.CastleDesign c = gen.Layout.castle;
+        var player = GameObject.Find("Player");
+        player.GetComponent<CharacterStats>().invulnerable = true;
+        player.GetComponent<PlayerPersistence>().MoveTo(c.Foot + Vector3.up * 0.1f, Quaternion.LookRotation(c.ToWorld(Vector3.zero) - c.Foot));
+        player.GetComponent<PlayerController>().MoveTo(c.ToWorld(new Vector3(0f, c.plateauHeight, 4f)));
+        return "caminando hacia la fachada";
+    }
+
+    public static string PlayerHeight()
+    {
+        var gen = Object.FindAnyObjectByType<VillageWorldGenerator>();
+        var player = GameObject.Find("Player");
+        Vector3 local = Quaternion.Inverse(Quaternion.Euler(0f, gen.Layout.castle.yaw, 0f)) * (player.transform.position - gen.Layout.castle.position);
+        return "altura " + player.transform.position.y.ToString("F2") + " (meseta " + gen.Layout.castle.plateauHeight.ToString("F2") + ") · z local " + local.z.ToString("F1");
+    }
+
+    public static string MapShot()
+    {
+        var gen = Object.FindAnyObjectByType<VillageWorldGenerator>();
+        foreach (Bonfire bf in Bonfire.Instances)
+        {
+            var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            marker.transform.position = bf.transform.position + Vector3.up * 30f;
+            marker.transform.localScale = new Vector3(6f, 30f, 6f);
+            Object.Destroy(marker.GetComponent<Collider>());
+            marker.GetComponent<Renderer>().material.color = new Color(1f, 0.55f, 0.1f);
+            Object.Destroy(marker, 2f);
+        }
+        var cam = new GameObject("MapCam").AddComponent<Camera>();
+        Object.Destroy(cam.gameObject);
+        return FrostboundBridge.CamShot("map", new Vector3(0f, 330f, -1f), Vector3.zero, 50f) + " | hogueras: "
+            + string.Join(", ", Bonfire.Instances.Select(bf => bf.id + " a " + new Vector2(bf.transform.position.x, bf.transform.position.z).magnitude.ToString("F0") + " m"));
     }
 
     public static string DeleteTestSlot()
