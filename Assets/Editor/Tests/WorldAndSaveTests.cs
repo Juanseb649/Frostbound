@@ -62,7 +62,15 @@ public class WorldAndSaveTests
                 }
             Assert.Greater(new Vector2(c0.Foot.x, c0.Foot.z).magnitude, VillageLayout.CampSafeRadius + 8f, "castillo pegado al poblado, seed " + seed);
             Assert.Greater(VillageLayout.DistanceToCastle(c0, VillageLayout.SteveClearing), VillageLayout.CastleClearance, "castillo sobre el claro de Steve, seed " + seed);
-            Assert.Less(Vector3.Distance(r.castleBonfire.position, c0.Foot), 9f, "la hoguera del castillo debe estar al pie del viaducto, seed " + seed);
+            Assert.Less(Vector3.Distance(r.castleBonfire.position, c0.Gate), 9f, "la hoguera del castillo debe estar en la puerta de la ciudadela, seed " + seed);
+            Assert.Greater(new Vector2(c0.Gate.x, c0.Gate.z).magnitude, VillageLayout.CampSafeRadius + 6f, "la ciudadela invade la zona segura, seed " + seed);
+            foreach (float lx in new[] { -VillageLayout.CastleDesign.TownHalfWidth, VillageLayout.CastleDesign.TownHalfWidth })
+            {
+                Vector3 corner = c0.ToWorld(new Vector3(lx, 0f, c0.GateZ));
+                Assert.That(Mathf.Abs(corner.x) < half && Mathf.Abs(corner.z) < half, "ciudadela fuera del suelo, seed " + seed);
+            }
+            Assert.That(r.town.ruins.Count, Is.InRange(6, 12), "casas en ruinas, seed " + seed);
+            Assert.AreEqual(10, r.town.spawnPoints.Count);
             Assert.IsFalse(VillageLayout.OnRoad(r.castleBonfire.position), "hoguera del castillo en el camino, seed " + seed);
 
             Assert.AreEqual(Anchors.Count, r.camps.Count);
