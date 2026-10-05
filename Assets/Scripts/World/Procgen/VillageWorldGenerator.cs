@@ -17,8 +17,6 @@ public class VillageWorldGenerator : MonoBehaviour
     public CastleBuilder castlePrefab;
 
     [Header("Escena")]
-    [Tooltip("Bancos y aldeanos de la plaza: se reúnen alrededor de una fogata decorativa (no es un punto de control).")]
-    public Transform bonfireCamp;
     [Tooltip("Suelo de la zona: se agranda para que quepa el castillo.")]
     public Transform ground;
     public NavMeshSurface navMesh;
@@ -56,15 +54,6 @@ public class VillageWorldGenerator : MonoBehaviour
             CastleBuilder castle = Instantiate(castlePrefab, root);
             castle.name = "Castillo";
             castle.Build(Layout.castle);
-        }
-
-        if (bonfireCamp != null && bonfirePrefab != null)
-        {
-            GameObject hearth = Instantiate(bonfirePrefab, bonfireCamp.position, bonfireCamp.rotation, bonfireCamp);
-            hearth.name = "Fogata_Plaza";
-            foreach (Bonfire b in hearth.GetComponentsInChildren<Bonfire>()) DestroyImmediate(b);
-            foreach (VillagerNPC v in bonfireCamp.GetComponentsInChildren<VillagerNPC>(true))
-                if (v.mood == VillagerMood.Huddle) v.focusPoint = hearth.transform;
         }
 
         SpawnBonfire(root, Layout.castleBonfire, Bonfire.CastleId, "Hoguera del castillo");

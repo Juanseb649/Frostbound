@@ -88,10 +88,19 @@ public class WorldHUD : MonoBehaviour
     private readonly List<WorldItem> _itemScratch = new List<WorldItem>();
     private Camera _cam;
 
-    private RectTransform _bubble;
-    private TextMeshProUGUI _bubbleText;
-    private Transform _bubbleTarget;
-    private float _bubbleHeight, _bubbleUntil, _bubbleStart;
+    // Globo de diálogo sobre la cabeza de alguien. El principal es el de las charlas con el héroe;
+    // los ambientales (más pequeños) son las conversaciones entre aldeanos.
+    private class Bubble
+    {
+        public RectTransform rt;
+        public TextMeshProUGUI text;
+        public Transform target;
+        public float height, until, start, maxWidth;
+        public bool Active => rt != null && rt.gameObject.activeSelf;
+    }
+
+    private Bubble _main;
+    private readonly List<Bubble> _ambient = new List<Bubble>();
 
     private RectTransform _menu;
     private TextMeshProUGUI _menuName, _menuRole;
@@ -187,26 +196,49 @@ public class WorldHUD : MonoBehaviour
 
     private void BuildBubble()
     {
-        _bubble = Rect("Globo", _bubbleLayer);
-        _bubble.pivot = new Vector2(0.5f, 0f);
-        _bubble.anchorMin = _bubble.anchorMax = new Vector2(0.5f, 0.5f);
+        _main = CreateBubble("Globo", 15f, 300f);
+    }
 
-        Image tail = Img(_bubble, "Cola", tailSprite, Color.white);
+    private Bubble CreateBubble(string objName, float fontSize, float maxWidth)
+    {
+        var b = new Bubble { maxWidth = maxWidth };
+        b.rt = Rect(objName, _bubbleLayer);
+        b.rt.pivot = new Vector2(0.5f, 0f);
+        b.rt.anchorMin = b.rt.anchorMax = new Vector2(0.5f, 0.5f);
+
+        float tailSize = fontSize < 14f ? 16f : 22f;
+        Image tail = Img(b.rt, "Cola", tailSprite, Color.white);
         tail.rectTransform.anchorMin = tail.rectTransform.anchorMax = new Vector2(0.5f, 0f);
-        tail.rectTransform.sizeDelta = new Vector2(22f, 22f);
+        tail.rectTransform.sizeDelta = new Vector2(tailSize, tailSize);
         tail.rectTransform.anchoredPosition = new Vector2(0f, 2f);
         tail.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
         if (tailSprite == null) tail.rectTransform.sizeDelta = new Vector2(16f, 16f);
 
-        Image outline = Img(_bubble, "Borde", bubbleSprite, new Color(0.12f, 0.16f, 0.24f));
+        Image outline = Img(b.rt, "Borde", bubbleSprite, new Color(0.12f, 0.16f, 0.24f));
         Stretch(outline.rectTransform, 0f);
-        Image fill = Img(_bubble, "Fondo", bubbleSprite, Color.white);
+        Image fill = Img(b.rt, "Fondo", bubbleSprite, Color.white);
         Stretch(fill.rectTransform, 2f);
 
-        _bubbleText = Text(_bubble, "Texto", textFont, 15f, new Color(0.07f, 0.1f, 0.16f), TextAlignmentOptions.Center);
-        _bubbleText.textWrappingMode = TextWrappingModes.Normal;
-        Stretch(_bubbleText.rectTransform, 12f);
-        _bubble.gameObject.SetActive(false);
+        b.text = Text(b.rt, "Texto", textFont, fontSize, new Color(0.07f, 0.1f, 0.16f), TextAlignmentOptions.Center);
+        b.text.textWrappingMode = TextWrappingModes.Normal;
+        Stretch(b.text.rectTransform, fontSize < 14f ? 9f : 12f);
+        b.rt.gameObject.SetActive(false);
+        return b;
+    }
+
+    private static void Show(Bubble b, Transform speaker, float height, string text, float seconds)
+    {
+        b.target = speaker;
+        b.height = height;
+        b.until = Time.time + seconds;
+        b.start = Time.time;
+        b.text.text = text;
+        float pad = b.text.fontSize < 14f ? 20f : 28f;
+        Vector2 pref = b.text.GetPreferredValues(text, b.maxWidth, 1000f);
+        float w = Mathf.Min(pref.x, b.maxWidth);
+        Vector2 pref2 = b.text.GetPreferredValues(text, w, 1000f);
+        b.rt.sizeDelta = new Vector2(w + pad, pref2.y + pad * 0.85f);
+        b.rt.gameObject.SetActive(true);
     }
 
     private void BuildMenu()
@@ -257,18 +289,37 @@ public class WorldHUD : MonoBehaviour
 
     public void Say(Transform speaker, float height, string text, float seconds)
     {
-        _bubbleTarget = speaker;
-        _bubbleHeight = height;
-        _bubbleUntil = Time.time + seconds;
-        _bubbleStart = Time.time;
-        _bubbleText.text = text;
-        const float maxWidth = 300f;
-        Vector2 pref = _bubbleText.GetPreferredValues(text, maxWidth, 1000f);
-        float w = Mathf.Min(pref.x, maxWidth);
-        Vector2 pref2 = _bubbleText.GetPreferredValues(text, w, 1000f);
-        _bubble.sizeDelta = new Vector2(w + 28f, pref2.y + 24f);
-        _bubble.gameObject.SetActive(true);
-        UpdateBubble();
+        // Si ese personaje tenía un globo ambiental, se quita para que no se solapen.
+        foreach (Bubble a in _ambient)
+            if (a.Active && a.target == speaker) a.rt.gameObject.SetActive(false);
+        Show(_main, speaker, height, text, seconds);
+        UpdateBubble(_main);
+    }
+
+    // Globo pequeño para conversaciones de fondo: puede haber varios a la vez, uno por personaje.
+    public void SayAmbient(Transform speaker, float height, string text, float seconds)
+    {
+        if (speaker == null) return;
+        if (_main.Active && _main.target == speaker) return;
+        Bubble slot = null;
+        foreach (Bubble a in _ambient)
+            if (a.Active && a.target == speaker) { slot = a; break; }
+        if (slot == null)
+            foreach (Bubble a in _ambient)
+                if (!a.Active) { slot = a; break; }
+        if (slot == null)
+        {
+            slot = CreateBubble("GloboAmbiente_" + _ambient.Count, 12.5f, 210f);
+            _ambient.Add(slot);
+        }
+        Show(slot, speaker, height, text, seconds);
+        slot.rt.SetAsFirstSibling();
+        UpdateBubble(slot);
+    }
+
+    public int ActiveAmbientBubbles
+    {
+        get { int n = 0; foreach (Bubble a in _ambient) if (a.Active) n++; return n; }
     }
 
     public void OpenMenu(NPCInteractable npc)
@@ -356,7 +407,8 @@ public class WorldHUD : MonoBehaviour
         UpdateNames();
         UpdateItemLabels();
         UpdatePopups();
-        UpdateBubble();
+        UpdateBubble(_main);
+        foreach (Bubble a in _ambient) UpdateBubble(a);
         UpdateMenu();
         UpdateMenuKeys();
     }
@@ -556,24 +608,26 @@ public class WorldHUD : MonoBehaviour
         return label;
     }
 
-    private void UpdateBubble()
+    private void UpdateBubble(Bubble b)
     {
-        if (_bubble == null || !_bubble.gameObject.activeSelf) return;
-        if (_bubbleTarget == null || Time.time > _bubbleUntil)
+        if (b == null || !b.Active) return;
+        if (b.target == null || Time.time > b.until)
         {
-            _bubble.gameObject.SetActive(false);
+            b.rt.gameObject.SetActive(false);
             return;
         }
         if (_cam == null) _cam = Camera.main;
-        if (_cam == null || !ToCanvas(_bubbleTarget.position + Vector3.up * _bubbleHeight, out Vector2 p))
+        if (_cam == null || !ToCanvas(b.target.position + Vector3.up * b.height, out Vector2 p))
         {
-            _bubble.localScale = Vector3.zero;
+            b.rt.localScale = Vector3.zero;
             return;
         }
-        _bubble.anchoredPosition = p + new Vector2(0f, 16f);
-        float pop = Mathf.Clamp01((Time.time - _bubbleStart) / 0.15f);
+        b.rt.anchoredPosition = p + new Vector2(0f, 16f);
+        float pop = Mathf.Clamp01((Time.time - b.start) / 0.15f);
         float s = Mathf.Lerp(0.6f, 1f, 1f - (1f - pop) * (1f - pop));
-        _bubble.localScale = new Vector3(s, s, 1f);
+        float fade = Mathf.Clamp01((b.until - Time.time) / 0.25f);
+        s *= Mathf.Lerp(0.85f, 1f, fade);
+        b.rt.localScale = new Vector3(s, s, 1f);
     }
 
     private void UpdateMenu()

@@ -56,7 +56,7 @@ public static class SetupProceduralVillage
         if (AssetDatabase.LoadAssetAtPath<GameObject>(BonfirePath) == null && fire != null)
             SaveTemplate(fire, BonfirePath, true, true);
 
-        Transform camp = EnsureCamp(fire);
+        int chatters = PlazaToChatters();
         if (forest != null) Object.DestroyImmediate(forest);
         if (mounds != null) Object.DestroyImmediate(mounds);
         if (fire != null) Object.DestroyImmediate(fire);
@@ -68,19 +68,17 @@ public static class SetupProceduralVillage
         gen.pinePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PinePath);
         gen.moundPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MoundPath);
         gen.bonfirePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BonfirePath);
-        gen.bonfireCamp = camp;
         gen.navMesh = Object.FindAnyObjectByType<NavMeshSurface>();
         gen.castlePrefab = EnsureCastlePrefab();
         GameObject groundGo = GameObject.Find("Ground");
         gen.ground = groundGo != null ? groundGo.transform : null;
-        if (camp != null) camp.position = SetupVillage.FirePos;
         EditorUtility.SetDirty(gen);
 
         GameObject player = GameObject.Find("Player");
         if (player != null && player.GetComponent<PlayerPersistence>() == null) player.AddComponent<PlayerPersistence>();
 
         return "Exterior procedural listo: pino " + (gen.pinePrefab != null) + ", nieve " + (gen.moundPrefab != null)
-            + ", hoguera " + (gen.bonfirePrefab != null) + ", campamento " + (camp != null ? camp.childCount + " piezas" : "no")
+            + ", hoguera " + (gen.bonfirePrefab != null) + ", aldeanos charlando " + chatters
             + ", NavMesh " + (gen.navMesh != null) + ", castillo " + (gen.castlePrefab != null) + ", suelo " + (gen.ground != null) + ", jugador " + (player != null);
     }
 
@@ -128,23 +126,45 @@ public static class SetupProceduralVillage
         return m;
     }
 
-    private static Transform EnsureCamp(GameObject fire)
+    // La plaza ya no tiene fogata: los aldeanos que se acurrucaban ahí ahora pasean y charlan entre ellos.
+    // Se quitan los bancos y el grupo antiguo "Campamento_Hoguera" (si existía).
+    private static int PlazaToChatters()
     {
-        GameObject existing = GameObject.Find(CampName);
-        Vector3 center = fire != null ? fire.transform.position : SetupVillage.FirePos;
-        Transform camp = existing != null ? existing.transform : new GameObject(CampName).transform;
-        if (existing == null) camp.position = center;
-
-        GameObject benches = Find("Bancos");
-        if (benches != null && benches.transform.parent != camp) benches.transform.SetParent(camp, true);
+        GameObject camp = GameObject.Find(CampName);
+        GameObject steveFire = Find("Fogata_Steve");
+        int n = 0;
         foreach (VillagerNPC v in Object.FindObjectsByType<VillagerNPC>(FindObjectsInactive.Include))
         {
-            if (v.mood != VillagerMood.Huddle || v.transform.parent == camp) continue;
-            v.transform.SetParent(camp, true);
+            if (camp != null && v.transform.IsChildOf(camp.transform)) v.transform.SetParent(null, true);
+            if (v.name == SetupSteve.ObjectName)
+            {
+                // Steve se queda en su claro, junto a su fogata.
+                v.mood = VillagerMood.Huddle;
+                if (steveFire != null) v.focusPoint = steveFire.transform;
+                EditorUtility.SetDirty(v);
+                continue;
+            }
+            if (v.mood != VillagerMood.Huddle && v.mood != VillagerMood.Chat) continue;
+            Vector3 off = v.transform.position - SetupVillage.FirePos;
+            off.y = 0f;
+            if (off.magnitude > 10f) continue;
+            if (v.mood == VillagerMood.Huddle)
+            {
+                if (off.sqrMagnitude < 0.01f) off = Vector3.forward;
+                v.transform.position = SetupVillage.FirePos + off.normalized * (3.5f + n * 0.9f);
+            }
+            v.mood = VillagerMood.Chat;
             v.focusPoint = null;
+            v.wanderRadius = 6f;
+            v.walkSpeed = 1.1f;
+            v.fear = Mathf.Min(v.fear, 0.45f);
             EditorUtility.SetDirty(v);
+            n++;
         }
-        return camp;
+        GameObject benches = Find("Bancos");
+        if (benches != null) Object.DestroyImmediate(benches);
+        if (camp != null) Object.DestroyImmediate(camp);
+        return n;
     }
 
     private static void SaveTemplate(GameObject source, string path, bool resetScale, bool bonfire)
