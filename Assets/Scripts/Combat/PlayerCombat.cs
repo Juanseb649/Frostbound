@@ -33,7 +33,7 @@ public class PlayerCombat : MonoBehaviour
     [Tooltip("Daño de cada golpe: tajo vertical, barrido, salto y aplastamiento.")]
     public float[] heavyDamage = { 1.3f, 1.1f, 1.75f };
     [Tooltip("Duración de cada golpe respecto a un ataque normal (lentos: el arma pesa).")]
-    public float[] heavyTiming = { 1.1f, 1.0f, 1.35f };
+    public float[] heavyTiming = { 1.1f, 1.15f, 1.35f };
     public float heavyComboWindow = 0.6f;
 
     [Header("Arco")]
@@ -247,11 +247,11 @@ public class PlayerCombat : MonoBehaviour
         _heavyStep = step;
         _comboStep = 0;
         int i = step - 1;
-        float[] minimum = { 0.95f, 0.9f, 1.25f };
+        float[] minimum = { 0.95f, 1.0f, 1.25f };
         float duration = Mathf.Max(minimum[i], baseDuration * heavyTiming[i]);
-        float[] hit = { 0.65f, 0.6f, 0.68f };
-        float[] stepMeters = { 0.4f, 0.55f, 1.3f };
-        float[] stepDelay = { 0.5f, 0.42f, 0.22f };
+        float[] hit = { 0.65f, 0.7f, 0.68f };
+        float[] stepMeters = { 0.4f, 0.45f, 1.3f };
+        float[] stepDelay = { 0.5f, 0.55f, 0.22f };
 
         _attackMultiplier = heavyDamage[i];
         _spinAttack = false;
@@ -259,8 +259,8 @@ public class PlayerCombat : MonoBehaviour
         _hitAt = Time.time + duration * hit[i];
         _readyAt = Time.time + duration * (step == 3 ? 1f : 0.92f);
         _comboDeadline = step == 3 ? 0f : Time.time + duration + heavyComboWindow;
-        _trailOn = Time.time + duration * (step == 2 ? 0.46f : 0.5f);
-        _trailOff = Time.time + duration * (step == 2 ? 0.78f : 0.7f);
+        _trailOn = Time.time + duration * (step == 2 ? 0.56f : 0.5f);
+        _trailOff = Time.time + duration * (step == 2 ? 0.74f : 0.7f);
 
         if (_pc != null)
         {
@@ -327,11 +327,12 @@ public class PlayerCombat : MonoBehaviour
     {
         float range = Range;
         int step = Mathf.Clamp(_heavyStep, 1, 3);
-        float[] arcs = { 32f, 115f, 181f };
-        float[] reach = { range + 0.6f, range + 0.2f, range + 1.1f };
-        float[] shake = { 0.22f, 0.12f, 0.36f };
+        float[] arcs = { 32f, 50f, 181f };
+        float[] reach = { range + 0.6f, range + 0.3f, range + 1.1f };
+        float[] shake = { 0.22f, 0.2f, 0.36f };
         float arc = arcs[step - 1], maxDist = reach[step - 1];
-        Vector3 impact = step == 2 ? transform.position + _aimDir * range * 0.6f : transform.position + _aimDir * (step == 3 ? 1.2f : range * 0.85f);
+        Vector3 right = Vector3.Cross(Vector3.up, _aimDir);
+        Vector3 impact = step == 2 ? transform.position + _aimDir * range * 0.75f + right * 0.35f : transform.position + _aimDir * (step == 3 ? 1.2f : range * 0.85f);
         int n = Physics.OverlapSphereNonAlloc(transform.position + Vector3.up * 0.6f, maxDist + 0.4f, _overlap, ~0, QueryTriggerInteraction.Ignore);
         _scratch.Clear();
         for (int i = 0; i < n; i++)
@@ -366,7 +367,7 @@ public class PlayerCombat : MonoBehaviour
                 agent.Move(push.normalized * (step == 3 ? 1.1f : 0.6f));
             }
         }
-        if (step != 2) GroundImpact.Spawn(new Vector3(impact.x, transform.position.y, impact.z), step == 3 ? 2.6f : 1.4f, step == 3 ? 1.5f : 1f);
+        GroundImpact.Spawn(new Vector3(impact.x, transform.position.y, impact.z), step == 3 ? 2.6f : 1.4f, step == 3 ? 1.5f : 1f);
         CameraFollow.Shake(shake[step - 1] + (_scratch.Count > 0 ? 0.08f : 0f), step == 3 ? 0.4f : 0.28f);
         if (_scratch.Count > 0)
         {

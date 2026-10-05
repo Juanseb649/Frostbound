@@ -64,6 +64,7 @@ public class GameSession : MonoBehaviour
         };
         _playSeconds = 0f;
         PendingRestore = false;
+        Stash.Load(Current);
         SaveSystem.Save(Current);
     }
 
@@ -83,6 +84,7 @@ public class GameSession : MonoBehaviour
         Current = data;
         _playSeconds = data.playSeconds;
         PendingRestore = true;
+        Stash.Load(data);
         Debug.Log("[GameSession] Partida " + (slot + 1) + " cargada. Seed del mundo: " + worldSeed);
         return true;
     }
@@ -131,6 +133,7 @@ public class GameSession : MonoBehaviour
     {
         if (Current == null) return false;
         if (_player != null) Capture(_player, Current);
+        Stash.Capture(Current);
         Current.playSeconds = _playSeconds;
         Current.worldSeed = worldSeed;
         return SaveSystem.Save(Current);
@@ -145,6 +148,8 @@ public class GameSession : MonoBehaviour
         data.allocated = stats.allocated;
         data.health = stats.IsDead ? stats.MaxHealth : stats.currentHealth;
         data.mana = stats.currentMana;
+        Wallet wallet = eq.GetComponent<Wallet>();
+        data.coins = wallet != null ? wallet.Coins : 0;
 
         data.inventory.Clear();
         Inventory inv = eq.Inventory;
@@ -186,6 +191,7 @@ public class GameSession : MonoBehaviour
         stats.experience = Mathf.Max(0, data.experience);
         stats.pointsAvailable = Mathf.Max(0, data.pointsAvailable);
         stats.allocated = data.allocated;
+        Wallet.Of(eq.gameObject).Set(data.coins);
 
         foreach (SavedStack d in data.inventory)
         {

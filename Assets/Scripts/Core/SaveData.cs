@@ -33,6 +33,9 @@ public class SaveData
     public string zone = "";
 
     public List<SavedQuest> quests = new List<SavedQuest>();
+    public int coins;
+    public int stashCoins;
+    public List<SavedStack> stash = new List<SavedStack>();
     public List<SavedFog> explored = new List<SavedFog>();
 
     public bool HasProgress => level > 1 || experience > 0 || inventory.Count > 0;

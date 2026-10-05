@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum NPCOption { Hablar, Comprar, Vender, Reparar }
+public enum NPCOption { Hablar, Comprar, Vender, Reparar, Arcon }
 
 // NPC con el que el héroe puede interactuar: se acerca, le hace clic y elige una opción.
 public class NPCInteractable : MonoBehaviour
@@ -39,7 +39,7 @@ public class NPCInteractable : MonoBehaviour
     public bool Busy => InConversation || Time.time < TalkUntil;
 
     // Opciones que ya tienen un sistema detrás. Comprar y Vender se habilitan con la tienda (F4).
-    public static bool IsImplemented(NPCOption o) => o == NPCOption.Hablar || o == NPCOption.Reparar;
+    public static bool IsImplemented(NPCOption o) => true;
 
     public List<NPCOption> AvailableOptions()
     {
@@ -73,6 +73,16 @@ public class NPCInteractable : MonoBehaviour
             TalkUntil = Time.time + seconds;
             hud.Say(transform, headHeight * transform.lossyScale.y, text, seconds);
         }
+        else if (option == NPCOption.Comprar || option == NPCOption.Vender)
+        {
+            hud.Say(transform, headHeight * transform.lossyScale.y, option == NPCOption.Comprar ? "Echa un vistazo, todo es de primera." : "A ver qué traes de la montaña...", 2.5f);
+            TradeWindow.OpenShop(this, option == NPCOption.Vender);
+        }
+        else if (option == NPCOption.Arcon)
+        {
+            hud.Say(transform, headHeight * transform.lossyScale.y, "Tu arcón está en el sótano. Nadie lo toca, te lo prometo.", 2.5f);
+            TradeWindow.OpenStash(this);
+        }
         else if (option == NPCOption.Reparar)
         {
             Equipment player = FindAnyObjectByType<Equipment>();
@@ -90,6 +100,7 @@ public class NPCInteractable : MonoBehaviour
             case NPCOption.Comprar: return "Comprar";
             case NPCOption.Vender: return "Vender";
             case NPCOption.Reparar: return "Reparar";
+            case NPCOption.Arcon: return "Arcón";
             default: return "Hablar";
         }
     }

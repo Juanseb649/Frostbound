@@ -503,14 +503,16 @@ public class PenguinRigAnimator : MonoBehaviour
         BowDraw01 = draw;
         BowNocked = shooting && t >= 0.16f && t < rel;
 
-        spineYaw += 42f * aim;
-        headYaw += -38f * aim;
-        headPitch += -3f * aim;
-        lean += -5f * draw * aim;
-        crouch += 0.025f * aim + 0.015f * draw;
+        // Como en Minecraft Dungeons: de frente al blanco, el torso apenas gira; la aleta del arco extendida al frente
+        // y la otra tira de la cuerda hacia el pecho y el hombro, siempre por delante del cuerpo (nunca detrás de la cabeza).
+        spineYaw += 18f * aim;
+        headYaw += -16f * aim;
+        headPitch += -2f * aim;
+        lean += -3f * draw * aim;
+        crouch += 0.02f * aim + 0.012f * draw;
 
         // Direcciones en el espacio del pingüino (yaw desde el frente, elevación).
-        Vector3 stance = Dir(-30f, -12f), atBow = Dir(-38f, 2f), fullDraw = Dir(150f, 14f), follow = Dir(172f, 38f);
+        Vector3 stance = Dir(-12f, -18f), atBow = Dir(-14f, 6f), fullDraw = Dir(62f, 8f), follow = Dir(84f, 22f);
         Vector3 target;
         if (!shooting) target = stance;
         else if (t < 0.2f) target = Vector3.Slerp(stance, atBow, reach);
@@ -536,7 +538,7 @@ public class PenguinRigAnimator : MonoBehaviour
             _recoil += _recoilVel * dt;
         }
         float tremble = draw > 0.9f ? Mathf.Sin(time * 47f) * 0.5f * (draw - 0.9f) * 10f : 0f;
-        Vector3 bowArm = Dir(-2f, 4f + _recoil * 9f + tremble);
+        Vector3 bowArm = Dir(-4f, 6f + _recoil * 9f + tremble);
 
         Quaternion spineD = Quaternion.AngleAxis(spineYaw, Vector3.up);
         if (_flipL != null)
@@ -706,20 +708,21 @@ public class PenguinRigAnimator : MonoBehaviour
         new Vector4(0.66f, 0f, -48f, -22f), new Vector4(0.84f, 2f, -44f, -18f), new Vector4(1f, 20f, 12f, 12f)
     };
 
-    // 2) Barrido horizontal: se carga muy atrás a la derecha con todo el torso y barre a la altura de la cintura.
+    // 2) Hachazo diagonal: carga el arma a pulso sobre el hombro izquierdo, la sostiene arriba y la deja caer
+    // en diagonal contra el suelo delante a la derecha. Corto, pesado y seco (nada de barridos de espada).
     private static readonly Vector4[] Heavy2 =
     {
-        new Vector4(0f, 20f, 12f, 12f), new Vector4(0.18f, 95f, 10f, 14f), new Vector4(0.36f, 150f, 4f, 16f),
-        new Vector4(0.46f, 155f, 2f, 14f), new Vector4(0.56f, 60f, -4f, 4f), new Vector4(0.63f, -50f, -6f, 0f),
-        new Vector4(0.74f, -140f, 2f, 8f), new Vector4(0.88f, -158f, 10f, 22f), new Vector4(1f, -150f, 18f, 30f)
+        new Vector4(0f, 20f, 12f, 12f), new Vector4(0.2f, -55f, 50f, 55f), new Vector4(0.38f, -115f, 60f, 82f),
+        new Vector4(0.5f, -122f, 57f, 86f), new Vector4(0.6f, -45f, 48f, 62f), new Vector4(0.66f, 12f, -8f, 10f),
+        new Vector4(0.71f, 28f, -46f, -20f), new Vector4(0.87f, 30f, -42f, -18f), new Vector4(1f, 20f, 12f, 12f)
     };
 
-    // 3) Salto y aplastamiento: el arma sube por la izquierda por encima de la cabeza y cae con todo el peso.
+    // 3) Salto y aplastamiento: el arma baja atrás, sube por detrás mientras salta y cae con todo el peso.
     private static readonly Vector4[] Heavy3 =
     {
-        new Vector4(0f, -150f, 18f, 30f), new Vector4(0.18f, -110f, 55f, 62f), new Vector4(0.34f, -170f, 62f, 88f),
-        new Vector4(0.46f, 180f, 58f, 90f), new Vector4(0.56f, 90f, 86f, 86f), new Vector4(0.63f, 5f, 18f, 30f),
-        new Vector4(0.68f, 0f, -52f, -26f), new Vector4(0.86f, 0f, -48f, -22f), new Vector4(1f, 22f, 30f, 24f)
+        new Vector4(0f, 20f, 12f, 12f), new Vector4(0.2f, 140f, -6f, 4f), new Vector4(0.36f, 172f, 44f, 70f),
+        new Vector4(0.48f, 178f, 60f, 90f), new Vector4(0.56f, 90f, 86f, 86f), new Vector4(0.63f, 5f, 18f, 30f),
+        new Vector4(0.68f, 0f, -52f, -26f), new Vector4(0.86f, 0f, -48f, -22f), new Vector4(1f, 20f, 12f, 12f)
     };
 
     // Catmull-Rom sobre (yaw, elevación de la hoja, elevación del brazo): curva suave que pasa por todas las claves.
@@ -821,10 +824,11 @@ public class PenguinRigAnimator : MonoBehaviour
             case 2:
                 path = Heavy2;
                 c.weight = recover;
-                c.lean = 6f + 12f * Bump(0.5f, 0.85f, t);
-                c.crouch = 0.45f + 0.5f * Bump(0.45f, 0.85f, t);
-                c.spineYaw = 10f * Bump(0.2f, 0.5f, t) - 14f * Bump(0.55f, 0.9f, t);
-                c.leftElevation = 0f;
+                // Se echa atrás al cargarla y se vuelca con el hachazo; las rodillas absorben el impacto.
+                c.lean = -10f * Bump(0.1f, 0.58f, t) + 24f * Smooth(0.6f, 0.71f, t) * (1f - Smooth(0.87f, 1f, t));
+                c.crouch = 0.2f * Bump(0.05f, 0.55f, t) + 1.1f * Smooth(0.62f, 0.72f, t) * (1f - 0.7f * Smooth(0.87f, 1f, t));
+                c.spineYaw = -12f * Bump(0.15f, 0.6f, t) + 10f * Bump(0.62f, 0.95f, t);
+                c.leftElevation = 10f;
                 break;
             default:
                 path = Heavy3;

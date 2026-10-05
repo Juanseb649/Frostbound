@@ -83,6 +83,9 @@ MonoBehaviour:
   headFollow: 14
   crouchDepth: 0.09
   comboRecover: 0.32
+  heavyWristStiffness: 12
+  heavyWristDamping: 0.42
+  heavyRecover: 0.5
 --- !u!114 &8307915250689772115
 MonoBehaviour:
   m_ObjectHideFlags: 0

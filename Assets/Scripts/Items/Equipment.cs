@@ -39,6 +39,7 @@ public class Equipment : MonoBehaviour
     {
         _stats = GetComponent<CharacterStats>();
         _inventory = GetComponent<Inventory>();
+        Wallet.Of(gameObject);
         if (outfit == null) outfit = GetComponentInChildren<PenguinOutfit>();
         if (weaponHolder == null) weaponHolder = GetComponentInChildren<WeaponHolder>();
         if (weaponHolder == null && outfit != null) weaponHolder = outfit.gameObject.AddComponent<WeaponHolder>();

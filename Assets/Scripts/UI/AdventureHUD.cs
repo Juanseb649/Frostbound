@@ -16,7 +16,8 @@ public class AdventureHUD : MonoBehaviour
     private RectTransform _bossRoot, _bossFill, _bossTrail;
     private TextMeshProUGUI _bossName;
     private CanvasGroup _bossGroup;
-    private TextMeshProUGUI _poison;
+    private TextMeshProUGUI _poison, _coins;
+    private Wallet _wallet;
     private float _trail = 1f;
     private BossController _shownBoss;
     private PlayerAfflictions _afflictions;
@@ -68,6 +69,10 @@ public class AdventureHUD : MonoBehaviour
 
         _poison = UIFactory.Text(transform, "Veneno", "", _skin != null ? _skin.nunito800 : null, 15f, PlayerAfflictions.PoisonColor, TextAlignmentOptions.Center, 1.5f, true);
         UIFactory.Anchored(_poison.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 236f), new Vector2(300f, 22f));
+        _coins = UIFactory.Text(transform, "Monedas", "", _skin != null ? _skin.nunito800 : null, 17f, new Color(1f, 0.82f, 0.32f), TextAlignmentOptions.BottomLeft, 1f);
+        UIFactory.Anchored(_coins.rectTransform, new Vector2(0f, 0f), new Vector2(26f, 196f), new Vector2(260f, 24f));
+        _coins.outlineWidth = 0.22f;
+        _coins.outlineColor = new Color32(20, 12, 0, 220);
         _poison.outlineWidth = 0.2f;
         _poison.outlineColor = new Color32(0, 0, 0, 200);
     }
@@ -104,6 +109,12 @@ public class AdventureHUD : MonoBehaviour
         UpdateTracker();
         UpdateBoss();
         UpdatePoison();
+        if (_wallet == null)
+        {
+            GameObject p = GameObject.Find("Player");
+            if (p != null) _wallet = Wallet.Of(p);
+        }
+        if (_wallet != null) _coins.text = "● " + _wallet.Coins.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES")) + " monedas";
     }
 
     private void UpdateTracker()

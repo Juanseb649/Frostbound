@@ -10,7 +10,7 @@ public class ArcheryRig : MonoBehaviour
     [Tooltip("Inclinación lateral del arco al apuntar (grados).")]
     public float cant = 12f;
     [Tooltip("Cuánto se puede tensar la cuerda (m, a escala del arco).")]
-    public float maxDraw = 0.42f;
+    public float maxDraw = 0.32f;
     public float stringStiffness = 900f;
     [Range(0f, 1f)] public float stringDamping = 0.1f;
     public Color stringColor = new Color(0.85f, 0.82f, 0.74f);

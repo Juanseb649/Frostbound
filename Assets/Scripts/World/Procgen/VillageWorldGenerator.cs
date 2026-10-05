@@ -93,6 +93,13 @@ public class VillageWorldGenerator : MonoBehaviour
         map.Setup(Layout);
         AdventureHUD.Ensure();
 
+        // La tabernera guarda el arcón del héroe; Tico compra y vende.
+        foreach (NPCInteractable npc in FindObjectsByType<NPCInteractable>())
+        {
+            if (npc.displayName == "Tabernera Mora") npc.options = new List<NPCOption> { NPCOption.Hablar, NPCOption.Arcon };
+            if (npc.displayName == "Mercader Tico") npc.options = new List<NPCOption> { NPCOption.Hablar, NPCOption.Comprar, NPCOption.Vender };
+        }
+
         GameObject steve = GameObject.Find(MapSystem.SteveName);
         if (steve != null && steve.GetComponent<NPCInteractable>() != null && steve.GetComponent<QuestGiver>() == null) steve.AddComponent<QuestGiver>();
     }
