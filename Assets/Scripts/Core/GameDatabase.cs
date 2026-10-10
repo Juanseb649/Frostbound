@@ -10,6 +10,8 @@ public class GameDatabase : ScriptableObject
     public ItemDatabase items;
     public PlumagePalette palette;
     public UISkin uiSkin;
+    [Tooltip("Pingüino con esqueleto (para los menús).")]
+    public GameObject penguinPrefab;
     public List<EnemyDefinition> enemies = new List<EnemyDefinition>();
 
     private static GameDatabase _instance;

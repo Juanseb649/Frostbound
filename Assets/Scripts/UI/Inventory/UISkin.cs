@@ -11,6 +11,8 @@ public class UISkin : ScriptableObject
     public TMP_FontAsset nunito500;
     public TMP_FontAsset nunito700;
     public TMP_FontAsset nunito800;
+    [Tooltip("Títulos y botones de los menús (Lilita One).")]
+    public TMP_FontAsset lilita;
 
     [Header("Formas")]
     public Sprite round10;

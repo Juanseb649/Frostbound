@@ -17,6 +17,7 @@ MonoBehaviour:
   nunito500: {fileID: 11400000, guid: 3b7ccb5120dc65b4981819deb3edf6fd, type: 2}
   nunito700: {fileID: 11400000, guid: 11ca8cf9e6bec2b40b47a98f7f5f13e3, type: 2}
   nunito800: {fileID: 11400000, guid: b1b54099d10cf924583df2b065e3e7e3, type: 2}
+  lilita: {fileID: 11400000, guid: 0eb842d897fb0254ea72c6116de81e66, type: 2}
   round10: {fileID: 21300000, guid: 939e4c700787e2d4fbb6d839c7b2f02a, type: 3}
   round12: {fileID: 21300000, guid: a7e07f24e01e8994d9c3a12baaf3ece2, type: 3}
   round16: {fileID: 21300000, guid: e87e5a70be317f940b6559b5b2b88c18, type: 3}
