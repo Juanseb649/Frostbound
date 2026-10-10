@@ -99,6 +99,12 @@ public class PenguinRigAnimator : MonoBehaviour
 
     // Armas de dos manos (mandobles, hachas, mazos): combo pesado con las dos aletas en el mango.
     private bool _heavy;
+    // Lanzas y báculos: el asta cruza delante del cuerpo y las dos aletas la agarran.
+    [System.NonSerialized] public float polearmSwing = 35f;
+    [System.NonSerialized] public float polearmOut = 0f;
+    [System.NonSerialized] public float polearmHandGap = -0.18f;
+    private bool _polearm;
+
     [Header("Combo pesado (dos manos)")]
     [Tooltip("Muñeca más blanda con armas pesadas: la cabeza del arma se retrasa y latiguea al frenar.")]
     public float heavyWristStiffness = 12f;
@@ -210,6 +216,16 @@ public class PenguinRigAnimator : MonoBehaviour
         _heavy = true;
     }
 
+    // Combo de lanza y báculo: 1 estocada, 2 barrido bajo, 3 molinete por encima de la cabeza y golpe contra el suelo.
+    public void PlayPolearmCombo(int step, float duration)
+    {
+        PlayAttack(duration);
+        _comboStep = Mathf.Clamp(step, 1, 3);
+        _polearm = true;
+    }
+
+    public bool PolearmCombo => _polearm && _comboStep > 0;
+
     public void SetBow(bool equipped)
     {
         _bowEquipped = equipped;
@@ -232,6 +248,7 @@ public class PenguinRigAnimator : MonoBehaviour
     {
         _comboStep = 0;
         _heavy = false;
+        _polearm = false;
         _attackDuration = Mathf.Max(0.12f, duration);
         _attackTime = 0f;
         _action = IdleAction.None;
@@ -297,7 +314,7 @@ public class PenguinRigAnimator : MonoBehaviour
         _actionWeight = Mathf.MoveTowards(_actionWeight, _action != IdleAction.None ? 1f : 0f, dt * (moving ? 8f : 4f));
         float recoverTime = _heavy ? heavyRecover : comboRecover;
         if (_attackTime < _attackDuration + (_comboStep > 0 ? recoverTime : 0f)) _attackTime += dt;
-        else if (_comboStep > 0 && _attackTime >= _attackDuration + recoverTime) { _comboStep = 0; _heavy = false; }
+        else if (_comboStep > 0 && _attackTime >= _attackDuration + recoverTime) { _comboStep = 0; _heavy = false; _polearm = false; }
 
         if (_bowTime < _bowDuration)
         {
@@ -439,7 +456,7 @@ public class PenguinRigAnimator : MonoBehaviour
             Quaternion fullR = Quaternion.FromToRotation(baseR * _tipRest, armTarget);
             saluteR = Quaternion.Slerp(Quaternion.identity, fullR, cw);
 
-            if (_grip == WeaponGrip.TwoHand)
+            if (_grip == WeaponGrip.TwoHand || _grip == WeaponGrip.Polearm)
                 saluteL = Quaternion.Slerp(Quaternion.identity, fullR, cw * 0.65f);
             else if (_flipL != null)
             {
@@ -567,15 +584,38 @@ public class PenguinRigAnimator : MonoBehaviour
     // La aleta izquierda agarra el mango por debajo de la derecha: las dos llevan el arma.
     private void TwoHandedGrip()
     {
-        if (_grip != WeaponGrip.TwoHand || !_armed || _wrist == null || _flipL == null || _anchorL == null) return;
+        bool pole = _grip == WeaponGrip.Polearm;
+        if ((_grip != WeaponGrip.TwoHand && !pole) || !_armed || _wrist == null || _flipL == null || _anchorL == null) return;
+        // Con lanza o báculo la aleta izquierda solo se suma al asta durante los golpes.
+        if (pole && _comboArmWeight <= 0.01f) return;
         Vector3 tip = _wrist.rotation * _tipLocal;
-        float reach = Mathf.Max(0.08f, _bladeLength * 0.11f);
-        Vector3 haft = _wrist.position - tip * reach;
         Vector3 shoulder = _flipL.t.position;
         Vector3 hand = _anchorL.position;
+        Vector3 haft;
+        if (pole)
+        {
+            // Punto del asta al alcance exacto de la aleta (intersección de la recta del asta con la esfera del brazo),
+            // el más cercano al agarre preferido.
+            float arm = (hand - shoulder).magnitude;
+            Vector3 o = _wrist.position - shoulder;
+            float b = Vector3.Dot(o, tip), c = o.sqrMagnitude - arm * arm;
+            float disc = b * b - c;
+            float sAt = -b;
+            if (disc >= 0f)
+            {
+                float r = Mathf.Sqrt(disc);
+                float s1 = -b - r, s2 = -b + r, want = -polearmHandGap;
+                sAt = Mathf.Abs(s1 - want) < Mathf.Abs(s2 - want) ? s1 : s2;
+            }
+            sAt = Mathf.Clamp(sAt, -_bladeLength * 0.45f, _bladeLength * 0.8f);
+            haft = _wrist.position + tip * sAt;
+        }
+        else haft = _wrist.position - tip * Mathf.Max(0.08f, _bladeLength * 0.11f);
         Vector3 from = hand - shoulder, to = haft - shoulder;
         if (from.sqrMagnitude < 1e-6f || to.sqrMagnitude < 1e-6f) return;
-        _flipL.t.rotation = Quaternion.FromToRotation(from, to) * _flipL.t.rotation;
+        Quaternion grab = Quaternion.FromToRotation(from, to);
+        if (pole) grab = Quaternion.Slerp(Quaternion.identity, grab, _comboArmWeight);
+        _flipL.t.rotation = grab * _flipL.t.rotation;
     }
 
     // Aletas al sujetar el arma y al atacar. Ángulos en grados: swing > 0 lleva la aleta hacia delante, out > 0 la abre.
@@ -596,8 +636,10 @@ public class PenguinRigAnimator : MonoBehaviour
                 outL -= 6f * hold;
                 break;
             case WeaponGrip.Polearm:
-                swingR = Mathf.Lerp(swingR, swingR * 0.4f + 35f, hold);
-                swingL = Mathf.Lerp(swingL, swingL * 0.5f + 20f, hold);
+                swingR = Mathf.Lerp(swingR, swingR * 0.3f + polearmSwing, hold);
+                swingL = Mathf.Lerp(swingL, swingL * 0.3f + polearmSwing, hold);
+                outR += polearmOut * hold;
+                outL += polearmOut * hold;
                 break;
             case WeaponGrip.Bow:
                 swingL = Mathf.Lerp(swingL, swingL * 0.3f + 60f, hold);
@@ -763,6 +805,7 @@ public class PenguinRigAnimator : MonoBehaviour
         Vector3 p;
         Vector4[] path;
         if (_heavy) return HeavyPose(t, recover);
+        if (_polearm) return PolearmPose(t, recover);
         switch (_comboStep)
         {
             case 1:
@@ -801,6 +844,71 @@ public class PenguinRigAnimator : MonoBehaviour
         c.elevation = p.y;
         c.armElevation = p.z;
         // Un poco más adelante en la trayectoria: da la dirección del movimiento (el filo va por delante).
+        Vector3 next = Sample(path, Mathf.Min(1f, t + 0.04f));
+        c.nextYaw = next.x;
+        c.nextElevation = next.y;
+        return c;
+    }
+
+    // ----- Combo de lanza: el asta va siempre por delante, las dos aletas la empujan. (tiempo, yaw, elevación de la punta, elevación del brazo)
+
+    // 1) Estocada: recoge el asta junto a la cadera y la dispara recta al frente con un paso largo.
+    private static readonly Vector4[] Pole1 =
+    {
+        new Vector4(0f, 15f, 28f, -18f), new Vector4(0.2f, 55f, 10f, -28f), new Vector4(0.38f, 70f, 6f, -34f),
+        new Vector4(0.5f, 4f, 0f, -4f), new Vector4(0.58f, 0f, -2f, 2f), new Vector4(0.8f, 2f, 0f, -2f), new Vector4(1f, 15f, 28f, -18f)
+    };
+
+    // 2) Barrido bajo: la punta abre a la derecha y barre a ras de suelo hasta la izquierda.
+    private static readonly Vector4[] Pole2 =
+    {
+        new Vector4(0f, 15f, 28f, -18f), new Vector4(0.2f, 85f, 14f, 22f), new Vector4(0.32f, 100f, 6f, 18f),
+        new Vector4(0.48f, 10f, -8f, 4f), new Vector4(0.6f, -90f, -6f, 10f), new Vector4(0.78f, -110f, 8f, 18f), new Vector4(1f, -40f, 24f, -6f)
+    };
+
+    // 3) Molinete: gira con el asta en alto por encima de la cabeza y la descarga de punta contra el suelo.
+    private static readonly Vector4[] Pole3 =
+    {
+        new Vector4(0f, 15f, 28f, -18f), new Vector4(0.12f, 60f, 18f, 58f), new Vector4(0.3f, 100f, 10f, 82f),
+        new Vector4(0.5f, 160f, 10f, 84f), new Vector4(0.62f, 40f, 48f, 74f), new Vector4(0.72f, 0f, -30f, 10f),
+        new Vector4(0.88f, 0f, -32f, 6f), new Vector4(1f, 15f, 28f, -18f)
+    };
+
+    private Combo PolearmPose(float t, float recover)
+    {
+        var c = new Combo();
+        Vector4[] path;
+        switch (_comboStep)
+        {
+            case 1:
+                path = Pole1;
+                c.weight = Smooth(0f, 0.12f, t) * recover;
+                c.lean = -6f * Bump(0.1f, 0.42f, t) + 16f * Smooth(0.42f, 0.55f, t) * (1f - Smooth(0.8f, 1f, t));
+                c.crouch = 0.25f * Bump(0.1f, 0.45f, t) + 0.55f * Smooth(0.45f, 0.56f, t) * (1f - Smooth(0.8f, 1f, t));
+                c.spineYaw = 18f * Bump(0.12f, 0.48f, t) - 10f * Bump(0.46f, 0.7f, t);
+                c.leftElevation = -5f;
+                break;
+            case 2:
+                path = Pole2;
+                c.weight = recover;
+                c.lean = 10f + 6f * Bump(0.3f, 0.7f, t);
+                c.crouch = 0.4f + 0.5f * Bump(0.3f, 0.8f, t);
+                c.leftElevation = -15f;
+                break;
+            default:
+                path = Pole3;
+                c.weight = recover;
+                c.spin = 360f * Cut(0.1f, 0.62f, t);
+                float air = Bump(0.12f, 0.6f, t);
+                c.lean = -8f * air + 24f * Smooth(0.62f, 0.72f, t) * (1f - Smooth(0.88f, 1f, t));
+                c.crouch = 0.3f * Bump(0f, 0.14f, t) - 0.4f * air + 1.1f * Smooth(0.64f, 0.72f, t) * (1f - 0.7f * Smooth(0.88f, 1f, t));
+                c.leftElevation = 10f;
+                break;
+        }
+        Vector3 p = Sample(path, t);
+        c.yaw = p.x;
+        c.elevation = p.y;
+        c.armElevation = p.z;
         Vector3 next = Sample(path, Mathf.Min(1f, t + 0.04f));
         c.nextYaw = next.x;
         c.nextElevation = next.y;

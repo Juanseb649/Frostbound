@@ -106,6 +106,7 @@ public class PlayerCombat : MonoBehaviour
         if (_holder != null) _holder.SetTrail(Time.time >= _trailOn && Time.time < _trailOff);
         if (_comboStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + comboWindow) _comboStep = 0;
         if (_heavyStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + heavyComboWindow) _heavyStep = 0;
+        if (_poleStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + poleComboWindow) _poleStep = 0;
 
         if (_pending && Time.time >= _hitAt)
         {
@@ -159,6 +160,15 @@ public class PlayerCombat : MonoBehaviour
     public bool UsesHeavyCombo => HasWeapon && !Weapon.item.IsRanged && Weapon.item.Handling == WeaponHandling.TwoHanded
                                   && Weapon.item.WeaponInfo.grip == WeaponGrip.TwoHand;
 
+    // Lanzas y báculos: estocada, barrido y molinete.
+    public bool UsesPolearmCombo => HasWeapon && !Weapon.item.IsRanged && Weapon.item.WeaponInfo.grip == WeaponGrip.Polearm;
+
+    [Header("Combo de lanza y báculo")]
+    public float[] poleDamage = { 1.05f, 1.1f, 1.6f };
+    public float[] poleTiming = { 0.9f, 0.95f, 1.3f };
+    public float poleComboWindow = 0.5f;
+    private int _poleStep;
+
     public bool UsesBow => HasWeapon && Weapon.item.WeaponInfo.grip == WeaponGrip.Bow;
 
     public float AttacksPerSecond
@@ -184,9 +194,11 @@ public class PlayerCombat : MonoBehaviour
         float duration = 1f / Mathf.Max(0.2f, AttacksPerSecond);
         if (UsesSwordCombo) return StartComboStep(duration);
         if (UsesHeavyCombo) return StartHeavyStep(duration);
+        if (UsesPolearmCombo) return StartPolearmStep(duration);
 
         _comboStep = 0;
         _heavyStep = 0;
+        _poleStep = 0;
         if (UsesBow)
         {
             // Coger flecha, colocarla, tensar y soltar: la flecha sale cuando la aleta suelta la cuerda.
@@ -272,6 +284,78 @@ public class PlayerCombat : MonoBehaviour
         return true;
     }
 
+    // Tres golpes de lanza: 1) estocada larga, 2) barrido bajo, 3) molinete y golpe contra el suelo.
+    private bool StartPolearmStep(float baseDuration)
+    {
+        int step = Time.time <= _comboDeadline && _poleStep > 0 && _poleStep < 3 ? _poleStep + 1 : 1;
+        _poleStep = step;
+        _comboStep = 0;
+        _heavyStep = 0;
+        int i = step - 1;
+        float[] minimum = { 0.5f, 0.55f, 0.95f };
+        float duration = Mathf.Max(minimum[i], baseDuration * poleTiming[i]);
+        float[] hit = { 0.52f, 0.5f, 0.72f };
+        float[] meters = { 0.75f, 0.25f, 0.55f };
+        float[] delay = { 0.4f, 0.3f, 0.6f };
+
+        _attackMultiplier = poleDamage[i];
+        _spinAttack = false;
+        _pending = true;
+        _hitAt = Time.time + duration * hit[i];
+        _readyAt = Time.time + duration * (step == 3 ? 1f : 0.9f);
+        _comboDeadline = step == 3 ? 0f : Time.time + duration + poleComboWindow;
+        _trailOn = Time.time + duration * (step == 3 ? 0.12f : 0.4f);
+        _trailOff = Time.time + duration * (step == 3 ? 0.78f : 0.66f);
+
+        if (_pc != null)
+        {
+            _pc.FaceAndHold(_aimDir, duration * 0.92f);
+            _pc.Lunge(_aimDir, meters[i], duration * delay[i], duration * 0.18f);
+        }
+        if (_rig != null) _rig.PlayPolearmCombo(step, duration);
+        return true;
+    }
+
+    private void PolearmMelee()
+    {
+        float range = Range;
+        int step = Mathf.Clamp(_poleStep, 1, 3);
+        float maxDist = step == 1 ? range + 0.8f : range + 0.3f;
+        int n = Physics.OverlapSphereNonAlloc(transform.position + Vector3.up * 0.6f, maxDist + 0.4f, _overlap, ~0, QueryTriggerInteraction.Ignore);
+        _scratch.Clear();
+        for (int i = 0; i < n; i++)
+        {
+            Damageable d = _overlap[i].GetComponentInParent<Damageable>();
+            if (d == null || d.IsDead || d.friendly || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
+            Vector3 to = d.transform.position - transform.position;
+            to.y = 0f;
+            if (to.magnitude > maxDist + 0.4f) continue;
+            if (step == 1)
+            {
+                float along = Vector3.Dot(to, _aimDir), side = Vector3.Cross(_aimDir, to).magnitude;
+                if (along < -0.3f || side > 0.85f) continue;
+            }
+            else if (step == 2 && to.sqrMagnitude > 0.04f && Vector3.Angle(_aimDir, to) > 105f) continue;
+            _scratch.Add(d);
+        }
+        foreach (Damageable d in _scratch)
+        {
+            Strike(d, _attackMultiplier, true);
+            if (step == 1) d.Knockback(d.transform.position - transform.position, 0.8f);
+            if (step == 2) d.ApplySlow(0.35f, 1.2f);
+        }
+        if (step == 3)
+        {
+            GroundImpact.Spawn(transform.position + _aimDir * (range * 0.8f), 1.8f, 1.2f);
+            CameraFollow.Shake(0.24f + (_scratch.Count > 0 ? 0.06f : 0f), 0.32f);
+        }
+        if (_scratch.Count > 0)
+        {
+            if (step != 2) StartCoroutine(HitStop(step == 3 ? 0.09f : 0.05f));
+            _eq.WearWeapon(wearPerMeleeHit);
+        }
+    }
+
     private float _brokenNoticeAt;
 
     private void ResolveAttack()
@@ -298,6 +382,11 @@ public class PlayerCombat : MonoBehaviour
             HeavyMelee();
             return;
         }
+        if (_poleStep > 0 && UsesPolearmCombo)
+        {
+            PolearmMelee();
+            return;
+        }
         float range = Range;
         Vector3 origin = transform.position + Vector3.up * 0.6f;
         // Los tajos horizontales barren un arco ancho; el giro de 360° alcanza todo alrededor.
@@ -309,7 +398,7 @@ public class PlayerCombat : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
-            if (d == null || d.IsDead || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
+            if (d == null || d.IsDead || d.friendly || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
             Vector3 to = d.transform.position - transform.position;
             to.y = 0f;
             if (to.magnitude > range + 0.6f) continue;
@@ -339,7 +428,7 @@ public class PlayerCombat : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
-            if (d == null || d.IsDead || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
+            if (d == null || d.IsDead || d.friendly || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
             Vector3 to = d.transform.position - transform.position;
             to.y = 0f;
             if (to.magnitude > maxDist + 0.4f) continue;
@@ -442,7 +531,7 @@ public class PlayerCombat : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
-            if (d == null || d == from || d.IsDead || targets.Contains(d)) continue;
+            if (d == null || d == from || d.IsDead || d.friendly || targets.Contains(d)) continue;
             targets.Add(d);
         }
         targets.Sort((a, b) => (a.transform.position - from.transform.position).sqrMagnitude

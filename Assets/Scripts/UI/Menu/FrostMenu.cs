@@ -911,6 +911,27 @@ public class FrostMenu : MonoBehaviour
         }
         var look = _actor.GetComponent<PenguinAppearance>();
         if (look != null) look.SetPlumage(plumage);
+        ArmActor(cls);
+    }
+
+    // Las armas de la clase van en las aletas igual que en el juego (WeaponHolder), no las piezas fijas del traje.
+    private void ArmActor(CharacterClass cls)
+    {
+        foreach (SkinnedMeshRenderer r in _actor.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            if (r.name.Contains("_Weapon_") || r.name.Contains("_Offhand_")) r.enabled = false;
+        PenguinRigAnimator rig = _actor.GetComponentInChildren<PenguinRigAnimator>();
+        if (rig == null) return;
+        WeaponHolder holder = rig.GetComponent<WeaponHolder>();
+        if (holder == null) holder = rig.gameObject.AddComponent<WeaponHolder>();
+        ItemDefinition main = null, off = null;
+        if (cls != null && cls.startingItems != null)
+            foreach (ItemDefinition item in cls.startingItems)
+            {
+                if (item == null || !item.IsEquippable) continue;
+                if (item.equipSlot == EquipSlot.Weapon && main == null) main = item;
+                else if (item.equipSlot == EquipSlot.Offhand && off == null) off = item;
+            }
+        holder.Show(main, off);
     }
 
     // Zona central invisible: arrastrar gira al héroe.

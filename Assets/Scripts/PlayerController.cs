@@ -415,6 +415,7 @@ public class PlayerController : MonoBehaviour
                     return false;
                 }
                 Damageable enemy = under != null ? under.GetComponentInParent<Damageable>() : null;
+                if (enemy != null && enemy.friendly) enemy = null;
                 if (enemy != null && _combat != null)
                 {
                     _clickTarget = null;

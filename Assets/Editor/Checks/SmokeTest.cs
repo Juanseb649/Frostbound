@@ -100,6 +100,80 @@ public static class SmokeTest
         return "en el paso";
     }
 
+    public static string GolemSummon()
+    {
+        GameObject p = GameObject.Find("Player");
+        if (p == null) return "sin héroe";
+        var g = SnowGolem.Summon(p, p.transform.position + p.transform.forward * 2f, 120f, 8f);
+        return "gólem vivo=" + g.Alive + " vida=" + g.Health.Health + "/" + g.Health.maxHealth + " navmesh=" + g.GetComponent<UnityEngine.AI.NavMeshAgent>().isOnNavMesh + " total=" + SnowGolem.Instances.Count;
+    }
+
+    public static string GolemState()
+    {
+        var sb = new System.Text.StringBuilder();
+        GameObject p = GameObject.Find("Player");
+        foreach (var g in SnowGolem.Instances)
+            sb.Append(g.name).Append(" vivo=").Append(g.Alive).Append(" vida=").Append(Mathf.RoundToInt(g.Health.Health))
+              .Append(" dist=").Append(p != null ? Vector3.Distance(p.transform.position, g.transform.position).ToString("F1") : "-").Append(" | ");
+        return sb.Length > 0 ? sb.ToString() : "ninguno";
+    }
+
+    public static string GolemHitByPlayer()
+    {
+        GameObject p = GameObject.Find("Player");
+        var g = SnowGolem.Instances.Count > 0 ? SnowGolem.Instances[0] : null;
+        if (g == null) return "ninguno";
+        float before = g.Health.Health;
+        g.Health.TakeHit(new DamageInfo { amount = 50f, source = p });
+        return "golpe del héroe: " + before + "→" + g.Health.Health;
+    }
+
+    public static string GolemKill()
+    {
+        var g = SnowGolem.Instances.Count > 0 ? SnowGolem.Instances[0] : null;
+        if (g == null) return "ninguno";
+        g.Health.TakeHit(new DamageInfo { amount = 99999f, source = null, direction = Vector3.forward });
+        int rbs = 0;
+        foreach (var rb in Object.FindObjectsByType<Rigidbody>()) if (rb.name == "Base" || rb.name == "Cuerpo" || rb.name == "Cabeza" || rb.name.StartsWith("Brazo")) rbs++;
+        return "muerto=" + g.Health.IsDead + " piezas con rigidbody=" + rbs + " articulaciones=" + Object.FindObjectsByType<CharacterJoint>().Length;
+    }
+
+    public static string EquipSpear()
+    {
+        GameObject p = GameObject.Find("Player");
+        var eq = p.GetComponent<Equipment>();
+        var db = GameDatabase.Instance;
+        eq.SetEquippedStack(EquipSlot.Weapon, new ItemStack(db.items.Find("spear"), 1));
+        var c = p.GetComponent<PlayerCombat>();
+        return "lanza=" + (eq.MainWeapon != null ? eq.MainWeapon.item.name : "no") + " combo=" + c.UsesPolearmCombo;
+    }
+
+    public static string SpearAttack()
+    {
+        GameObject p = GameObject.Find("Player");
+        var c = p.GetComponent<PlayerCombat>();
+        bool ok = c.TryAttack(p.transform.position + p.transform.forward * 3f);
+        var rig = p.GetComponentInChildren<PenguinRigAnimator>();
+        return "ataque=" + ok + " paso=" + rig.ComboStep + " lanza=" + rig.PolearmCombo;
+    }
+
+    public static string InventoryTabs()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        if (inv == null) return "sin inventario";
+        var sb = new System.Text.StringBuilder();
+        foreach (InventoryScreen.Tab t in new[] { InventoryScreen.Tab.Character, InventoryScreen.Tab.Equipment, InventoryScreen.Tab.Inventory })
+        {
+            inv.OpenTab(t);
+            sb.Append(t).Append(": ");
+            foreach (Transform child in inv.transform.Find("Window"))
+                if (child.gameObject.activeSelf && child.name.EndsWith("Panel")) sb.Append(child.name).Append(" ");
+            sb.Append("| ");
+        }
+        inv.Close();
+        return sb.ToString() + " abierto=" + inv.IsOpen + " bloqueo=" + GameplayInput.Blocked;
+    }
+
     public static string MenuState()
     {
         var menu = Object.FindAnyObjectByType<FrostMenu>();
