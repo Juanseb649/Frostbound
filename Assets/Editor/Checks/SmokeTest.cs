@@ -157,6 +157,24 @@ public static class SmokeTest
         return "ataque=" + ok + " paso=" + rig.ComboStep + " lanza=" + rig.PolearmCombo;
     }
 
+    public static string MageTest()
+    {
+        GameObject p = GameObject.Find("Player");
+        var eq = p.GetComponent<Equipment>();
+        var db = GameDatabase.Instance;
+        eq.SetEquippedStack(EquipSlot.Weapon, new ItemStack(db.items.Find("mage_staff"), 1));
+        eq.SetEquippedStack(EquipSlot.Chest, new ItemStack(db.items.Find("mage_robe"), 1));
+        eq.SetEquippedStack(EquipSlot.Head, new ItemStack(db.items.Find("mage_hat"), 1));
+        var c = p.GetComponent<PlayerCombat>();
+        bool ok = c.TryAttack(p.transform.position + p.transform.forward * 6f);
+        var parts = new System.Text.StringBuilder();
+        foreach (var r in p.GetComponentsInChildren<SkinnedMeshRenderer>())
+            if (r.name.StartsWith("Outfit_")) parts.Append(r.name.Replace("Outfit_", "")).Append(",");
+        return "magia=" + c.UsesMagic + " alcance=" + c.Range + " ataque=" + ok + " piezas=" + parts;
+    }
+
+    public static string OrbCount() => "orbes=" + Object.FindObjectsByType<MagicOrb>().Length + " destellos=" + GameObject.FindObjectsByType<Light>().Length;
+
     public static string InventoryTabs()
     {
         var inv = Object.FindAnyObjectByType<InventoryScreen>();

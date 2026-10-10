@@ -64,6 +64,7 @@ public class PlayerCombat : MonoBehaviour
     private bool _pending;
     private float _hitAt;
     private Vector3 _aimDir = Vector3.forward;
+    private Vector3 _aimPoint;
     private bool _lowWarned;
     private int _comboStep;
     private float _comboDeadline;
@@ -131,6 +132,7 @@ public class PlayerCombat : MonoBehaviour
         get
         {
             if (!HasWeapon) return unarmedRange;
+            if (UsesMagic) return magicRange;
             return Weapon.item.WeaponInfo.range;
         }
     }
@@ -161,7 +163,14 @@ public class PlayerCombat : MonoBehaviour
                                   && Weapon.item.WeaponInfo.grip == WeaponGrip.TwoHand;
 
     // Lanzas y báculos: estocada, barrido y molinete.
-    public bool UsesPolearmCombo => HasWeapon && !Weapon.item.IsRanged && Weapon.item.WeaponInfo.grip == WeaponGrip.Polearm;
+    public bool UsesPolearmCombo => HasWeapon && !Weapon.item.IsRanged && Weapon.item.WeaponInfo.grip == WeaponGrip.Polearm && !UsesMagic;
+
+    // El mago es el único que ataca con magia: el báculo dispara orbes amarillos.
+    public bool UsesMagic => HasWeapon && Weapon.item.weaponType == WeaponType.Staff;
+
+    [Header("Magia (báculo)")]
+    public float magicRange = 11f;
+    public float orbSpeed = 17f;
 
     [Header("Combo de lanza y báculo")]
     public float[] poleDamage = { 1.05f, 1.1f, 1.6f };
@@ -190,10 +199,12 @@ public class PlayerCombat : MonoBehaviour
         dir.y = 0f;
         if (dir.sqrMagnitude < 0.001f) dir = transform.forward;
         _aimDir = dir.normalized;
+        _aimPoint = targetPoint;
 
         float duration = 1f / Mathf.Max(0.2f, AttacksPerSecond);
         if (UsesSwordCombo) return StartComboStep(duration);
         if (UsesHeavyCombo) return StartHeavyStep(duration);
+        if (UsesMagic) return StartCast(duration);
         if (UsesPolearmCombo) return StartPolearmStep(duration);
 
         _comboStep = 0;
@@ -316,6 +327,44 @@ public class PlayerCombat : MonoBehaviour
         return true;
     }
 
+    // Conjuro: el mago apunta el báculo al frente y suelta el orbe desde la punta.
+    private bool StartCast(float baseDuration)
+    {
+        _comboStep = 0;
+        _heavyStep = 0;
+        _poleStep = 0;
+        float duration = Mathf.Max(0.45f, baseDuration);
+        _attackMultiplier = 1f;
+        _spinAttack = false;
+        _pending = true;
+        _hitAt = Time.time + duration * 0.5f;
+        _readyAt = Time.time + duration;
+        if (_pc != null) _pc.FaceAndHold(_aimDir, duration * 0.9f);
+        if (_rig != null) _rig.PlayPolearmCombo(1, duration);
+        return true;
+    }
+
+    private void CastOrb()
+    {
+        Vector3 origin = transform.position + Vector3.up * 1.1f + _aimDir * 0.5f;
+        if (_holder != null && _holder.MainModel != null)
+        {
+            Transform staff = _holder.MainModel.transform;
+            origin = staff.position + staff.up * Mathf.Max(0.3f, _holder.BladeLength);
+        }
+        origin.y = Mathf.Max(origin.y, transform.position.y + 0.7f);
+        Vector3 flat = new Vector3(_aimPoint.x - transform.position.x, 0f, _aimPoint.z - transform.position.z);
+        Vector3 dir = _aimDir;
+        if (flat.magnitude > 1.5f)
+        {
+            Vector3 target = new Vector3(_aimPoint.x, transform.position.y + 0.75f, _aimPoint.z);
+            dir = (target - origin).normalized;
+            if (Vector3.Dot(new Vector3(dir.x, 0f, dir.z).normalized, _aimDir) < 0.7f) dir = _aimDir;
+        }
+        MagicOrb.Launch(origin, dir, orbSpeed, magicRange + 2f, gameObject, (target, point) => Strike(target, _attackMultiplier, true));
+        _eq.WearWeapon(wearPerShot);
+    }
+
     private void PolearmMelee()
     {
         float range = Range;
@@ -371,7 +420,8 @@ public class PlayerCombat : MonoBehaviour
             }
             return;
         }
-        if (IsRanged) Shoot(weapon);
+        if (UsesMagic) CastOrb();
+        else if (IsRanged) Shoot(weapon);
         else Melee(weapon);
     }
 

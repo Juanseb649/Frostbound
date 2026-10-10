@@ -16,12 +16,13 @@ MonoBehaviour:
   slot: 2
   alsoOccupies: 03000000
   attachMode: 0
-  prefab: {fileID: 919132149155446097, guid: 57511c8d36c357841892f4e8d378bdc9, type: 3}
+  prefab: {fileID: 1675046706690994402, guid: b95d595056c443c4e8bcb22b66a34102, type: 3}
   materialOverride: {fileID: 0}
   onlyParts:
   - Robe
   - Cloak
   - Belt
+  - Tunic
   fitBones: []
   positionOffset: {x: 0, y: 0, z: 0}
   rotationOffset: {x: 0, y: 0, z: 0}

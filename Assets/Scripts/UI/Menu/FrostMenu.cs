@@ -906,7 +906,12 @@ public class FrostMenu : MonoBehaviour
         {
             outfit.useClassOutfit = false;
             outfit.UnequipAll();
-            if (cls != null && cls.startingOutfit != null)
+            // Igual que en el juego: cada pieza inicial de armadura pone su prenda; si no hay, el traje de la clase.
+            bool any = false;
+            if (cls != null && cls.startingItems != null)
+                foreach (ItemDefinition item in cls.startingItems)
+                    if (item != null && item.IsEquippable && item.weaponModel == null && item.outfit != null) { outfit.Equip(item.outfit); any = true; }
+            if (!any && cls != null && cls.startingOutfit != null)
                 foreach (OutfitItem item in cls.startingOutfit) outfit.Equip(item);
         }
         var look = _actor.GetComponent<PenguinAppearance>();
@@ -929,7 +934,7 @@ public class FrostMenu : MonoBehaviour
             {
                 if (item == null || !item.IsEquippable) continue;
                 if (item.equipSlot == EquipSlot.Weapon && main == null) main = item;
-                else if (item.equipSlot == EquipSlot.Offhand && off == null) off = item;
+                else if (item.equipSlot == EquipSlot.Offhand && off == null && item.weaponModel != null) off = item;
             }
         holder.Show(main, off);
     }

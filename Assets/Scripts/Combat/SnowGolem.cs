@@ -119,6 +119,7 @@ public class SnowGolem : MonoBehaviour
     {
         if (_snow != null) return;
         _snow = Mat("Nieve compacta", SnowTexture(), Color.white, 0.15f);
+        _snow.SetTextureScale("_BaseMap", new Vector2(4f, 2f));
         _coal = Mat("Carbón", null, new Color(0.08f, 0.08f, 0.1f), 0.3f);
         _ice = MenuRuins.Lit("Hielo del gólem", new Color(0.45f, 0.78f, 1f), 0.9f, 0f, new Color(0.2f, 0.55f, 1.1f));
         _wood = Mat("Rama", null, new Color(0.36f, 0.22f, 0.12f), 0.1f);
@@ -159,9 +160,9 @@ public class SnowGolem : MonoBehaviour
         return tex;
     }
 
-    private Transform Cube(Transform parent, string name, Vector3 pos, Vector3 size, Material mat, Vector3 euler = default)
+    private Transform Shape(PrimitiveType type, Transform parent, string name, Vector3 pos, Vector3 size, Material mat, Vector3 euler = default)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var go = GameObject.CreatePrimitive(type);
         go.name = name;
         Destroy(go.GetComponent<Collider>());
         go.transform.SetParent(parent, false);
@@ -172,6 +173,9 @@ public class SnowGolem : MonoBehaviour
         return go.transform;
     }
 
+    private Transform Ball(Transform parent, string name, Vector3 pos, float diameter, Material mat) =>
+        Shape(PrimitiveType.Sphere, parent, name, pos, Vector3.one * diameter, mat);
+
     private Transform Part(string name, Vector3 pos)
     {
         var t = new GameObject(name).transform;
@@ -179,6 +183,9 @@ public class SnowGolem : MonoBehaviour
         t.localPosition = pos;
         return t;
     }
+
+    // Diámetros de las tres bolas de nieve (base, cuerpo, cabeza).
+    private const float BaseSize = 0.86f, BodySize = 0.66f, HeadSize = 0.5f;
 
     private void BuildModel()
     {
@@ -188,53 +195,56 @@ public class SnowGolem : MonoBehaviour
         _sway = new GameObject("Balanceo").transform;
         _sway.SetParent(_model, false);
 
-        // Base: el bloque más grande, un poco ladeado; botones de hielo.
+        // Base: la bola más grande, un poco aplastada contra el suelo, con dos botones de hielo.
         _base = Part("Base", new Vector3(0f, 0.4f, 0f));
-        Cube(_base, "Bloque", Vector3.zero, new Vector3(0.8f, 0.8f, 0.74f), _snow, new Vector3(0f, 4f, 0f));
-        Cube(_base, "Boton", new Vector3(0f, 0.12f, 0.38f), new Vector3(0.11f, 0.11f, 0.06f), _ice, new Vector3(0f, 0f, 45f));
-        Cube(_base, "Boton", new Vector3(0f, -0.14f, 0.38f), new Vector3(0.11f, 0.11f, 0.06f), _ice, new Vector3(0f, 0f, 45f));
+        Shape(PrimitiveType.Sphere, _base, "Bola", Vector3.zero, new Vector3(BaseSize, BaseSize * 0.92f, BaseSize), _snow);
+        Ball(_base, "Boton", new Vector3(0f, 0.14f, BaseSize * 0.47f), 0.09f, _ice);
+        Ball(_base, "Boton", new Vector3(0f, -0.06f, BaseSize * 0.49f), 0.09f, _ice);
 
-        // Cuerpo: con la bufanda y los brazos de rama.
-        _body = Part("Cuerpo", new Vector3(0f, 1.1f, 0f));
-        Cube(_body, "Bloque", Vector3.zero, new Vector3(0.64f, 0.62f, 0.6f), _snow, new Vector3(0f, -6f, 0f));
-        Cube(_body, "Boton", new Vector3(0f, 0.08f, 0.31f), new Vector3(0.09f, 0.09f, 0.05f), _ice, new Vector3(0f, 0f, 45f));
-        Cube(_body, "Boton", new Vector3(0f, -0.14f, 0.31f), new Vector3(0.09f, 0.09f, 0.05f), _ice, new Vector3(0f, 0f, 45f));
-        Cube(_body, "Bufanda", new Vector3(0f, 0.32f, 0f), new Vector3(0.7f, 0.12f, 0.66f), _scarf);
-        Cube(_body, "Bufanda_Cola", new Vector3(0.18f, 0.12f, 0.34f), new Vector3(0.14f, 0.36f, 0.05f), _scarf, new Vector3(0f, 0f, -8f));
+        // Cuerpo: bufanda en el cuello y los brazos de rama levantados.
+        _body = Part("Cuerpo", new Vector3(0f, 1.05f, 0f));
+        Ball(_body, "Bola", Vector3.zero, BodySize, _snow);
+        Ball(_body, "Boton", new Vector3(0f, 0.1f, BodySize * 0.48f), 0.075f, _ice);
+        Ball(_body, "Boton", new Vector3(0f, -0.08f, BodySize * 0.49f), 0.075f, _ice);
+        Shape(PrimitiveType.Cylinder, _body, "Bufanda", new Vector3(0f, 0.27f, 0f), new Vector3(0.5f, 0.05f, 0.5f), _scarf);
+        Shape(PrimitiveType.Cube, _body, "Bufanda_Cola", new Vector3(0.12f, 0.12f, 0.27f), new Vector3(0.12f, 0.3f, 0.04f), _scarf, new Vector3(-18f, 0f, -10f));
 
-        _armL = Part("Brazo_L", new Vector3(-0.32f, 0.12f, 0f));
-        _armR = Part("Brazo_R", new Vector3(0.32f, 0.12f, 0f));
+        _armL = Part("Brazo_L", new Vector3(-0.26f, 0.14f, 0f));
+        _armR = Part("Brazo_R", new Vector3(0.26f, 0.14f, 0f));
         foreach (Transform arm in new[] { _armL, _armR })
         {
             float side = arm == _armR ? 1f : -1f;
-            arm.localRotation = Quaternion.Euler(0f, 0f, side * -55f);
-            Cube(arm, "Rama", new Vector3(0f, 0.32f, 0f), new Vector3(0.07f, 0.64f, 0.07f), _wood);
-            Cube(arm, "Ramita", new Vector3(side * 0.06f, 0.5f, 0f), new Vector3(0.05f, 0.22f, 0.05f), _wood, new Vector3(0f, 0f, side * -35f));
-            Cube(arm, "Ramita", new Vector3(-side * 0.05f, 0.62f, 0f), new Vector3(0.04f, 0.16f, 0.04f), _wood, new Vector3(0f, 0f, side * 30f));
+            arm.localRotation = Quaternion.Euler(0f, 0f, side * -ArmLift);
+            Shape(PrimitiveType.Cylinder, arm, "Rama", new Vector3(0f, 0.36f, 0f), new Vector3(0.07f, 0.36f, 0.07f), _wood);
+            Shape(PrimitiveType.Cylinder, arm, "Ramita", new Vector3(side * 0.07f, 0.6f, 0f), new Vector3(0.045f, 0.12f, 0.045f), _wood, new Vector3(0f, 0f, side * -38f));
+            Shape(PrimitiveType.Cylinder, arm, "Ramita", new Vector3(-side * 0.05f, 0.7f, 0f), new Vector3(0.04f, 0.09f, 0.04f), _wood, new Vector3(0f, 0f, side * 32f));
         }
 
-        // Cabeza: cara de carbón con sonrisa, nariz de carámbano y gorro de lana con pompón de nieve.
-        _head = Part("Cabeza", new Vector3(0f, 1.66f, 0f));
-        Cube(_head, "Bloque", Vector3.zero, new Vector3(0.52f, 0.5f, 0.5f), _snow, new Vector3(0f, 3f, 0f));
-        Cube(_head, "Ojo", new Vector3(-0.12f, 0.08f, 0.255f), new Vector3(0.08f, 0.1f, 0.03f), _coal);
-        Cube(_head, "Ojo", new Vector3(0.12f, 0.08f, 0.255f), new Vector3(0.08f, 0.1f, 0.03f), _coal);
+        // Cabeza: ojos y sonrisa de carbón, nariz de carámbano y gorro de lana con pompón.
+        _head = Part("Cabeza", new Vector3(0f, 1.58f, 0f));
+        Ball(_head, "Bola", Vector3.zero, HeadSize, _snow);
+        float r = HeadSize * 0.5f;
+        foreach (float x in new[] { -0.09f, 0.09f })
+            Ball(_head, "Ojo", new Vector3(x, 0.06f, Mathf.Sqrt(r * r - x * x - 0.0036f) - 0.005f), 0.075f, _coal);
         for (int i = 0; i < 5; i++)
         {
-            float x = (i - 2) * 0.065f;
-            float y = -0.12f + Mathf.Abs(i - 2) * 0.025f;
-            Cube(_head, "Sonrisa", new Vector3(x, y, 0.255f), new Vector3(0.045f, 0.045f, 0.03f), _coal);
+            float x = (i - 2) * 0.05f;
+            float y = -0.09f + Mathf.Abs(i - 2) * 0.022f;
+            Ball(_head, "Sonrisa", new Vector3(x, y, Mathf.Sqrt(Mathf.Max(0f, r * r - x * x - y * y)) - 0.004f), 0.04f, _coal);
         }
         var nose = new GameObject("Nariz");
         nose.transform.SetParent(_head, false);
-        nose.transform.localPosition = new Vector3(0f, -0.01f, 0.36f);
+        nose.transform.localPosition = new Vector3(0f, -0.01f, r + 0.08f);
         nose.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        nose.transform.localScale = new Vector3(0.07f, 0.24f, 0.07f);
+        nose.transform.localScale = new Vector3(0.07f, 0.22f, 0.07f);
         nose.AddComponent<MeshFilter>().sharedMesh = MenuRuins.Octahedron();
         nose.AddComponent<MeshRenderer>().sharedMaterial = _ice;
-        Cube(_head, "Gorro", new Vector3(0f, 0.3f, 0f), new Vector3(0.5f, 0.16f, 0.48f), _wool);
-        Cube(_head, "Gorro_Borde", new Vector3(0f, 0.23f, 0f), new Vector3(0.56f, 0.07f, 0.54f), _wool);
-        Cube(_head, "Pompon", new Vector3(0.04f, 0.45f, 0f), new Vector3(0.14f, 0.14f, 0.14f), _snow, new Vector3(0f, 30f, 12f));
+        Shape(PrimitiveType.Sphere, _head, "Gorro", new Vector3(0f, 0.13f, -0.01f), new Vector3(0.48f, 0.34f, 0.48f), _wool);
+        Shape(PrimitiveType.Cylinder, _head, "Gorro_Borde", new Vector3(0f, 0.12f, -0.01f), new Vector3(0.5f, 0.035f, 0.5f), _wool);
+        Ball(_head, "Pompon", new Vector3(0.03f, 0.32f, -0.02f), 0.13f, _snow);
     }
+
+    private const float ArmLift = 32f;
 
     private IEnumerator Rise()
     {
@@ -338,14 +348,14 @@ public class SnowGolem : MonoBehaviour
         float walk = Mathf.Clamp01(speed / 3f);
         _sway.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t) * 6f * walk);
         _head.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 1.7f) * 3f, Mathf.Sin(Time.time * 0.9f) * 8f, 0f);
-        _armL.localRotation = Quaternion.Euler(Mathf.Sin(t) * 25f * walk, 0f, 55f);
+        _armL.localRotation = Quaternion.Euler(Mathf.Sin(t) * 25f * walk, 0f, ArmLift + Mathf.Sin(Time.time * 2.3f) * 6f);
         if (_throwT < 1f)
         {
             _throwT += Time.deltaTime / 0.45f;
             float k = _throwT < 0.45f ? -Mathf.Sin(_throwT / 0.45f * Mathf.PI * 0.5f) * 80f : Mathf.Lerp(-80f, 70f, Mathf.SmoothStep(0f, 1f, (_throwT - 0.45f) / 0.3f)) * (1f - Mathf.SmoothStep(0.8f, 1f, _throwT));
-            _armR.localRotation = Quaternion.Euler(-k, 0f, -55f + Mathf.Abs(k) * 0.3f);
+            _armR.localRotation = Quaternion.Euler(-k, 0f, -ArmLift + Mathf.Abs(k) * 0.2f);
         }
-        else _armR.localRotation = Quaternion.Euler(-Mathf.Sin(t) * 25f * walk, 0f, -55f);
+        else _armR.localRotation = Quaternion.Euler(-Mathf.Sin(t) * 25f * walk, 0f, -ArmLift - Mathf.Sin(Time.time * 2.3f + 1f) * 6f);
     }
 
     // ---------- Muerte ----------
@@ -378,13 +388,13 @@ public class SnowGolem : MonoBehaviour
         if (_agent != null) _agent.enabled = false;
         foreach (Collider c in GetComponents<Collider>()) c.enabled = false;
         Vector3 dir = transform.forward * -1f;
-        Rigidbody baseRb = Physical(_base, new Vector3(0.8f, 0.8f, 0.74f), 3f);
-        Rigidbody bodyRb = Physical(_body, new Vector3(0.64f, 0.62f, 0.6f), 2f);
-        Rigidbody headRb = Physical(_head, new Vector3(0.52f, 0.5f, 0.5f), 1.2f);
-        Rigidbody armL = Physical(_armL, new Vector3(0.08f, 0.7f, 0.08f), 0.2f, new Vector3(0f, 0.32f, 0f));
-        Rigidbody armR = Physical(_armR, new Vector3(0.08f, 0.7f, 0.08f), 0.2f, new Vector3(0f, 0.32f, 0f));
-        Joint(bodyRb, baseRb, new Vector3(0f, -0.31f, 0f), 260f);
-        Joint(headRb, bodyRb, new Vector3(0f, -0.25f, 0f), 180f);
+        Rigidbody baseRb = Round(_base, BaseSize * 0.48f, 3f);
+        Rigidbody bodyRb = Round(_body, BodySize * 0.5f, 2f);
+        Rigidbody headRb = Round(_head, HeadSize * 0.5f, 1.2f);
+        Rigidbody armL = Physical(_armL, new Vector3(0.08f, 0.78f, 0.08f), 0.2f, new Vector3(0f, 0.38f, 0f));
+        Rigidbody armR = Physical(_armR, new Vector3(0.08f, 0.78f, 0.08f), 0.2f, new Vector3(0f, 0.38f, 0f));
+        Joint(bodyRb, baseRb, new Vector3(0f, -BodySize * 0.45f, 0f), 260f);
+        Joint(headRb, bodyRb, new Vector3(0f, -HeadSize * 0.45f, 0f), 180f);
         Joint(armL, bodyRb, Vector3.zero, 90f);
         Joint(armR, bodyRb, Vector3.zero, 90f);
         Vector3 push = (dir + Vector3.up * 0.4f).normalized;
@@ -395,6 +405,19 @@ public class SnowGolem : MonoBehaviour
         armR.AddForce(Random.insideUnitSphere * 0.6f + Vector3.up * 0.8f, ForceMode.Impulse);
         GroundImpact.Spawn(transform.position, 1.4f, 0.9f);
         StartCoroutine(Crumble(new[] { _base, _body, _head, _armL, _armR }));
+    }
+
+    private Rigidbody Round(Transform part, float radius, float mass)
+    {
+        part.SetParent(null, true);
+        var sphere = part.gameObject.AddComponent<SphereCollider>();
+        sphere.radius = radius;
+        var rb = part.gameObject.AddComponent<Rigidbody>();
+        rb.mass = mass;
+        rb.linearDamping = 0.1f;
+        rb.angularDamping = 0.4f;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        return rb;
     }
 
     private Rigidbody Physical(Transform part, Vector3 size, float mass, Vector3 center = default)

@@ -145,6 +145,35 @@ public static class WeaponGripCheck
         return sb.ToString();
     }
 
+    public static string MageParts()
+    {
+        var sb = new StringBuilder();
+        var gear = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Gear/Frostbound_Mage_Gear.fbx");
+        foreach (var smr in gear.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            sb.Append(smr.name).Append(" mats=");
+            foreach (var m in smr.sharedMaterials) sb.Append(m != null ? m.name + "(" + m.shader.name + ")" : "null").Append(",");
+            sb.Append(" b=").Append(smr.sharedMesh.bounds.min.ToString("F2")).Append("..").Append(smr.sharedMesh.bounds.max.ToString("F2"));
+            sb.Append(" colores=").Append(smr.sharedMesh.colors.Length > 0).Append(" | ");
+        }
+        var db = AssetDatabase.LoadAssetAtPath<GameDatabase>("Assets/Resources/GameDatabase.asset");
+        foreach (var smr in db.penguinPrefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            sb.Append("PING ").Append(smr.name).Append(" v=").Append(smr.sharedMesh.vertexCount).Append(" huesos=");
+            foreach (var b in smr.bones) sb.Append(b != null ? b.name : "null").Append(",");
+            sb.Append(" b=").Append(smr.sharedMesh.bounds.min.ToString("F2")).Append("..").Append(smr.sharedMesh.bounds.max.ToString("F2"));
+            sb.Append(" mats=");
+            foreach (var m in smr.sharedMaterials) sb.Append(m != null ? m.name + "(" + m.shader.name + ")" : "null").Append(",");
+            sb.Append(" | ");
+        }
+        foreach (string g in new[] { "Pieza_Mage_Torso", "Pieza_Mage_Casco" })
+        {
+            var o = AssetDatabase.LoadAssetAtPath<OutfitItem>("Assets/Data/Outfits/Pieces/" + g + ".asset");
+            sb.Append(g).Append(" slot=").Append(o.slot).Append(" mat=").Append(o.materialOverride != null ? o.materialOverride.name : "-").Append(" | ");
+        }
+        return sb.ToString();
+    }
+
     public static string Models()
     {
         var db = AssetDatabase.LoadAssetAtPath<GameDatabase>("Assets/Resources/GameDatabase.asset");
