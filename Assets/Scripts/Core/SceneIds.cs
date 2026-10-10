@@ -9,4 +9,12 @@ public static class SceneIds
     public const string MainMenuPath = Folder + MainMenu + ".unity";
     public const string VillagePath = Folder + Village + ".unity";
     public const string FoothillsPath = Folder + Foothills + ".unity";
+
+    public static bool IsGameplay(string scene) => scene == Village || scene == Foothills;
+
+    public static string Kicker(string scene) => scene == Foothills ? "Capítulo I" : "El Frostspire";
+    public static string Title(string scene) => scene == Foothills ? "Las Faldas" : scene == Village ? "El poblado" : "Frostbound";
+    public static string Subtitle(string scene) => scene == Foothills
+        ? "Donde empieza la montaña"
+        : scene == Village ? "Al pie del Frostspire" : "";
 }

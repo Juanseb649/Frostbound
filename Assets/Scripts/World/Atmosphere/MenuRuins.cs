@@ -275,7 +275,7 @@ public class MenuRuins : MonoBehaviour
 
     // ---------- Materiales y mallas ----------
 
-    private static Material Lit(string name, Color color, float smoothness, float metallic = 0f, Color? emission = null)
+    public static Material Lit(string name, Color color, float smoothness, float metallic = 0f, Color? emission = null)
     {
         var m = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = name };
         m.SetColor("_BaseColor", color);
@@ -290,7 +290,7 @@ public class MenuRuins : MonoBehaviour
         return m;
     }
 
-    private static Material Transparent(string name, Texture tex, Color color, bool additive)
+    public static Material Transparent(string name, Texture tex, Color color, bool additive)
     {
         Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit");
         var m = new Material(sh) { name = name };
@@ -307,7 +307,7 @@ public class MenuRuins : MonoBehaviour
         return m;
     }
 
-    private static Texture2D Soft(int n)
+    public static Texture2D Soft(int n)
     {
         var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "Suave" };
         for (int y = 0; y < n; y++)

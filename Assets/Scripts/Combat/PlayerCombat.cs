@@ -84,6 +84,7 @@ public class PlayerCombat : MonoBehaviour
         _rig = GetComponentInChildren<PenguinRigAnimator>();
         _holder = GetComponentInChildren<WeaponHolder>();
         _dodge = GetComponent<PlayerDodge>();
+        if (GetComponent<PlayerAbility>() == null) gameObject.AddComponent<PlayerAbility>();
         if (lootSpriteMaterial != null) WorldItem.DefaultSpriteMaterial = lootSpriteMaterial;
     }
 

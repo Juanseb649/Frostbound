@@ -22,6 +22,13 @@ public class PlayerPersistence : MonoBehaviour
 
     void Start()
     {
+        _nextSave = Time.time + autosaveSeconds;
+        ZoneArrival arrival = ZoneTravel.TakeArrival();
+        if (arrival != null)
+        {
+            MoveTo(arrival.transform.position, arrival.transform.rotation);
+            return;
+        }
         GameSession s = GameSession.Instance;
         string last = s != null ? s.LastBonfire : "";
         Bonfire b = string.IsNullOrEmpty(last) ? null : Bonfire.Find(last);

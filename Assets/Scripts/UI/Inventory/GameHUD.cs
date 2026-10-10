@@ -31,6 +31,11 @@ public class GameHUD : MonoBehaviour
     private RectTransform _feed;
     private readonly List<(TextMeshProUGUI text, float time)> _feedLines = new List<(TextMeshProUGUI, float)>();
 
+    private PlayerAbility _ability;
+    private Image _abilityIcon, _abilityShade, _abilityFrame;
+    private TextMeshProUGUI _abilityCost, _abilityTimer, _abilityName;
+    private PlayerAbility.Kind _abilityShown = (PlayerAbility.Kind)(-1);
+
     private const float ToastDuration = 3f;
     private const float FeedDuration = 3.5f;
     private const int FeedMax = 5;
@@ -49,12 +54,16 @@ public class GameHUD : MonoBehaviour
         if (_belt == null) _belt = player.gameObject.AddComponent<PotionBelt>();
         _belt.Failed += OnBeltFailed;
         _belt.Used += OnBeltUsed;
+        _ability = player.GetComponent<PlayerAbility>();
+        if (_ability != null) _ability.Failed += OnAbilityFailed;
         Build();
         _stats.LeveledUp += OnLevelUp;
         _stats.ExperienceGained += OnExperienceGained;
         player.Inventory.ItemAdded += OnItemAdded;
         Notifications.Register(this);
     }
+
+    private void OnAbilityFailed(string msg) => ShowMessage(msg, FrostboundUI.Negative);
 
     private void OnExperienceGained(int amount) => ShowMessage("+" + amount + " XP", FrostboundUI.XpBar);
 
@@ -75,6 +84,7 @@ public class GameHUD : MonoBehaviour
             _stats.ExperienceGained -= OnExperienceGained;
         }
         if (player != null && player.Inventory != null) player.Inventory.ItemAdded -= OnItemAdded;
+        if (_ability != null) _ability.Failed -= OnAbilityFailed;
     }
 
     void Update()
@@ -88,6 +98,7 @@ public class GameHUD : MonoBehaviour
             _hpOrb.fillAmount = Mathf.MoveTowards(_hpOrb.fillAmount, Mathf.Clamp01(hp), Time.unscaledDeltaTime * 1.5f);
             _mpOrb.fillAmount = Mathf.MoveTowards(_mpOrb.fillAmount, Mathf.Clamp01(mp), Time.unscaledDeltaTime * 1.5f);
             UpdateBelt();
+            UpdateAbility();
         }
         else
         {
@@ -301,6 +312,8 @@ public class GameHUD : MonoBehaviour
             _beltCounts[i] = count;
         }
 
+        BuildAbility(bar);
+
         _xpFill = UIFactory.Bar(bar, "Experiencia", skin.pill, new Color(0.03f, 0.04f, 0.05f, 1f), FrostboundUI.XpBar, out RectTransform xp);
         Anchor(xp, 709f, 192f, 1211f, 202f);
         _levelText = UIFactory.Text(bar, "Nivel", "1", skin.cinzel800, 14f, FrostboundUI.ChipGoldText, TextAlignmentOptions.Center);
@@ -319,6 +332,56 @@ public class GameHUD : MonoBehaviour
         UIFactory.Stretch(_pointsText.rectTransform);
         Button chipButton = UIFactory.MakeButton(chip);
         chipButton.onClick.AddListener(() => { if (inventoryScreen != null) inventoryScreen.Open(); });
+    }
+
+    // Casilla de la habilidad de clase, encima del extremo izquierdo del cinturón de pociones.
+    private void BuildAbility(RectTransform bar)
+    {
+        if (_ability == null) return;
+        Image frame = UIFactory.Frame(bar, "Habilidad", skin.round16 != null ? skin.round16 : skin.pill, new Color(0.03f, 0.05f, 0.1f, 0.92f), FrostboundUI.Border, out _);
+        _abilityFrame = frame;
+        Anchor(frame.rectTransform, 709f, -96f, 789f, -16f);
+        _abilityIcon = UIFactory.Img(frame.transform, "Icono", FrostUI.Icon(_ability.Data.icon), new Color(0.75f, 0.92f, 1f));
+        UIFactory.Stretch(_abilityIcon.rectTransform, 14f);
+        _abilityShade = UIFactory.Img(frame.transform, "Recarga", null, new Color(0f, 0f, 0f, 0.62f));
+        UIFactory.Stretch(_abilityShade.rectTransform, 3f);
+        _abilityShade.type = Image.Type.Filled;
+        _abilityShade.fillMethod = Image.FillMethod.Radial360;
+        _abilityShade.fillOrigin = (int)Image.Origin360.Top;
+        _abilityShade.fillClockwise = false;
+        _abilityTimer = UIFactory.Text(frame.transform, "Tiempo", "", skin.nunito800, 16f, Color.white, TextAlignmentOptions.Center);
+        UIFactory.Stretch(_abilityTimer.rectTransform);
+        TextMeshProUGUI key = UIFactory.Text(frame.transform, "Tecla", "F", skin.cinzel800, 11f, new Color32(207, 198, 184, 255), TextAlignmentOptions.TopLeft);
+        UIFactory.Stretch(key.rectTransform, 5f);
+        key.outlineWidth = 0.25f; key.outlineColor = new Color32(5, 6, 8, 255);
+        _abilityCost = UIFactory.Text(frame.transform, "Coste", "", skin.nunito800, 11f, new Color(0.55f, 0.75f, 1f), TextAlignmentOptions.BottomRight);
+        UIFactory.Stretch(_abilityCost.rectTransform, 5f);
+        _abilityCost.outlineWidth = 0.25f; _abilityCost.outlineColor = new Color32(5, 6, 8, 255);
+        TextMeshProUGUI name = _abilityName = UIFactory.Text(frame.transform, "Nombre", _ability.Data.name, skin.nunito800, 11f, FrostboundUI.Muted, TextAlignmentOptions.Left);
+        name.rectTransform.anchorMin = new Vector2(1f, 0f);
+        name.rectTransform.anchorMax = new Vector2(1f, 1f);
+        name.rectTransform.pivot = new Vector2(0f, 0.5f);
+        name.rectTransform.anchoredPosition = new Vector2(8f, 0f);
+        name.rectTransform.sizeDelta = new Vector2(160f, 0f);
+        name.outlineWidth = 0.25f; name.outlineColor = new Color32(5, 6, 8, 255);
+    }
+
+    private void UpdateAbility()
+    {
+        if (_ability == null || _abilityShade == null) return;
+        if (_ability.Current != _abilityShown)
+        {
+            _abilityShown = _ability.Current;
+            _abilityIcon.sprite = FrostUI.Icon(_ability.Data.icon);
+            _abilityName.text = _ability.Data.name;
+        }
+        float left = _ability.CooldownLeft;
+        _abilityShade.fillAmount = left > 0f ? _ability.Cooldown01 : 0f;
+        _abilityTimer.text = left > 0f ? Mathf.CeilToInt(left).ToString() : "";
+        bool ready = left <= 0f && _ability.CanAfford;
+        _abilityIcon.color = ready ? new Color(0.75f, 0.92f, 1f) : new Color(0.4f, 0.48f, 0.58f);
+        _abilityCost.text = Mathf.CeilToInt(_ability.Data.cost).ToString();
+        _abilityCost.color = _ability.CanAfford ? new Color(0.55f, 0.75f, 1f) : FrostboundUI.Negative;
     }
 
     private void Build()

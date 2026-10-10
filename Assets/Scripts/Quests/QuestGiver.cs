@@ -28,8 +28,30 @@ public class QuestGiver : MonoBehaviour
 
     private static readonly string[] Done =
     {
-        "Lo hiciste. Esta noche la ciudadela descansa. Gracias, héroe.",
-        "Si la montaña aún late... será otro día. Hoy, descansa junto al fuego."
+        "¿Llegaste al paso helado? Más allá está el Bosque Corrupto... nadie ha vuelto de ahí.",
+        "Descansa junto al fuego, héroe. La montaña seguirá latiendo mañana."
+    };
+
+    public static readonly string[] Mountain =
+    {
+        "Lo hiciste. La ciudadela ya respira... pero esto no ha terminado.",
+        "Esa tropa de élite no salió de la nada: bajó de la montaña. Del Frostspire.",
+        "Allí arriba algo late bajo el hielo. Lo siento en el suelo cada noche.",
+        "Los que suben y vuelven ya no son pingüinos: son cascarones de cristal.",
+        "Toma el sendero del norte, al final del camino. Lleva a Las Faldas.",
+        "Enciende las hogueras que encuentres. Y héroe... no mires mucho rato al cristal."
+    };
+
+    private static readonly string[] MountainWaiting =
+    {
+        "El sendero de la montaña empieza al final del camino del norte, pasado el bosque.",
+        "En Las Faldas la ventisca esconde a los corruptos. Avanza de hoguera en hoguera."
+    };
+
+    private static readonly string[] MountainClimbing =
+    {
+        "¿Ya pisaste Las Faldas? Sigue subiendo: el paso helado está en lo alto del sendero.",
+        "Si la montaña late más fuerte, es que vas por buen camino."
     };
 
     private NPCInteractable _npc;
@@ -56,10 +78,11 @@ public class QuestGiver : MonoBehaviour
     private void RefreshTag()
     {
         if (_tag == null) return;
-        _tag.subtitle = QuestLog.Stage(QuestLog.Citadel) == QuestLog.CitadelNone ? "¡Tiene algo que contarte!" : "Explorador";
+        _tag.subtitle = HasNews ? "¡Tiene algo que contarte!" : "Explorador";
     }
 
-    public bool HasNews => QuestLog.Stage(QuestLog.Citadel) == QuestLog.CitadelNone;
+    public bool HasNews => QuestLog.Stage(QuestLog.Citadel) == QuestLog.CitadelNone
+        || (QuestLog.Stage(QuestLog.Citadel) >= QuestLog.CitadelDone && QuestLog.Stage(QuestLog.Ascent) == QuestLog.AscentNone);
 
     private bool Talk()
     {
@@ -70,7 +93,19 @@ public class QuestGiver : MonoBehaviour
             StartCoroutine(Tell());
             return true;
         }
-        string[] pool = stage == QuestLog.CitadelTalked ? Waiting : stage == QuestLog.CitadelBarbarian ? AfterBarbarian : Done;
+        if (stage >= QuestLog.CitadelDone)
+        {
+            int ascent = QuestLog.Stage(QuestLog.Ascent);
+            if (ascent == QuestLog.AscentNone)
+            {
+                StartCoroutine(TellMountain());
+                return true;
+            }
+            string[] climb = ascent == QuestLog.AscentTold ? MountainWaiting : ascent == QuestLog.AscentFoothills ? MountainClimbing : Done;
+            Say(climb[_line++ % climb.Length]);
+            return true;
+        }
+        string[] pool = stage == QuestLog.CitadelTalked ? Waiting : AfterBarbarian;
         Say(pool[_line++ % pool.Length]);
         return true;
     }
@@ -95,6 +130,20 @@ public class QuestGiver : MonoBehaviour
         QuestLog.SetStage(QuestLog.Citadel, QuestLog.CitadelTalked);
         BonfireBanner.Show("NUEVA MISIÓN", BonfireBanner.Victory);
         Notifications.Show("Nueva misión: " + QuestLog.Title(QuestLog.Citadel), FrostboundUI.Gold);
+    }
+
+    private IEnumerator TellMountain()
+    {
+        _telling = true;
+        foreach (string line in Mountain)
+        {
+            float s = Say(line);
+            yield return new WaitForSeconds(s + 0.15f);
+        }
+        _telling = false;
+        QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentTold);
+        BonfireBanner.Show("NUEVA MISIÓN", BonfireBanner.Victory);
+        Notifications.Show("Nueva misión: " + QuestLog.Title(QuestLog.Ascent), FrostboundUI.Gold);
     }
 
     // Para las comprobaciones: activa la misión sin esperar la charla.

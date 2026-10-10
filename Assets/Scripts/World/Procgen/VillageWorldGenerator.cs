@@ -55,6 +55,7 @@ public class VillageWorldGenerator : MonoBehaviour
             castle.name = "Castillo";
             castle.Build(Layout.castle, Layout.town);
             BuildCastleGameplay(root, castle);
+            BuildTrailhead(root, castle.stone);
         }
 
         SpawnBonfire(root, Layout.castleBonfire, Bonfire.CastleId, "Hoguera del castillo");
@@ -139,6 +140,67 @@ public class VillageWorldGenerator : MonoBehaviour
         guard.monsterLevel = new Vector2Int(2, 3);
         guard.radius = 10f;
         guard.activateDistance = 45f;
+    }
+
+    // Inicio del sendero del Frostspire al final del camino del norte: arco de piedra con banderines, mojones
+    // a lo largo del camino y las cumbres de la montaña al fondo. Se abre cuando Steve te manda a la montaña.
+    private void BuildTrailhead(Transform root, Material stone)
+    {
+        Transform t = new GameObject("Sendero_Frostspire").transform;
+        t.SetParent(root, false);
+        Material cloth = MenuRuins.Lit("Banderín rojo", new Color(0.62f, 0.16f, 0.18f), 0.1f);
+        cloth.SetFloat("_Cull", 0f);
+        ZoneGate gate = ZoneGate.Build(t, "Paso_Montana", VillageLayout.Trailhead, 0f, 8f, stone, cloth);
+        gate.targetScene = SceneIds.Foothills;
+        gate.arrival = MountainLayout.ArrivalFromVillage;
+        gate.label = "Sendero del Frostspire";
+        gate.canPass = () => QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentTold;
+        gate.blockedMessage = "Una ventisca cierra el sendero de la montaña. Quizá Steve sepa algo.";
+        gate.onPass = () =>
+        {
+            if (QuestLog.Stage(QuestLog.Ascent) < QuestLog.AscentFoothills) QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentFoothills);
+        };
+        ZoneArrival.Create(t, MountainLayout.ArrivalFromFoothills, VillageLayout.Trailhead + new Vector3(0f, 0.1f, -6f), 180f);
+
+        var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("sendero_norte")));
+        Mesh rock = MountainMeshes.Rock(SeedUtil.Combine(Seed, 77), 0.6f);
+        for (float z = 48f; z < VillageLayout.Trailhead.z - 8f; z += rng.Range(24f, 34f))
+        {
+            float side = rng.Chance(0.5f) ? 1f : -1f;
+            var cairn = new GameObject("Mojon");
+            cairn.transform.SetParent(t, false);
+            cairn.transform.position = new Vector3(side * 5.6f, 0f, z);
+            float y = 0f;
+            for (int i = 0; i < 3; i++)
+            {
+                float size = 0.75f - i * 0.18f;
+                var piece = new GameObject("Piedra");
+                piece.transform.SetParent(cairn.transform, false);
+                piece.transform.localPosition = new Vector3(0f, y + size * 0.3f, 0f);
+                piece.transform.localRotation = Quaternion.Euler(0f, i * 47f + z, 0f);
+                piece.transform.localScale = new Vector3(size * 1.3f, size * 0.75f, size * 1.1f);
+                piece.AddComponent<MeshFilter>().sharedMesh = rock;
+                piece.AddComponent<MeshRenderer>().sharedMaterial = stone;
+                y += size * 0.55f;
+            }
+        }
+
+        Material snow = ground != null && ground.GetComponent<Renderer>() != null ? ground.GetComponent<Renderer>().sharedMaterial : null;
+        if (snow == null) return;
+        for (int i = 0; i < 7; i++)
+        {
+            float x = (i - 3) * rng.Range(48f, 62f) + rng.Range(-15f, 15f);
+            float z = VillageLayout.GroundVisualHalfSize + rng.Range(40f, 140f) + (i == 3 ? 90f : 0f);
+            float s = i == 3 ? 170f : rng.Range(70f, 120f);
+            var peak = new GameObject("Cumbre_Frostspire");
+            peak.transform.SetParent(t, false);
+            peak.transform.SetPositionAndRotation(new Vector3(x, -6f, z), Quaternion.Euler(0f, rng.Range(0f, 360f), 0f));
+            peak.transform.localScale = new Vector3(s * 1.5f, s, s * 1.5f);
+            peak.AddComponent<MeshFilter>().sharedMesh = MountainMeshes.Peak(SeedUtil.Combine(Seed, 300 + i));
+            var r = peak.AddComponent<MeshRenderer>();
+            r.sharedMaterial = snow;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
     }
 
     private Bonfire SpawnBonfire(Transform parent, VillageLayout.Spot spot, string id, string label)

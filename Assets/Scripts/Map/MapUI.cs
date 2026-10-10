@@ -160,10 +160,11 @@ public class MapUI : MonoBehaviour
     void Update()
     {
         Keyboard kb = Keyboard.current;
-        if (kb != null && kb.mKey.wasPressedThisFrame && !SaveSlotsPanel.IsOpen) Toggle();
+        if (kb != null && kb.mKey.wasPressedThisFrame && !SaveSlotsPanel.IsOpen && !PauseMenu.IsPaused && MapSystem.Instance != null) Toggle();
         if (FullOpen && kb != null && kb.escapeKey.wasPressedThisFrame) Close();
 
         MapSystem map = MapSystem.Instance;
+        if (map == null && _miniRoot != null && _miniRoot.gameObject.activeSelf) _miniRoot.gameObject.SetActive(false);
         if (map == null || _miniRoot == null) return;
         MapSystem.Area area = map.CurrentArea;
         if (area == null || area.map == null) return;
