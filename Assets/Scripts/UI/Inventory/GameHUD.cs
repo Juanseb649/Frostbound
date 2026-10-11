@@ -30,6 +30,10 @@ public class GameHUD : MonoBehaviour
     private PotionBelt _belt;
     private readonly Image[] _beltIcons = new Image[PotionBelt.Size];
     private readonly TextMeshProUGUI[] _beltCounts = new TextMeshProUGUI[PotionBelt.Size];
+    private readonly TextMeshProUGUI[] _beltKeys = new TextMeshProUGUI[PotionBelt.Size];
+    private TextMeshProUGUI _abilityKey;
+    private int _keysMode = -1;
+    private float _keysCheckAt;
     private readonly float[] _beltFlash = new float[PotionBelt.Size];
     private CanvasGroup _toast;
     private TextMeshProUGUI _toastTitle, _toastSub;
@@ -67,6 +71,7 @@ public class GameHUD : MonoBehaviour
         _stats.ExperienceGained += OnExperienceGained;
         player.Inventory.ItemAdded += OnItemAdded;
         if (!secondary) Notifications.Register(this);
+        InputMap.Changed += OnInputMapChanged;
     }
 
     // Coloca este HUD en una esquina (co-op) o en el centro (un jugador).
@@ -107,7 +112,8 @@ public class GameHUD : MonoBehaviour
             _belt.Failed -= OnBeltFailed;
             _belt.Used -= OnBeltUsed;
         }
-        Notifications.Unregister(this);
+        if (!secondary) Notifications.Unregister(this);
+        InputMap.Changed -= OnInputMapChanged;
         if (_stats != null)
         {
             _stats.LeveledUp -= OnLevelUp;
@@ -129,6 +135,7 @@ public class GameHUD : MonoBehaviour
             _mpOrb.fillAmount = Mathf.MoveTowards(_mpOrb.fillAmount, Mathf.Clamp01(mp), Time.unscaledDeltaTime * 1.5f);
             UpdateBelt();
             UpdateAbility();
+            UpdateKeyHints();
         }
         else
         {
@@ -151,8 +158,8 @@ public class GameHUD : MonoBehaviour
             _pointsChip.localScale = new Vector3(s, s, 1f);
         }
 
-        Keyboard kb = secondary ? null : Keyboard.current;
-        if (kb != null && kb.qKey.wasPressedThisFrame && !GameplayInput.Blocked)
+        bool quick = (!secondary && InputMap.KeyPressed(GameAction.QuickPotion)) || InputMap.PadPressed(PlayerController.PadOf(player), GameAction.QuickPotion);
+        if (quick && !GameplayInput.Blocked)
         {
             if (!player.UseFirstHealing(out string msg) && msg.Length > 0) ShowMessage(msg, FrostboundUI.Negative);
         }
@@ -349,6 +356,7 @@ public class GameHUD : MonoBehaviour
             TextMeshProUGUI key = UIFactory.Text(hit.transform, "Tecla", (i + 1).ToString(), skin.cinzel800, 10f, new Color32(207, 198, 184, 255), TextAlignmentOptions.TopLeft);
             UIFactory.Stretch(key.rectTransform, 3f);
             key.outlineWidth = 0.25f; key.outlineColor = new Color32(5, 6, 8, 255);
+            _beltKeys[i] = key;
             TextMeshProUGUI count = UIFactory.Text(hit.transform, "Cantidad", "", skin.cinzel800, 12f, Color.white, TextAlignmentOptions.BottomRight);
             UIFactory.Stretch(count.rectTransform, 3f);
             count.outlineWidth = 0.25f; count.outlineColor = new Color32(5, 6, 8, 255);
@@ -356,17 +364,6 @@ public class GameHUD : MonoBehaviour
         }
 
         BuildAbility(bar);
-        if (secondary)
-        {
-            // El jugador 2 usa la cruceta: izquierda, arriba, derecha y abajo para las casillas 1 a 4.
-            string[] pad = { "◄", "▲", "►", "▼", "", "" };
-            for (int i = 0; i < PotionBelt.Size; i++)
-            {
-                Transform k = _beltIcons[i].transform.parent.Find("Tecla");
-                if (k != null) k.GetComponent<TextMeshProUGUI>().text = pad[i];
-            }
-        }
-
         _xpFill = UIFactory.Bar(bar, "Experiencia", skin.pill, new Color(0.03f, 0.04f, 0.05f, 1f), FrostboundUI.XpBar, out RectTransform xp);
         Anchor(xp, 709f, 192f, 1211f, 202f);
         _levelText = UIFactory.Text(bar, "Nivel", "1", skin.cinzel800, 14f, FrostboundUI.ChipGoldText, TextAlignmentOptions.Center);
@@ -404,9 +401,10 @@ public class GameHUD : MonoBehaviour
         _abilityShade.fillClockwise = false;
         _abilityTimer = UIFactory.Text(frame.transform, "Tiempo", "", skin.nunito800, 16f, Color.white, TextAlignmentOptions.Center);
         UIFactory.Stretch(_abilityTimer.rectTransform);
-        TextMeshProUGUI key = UIFactory.Text(frame.transform, "Tecla", secondary ? "RB" : "F", skin.cinzel800, 11f, new Color32(207, 198, 184, 255), TextAlignmentOptions.TopLeft);
+        TextMeshProUGUI key = UIFactory.Text(frame.transform, "Tecla", "F", skin.cinzel800, 11f, new Color32(207, 198, 184, 255), TextAlignmentOptions.TopLeft);
         UIFactory.Stretch(key.rectTransform, 5f);
         key.outlineWidth = 0.25f; key.outlineColor = new Color32(5, 6, 8, 255);
+        _abilityKey = key;
         _abilityCost = UIFactory.Text(frame.transform, "Coste", "", skin.nunito800, 11f, new Color(0.55f, 0.75f, 1f), TextAlignmentOptions.BottomRight);
         UIFactory.Stretch(_abilityCost.rectTransform, 5f);
         _abilityCost.outlineWidth = 0.25f; _abilityCost.outlineColor = new Color32(5, 6, 8, 255);
@@ -418,6 +416,42 @@ public class GameHUD : MonoBehaviour
         name.rectTransform.sizeDelta = new Vector2(160f, 0f);
         name.outlineWidth = 0.25f; name.outlineColor = new Color32(5, 6, 8, 255);
     }
+
+    // Teclas del cinturón y de la habilidad según Configuración → Control: texto con teclado, iconos de Xbox con mando.
+    private void UpdateKeyHints(bool force = false)
+    {
+        if (!force && Time.unscaledTime < _keysCheckAt) return;
+        _keysCheckAt = Time.unscaledTime + 0.5f;
+        int mode = PlayerController.PadOf(player) != null ? 1 : 0;
+        if (!force && mode == _keysMode) return;
+        _keysMode = mode;
+        for (int i = 0; i < PotionBelt.Size; i++) SetKeyHint(_beltKeys[i], GameAction.Belt1 + i, mode == 1, 22f);
+        SetKeyHint(_abilityKey, GameAction.Ability, mode == 1, 26f);
+    }
+
+    private static void SetKeyHint(TextMeshProUGUI label, GameAction a, bool pad, float size)
+    {
+        if (label == null) return;
+        Transform old = label.transform.parent.Find("TeclaGlifo");
+        if (old != null) Destroy(old.gameObject);
+        label.gameObject.SetActive(!pad);
+        if (!pad)
+        {
+            int k = InputMap.KeyOf(a);
+            string n = InputMap.KeyName(k);
+            label.text = k < 0 && k != InputMap.None ? (k == InputMap.MouseLeft ? "Clic" : k == InputMap.MouseRight ? "Clic D" : "Rueda") : n.Length > 5 ? n.Substring(0, 4) + "." : n;
+            return;
+        }
+        RectTransform holder = UIFactory.Node(label.transform.parent, "TeclaGlifo");
+        holder.anchorMin = holder.anchorMax = holder.pivot = new Vector2(0f, 1f);
+        holder.anchoredPosition = new Vector2(-size * 0.3f, size * 0.3f);
+        holder.sizeDelta = new Vector2(size, size);
+        RectTransform g = InputGlyph.Pad(holder, InputMap.PadOf(a), size);
+        g.anchorMin = g.anchorMax = g.pivot = new Vector2(0f, 1f);
+        g.anchoredPosition = Vector2.zero;
+    }
+
+    private void OnInputMapChanged() => UpdateKeyHints(true);
 
     private void UpdateAbility()
     {

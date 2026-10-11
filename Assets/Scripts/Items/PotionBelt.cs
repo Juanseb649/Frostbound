@@ -105,16 +105,9 @@ public class PotionBelt : MonoBehaviour
     {
         if (GameplayInput.Blocked) return;
         if (WorldHUD.Instance != null && WorldHUD.Instance.MenuOpen) return;
-        Keyboard kb = PlayerController.UsesKeyboard(this) ? Keyboard.current : null;
-        if (kb != null)
-            for (int i = 0; i < Size; i++)
-                if (kb[(Key)((int)Key.Digit1 + i)].wasPressedThisFrame) Use(i);
-        // Mando: cruceta izquierda, arriba, derecha y abajo = casillas 1 a 4 del cinturón.
-        Gamepad pad = PlayerController.PadOf(this);
-        if (pad == null || (WorldHUD.Instance != null && WorldHUD.Instance.MenuOpen)) return;
-        if (pad.dpad.left.wasPressedThisFrame) Use(0);
-        else if (pad.dpad.up.wasPressedThisFrame) Use(1);
-        else if (pad.dpad.right.wasPressedThisFrame) Use(2);
-        else if (pad.dpad.down.wasPressedThisFrame) Use(3);
+        // Teclas y botones del cinturón según Configuración → Control.
+        if (WorldHUD.Instance != null && WorldHUD.Instance.MenuOpen) return;
+        for (int i = 0; i < Size; i++)
+            if (InputMap.Pressed(GameAction.Belt1 + i, this)) { Use(i); return; }
     }
 }

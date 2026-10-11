@@ -85,9 +85,7 @@ public class PlayerAbility : MonoBehaviour
         if (_cam == null) _cam = Camera.main;
         RefreshClass();
         if (GameplayInput.Blocked || _stats.IsDead || PauseMenu.IsPaused) return;
-        Keyboard kb = PlayerController.UsesKeyboard(this) ? Keyboard.current : null;
-        Gamepad pad = PlayerController.PadOf(this);
-        bool pressed = (kb != null && kb.fKey.wasPressedThisFrame) || (pad != null && pad.rightShoulder.wasPressedThisFrame);
+        bool pressed = InputMap.Pressed(GameAction.Ability, this);
         if (pressed) TryUse();
     }
 
@@ -123,7 +121,7 @@ public class PlayerAbility : MonoBehaviour
         Vector3 dir = transform.forward;
         Mouse mouse = Mouse.current;
         PlayerController pc = GetComponent<PlayerController>();
-        if (!PlayerController.UsesKeyboard(this) || (PlayerController.RecentP1Pad != null && PlayerController.PadOf(this) == PlayerController.RecentP1Pad))
+        if (PlayerController.PadOf(this) != null)
             return pc != null ? pc.PadAimDirection() : dir;
         if (mouse != null && _cam != null)
         {
