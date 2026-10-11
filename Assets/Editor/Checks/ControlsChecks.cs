@@ -83,4 +83,40 @@ public static class ControlsChecks
         string list = System.IO.Directory.Exists(f) ? string.Join(",", System.IO.Directory.GetFiles(f).Select(System.IO.Path.GetFileName)) : "no existe";
         return f + " -> " + list;
     }
+
+    public static string HoldW() { InputSystem.QueueStateEvent(Kb, new KeyboardState(Key.W)); return "W"; }
+
+    public static string Positions()
+    {
+        return string.Join(" | ", Players.All.Select(p => p.name + " " + p.transform.position.ToString("F1") + " pad=" + p.IsPadPlayer + " teclado=" + PlayerController.UsesKeyboard(p) + " activo=" + p.enabled));
+    }
+
+    // Quita los dispositivos virtuales de las pruebas (si no, siguen conectados en el editor y confunden al jugador).
+    public static string RemoveTestDevices()
+    {
+        int n = 0;
+        foreach (var d in InputSystem.devices.ToArray())
+            if (d.name.StartsWith("PruebaCoop") || d.name.StartsWith("PruebaTeclado")) { InputSystem.RemoveDevice(d); n++; }
+        return "quitados=" + n;
+    }
+
+    public static string PressEnter() { InputSystem.QueueStateEvent(Kb, new KeyboardState(Key.Enter)); return "Intro"; }
+    public static string PressY() { InputSystem.QueueStateEvent(Pad, new GamepadState().WithButton(GamepadButton.North)); return "Y"; }
+    public static string PressRB() { InputSystem.QueueStateEvent(Pad, new GamepadState().WithButton(GamepadButton.RightShoulder)); return "RB"; }
+    public static string LoadSlot1()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        menu.LoadSlot(0);
+        return "cargando ranura 1";
+    }
+
+    public static string Inventory()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        var sel = UnityEngine.EventSystems.EventSystem.current != null ? UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject : null;
+        return "abierto=" + inv.IsOpen + " pestaña=" + inv.Current + " seleccion=" + (sel != null ? sel.name : "-") + " puntos=" + inv.Owner.Stats.pointsAvailable;
+    }
+
+    public static string GivePoints() { var st = Players.Get(0).Stats; st.pointsAvailable += 5; return "puntos=" + st.pointsAvailable; }
+    public static string PressA() { InputSystem.QueueStateEvent(Pad, new GamepadState().WithButton(GamepadButton.South)); return "A"; }
 }

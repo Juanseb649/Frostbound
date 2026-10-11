@@ -101,9 +101,13 @@ public class CoopManager : MonoBehaviour
         {
             if (_p1 == null) _p1 = GameObject.Find("Player");
             TryAutoRejoin();
-            if (!PauseMenu.IsPaused && !LoadingScreen.Active)
+            if (!PauseMenu.IsPaused && !LoadingScreen.Active && !OptionsPanel.IsOpen)
+            {
                 foreach (Gamepad g in Gamepad.all)
-                    if (InputMap.PadPressed(g, GameAction.Pause) && IsJoinPad(g)) { OpenPicker(g); break; }
+                    if (InputMap.PadPressed(g, GameAction.Pause) && IsJoinPad(g)) { OpenPicker(g, false); break; }
+                // Si el jugador 1 juega con mando, el teclado puede unir al jugador 2 con Intro.
+                if (!_pickerOpen && KeyboardCanJoin && InputMap.KeyDown(UnityEngine.InputSystem.Key.Enter)) OpenPicker(null, true);
+            }
         }
         else
         {
@@ -114,6 +118,9 @@ public class CoopManager : MonoBehaviour
         UpdateHud();
     }
 
+    // El teclado queda libre cuando el jugador 1 juega con un mando.
+    public static bool KeyboardCanJoin => Instance != null && Instance._p2 == null && PlayerController.P1Pad != null;
+
     // Al llegar a una zona con el jugador 2 activo en la partida, vuelve a entrar con el primer mando libre.
     private void TryAutoRejoin()
     {
@@ -122,8 +129,13 @@ public class CoopManager : MonoBehaviour
         CompanionData c = Saved;
         if (c == null || !c.active) return;
         Gamepad pad = null;
-        foreach (Gamepad g in Gamepad.all) if (!PlayerController.Claimed(g) && g != PlayerController.RecentP1Pad) { pad = g; break; }
-        if (pad == null) return;
+        bool keyboard = c.keyboard && InputMap.Preferred == InputMap.Device.Gamepad && Gamepad.all.Count > 0;
+        if (!keyboard)
+        {
+            foreach (Gamepad g in Gamepad.all) if (!PlayerController.Claimed(g) && g != PlayerController.RecentP1Pad) { pad = g; break; }
+            if (pad == null) return;
+        }
+        _spawnKeyboard = keyboard;
         if (c.slot >= 0 && c.slot != CurrentSlot && SaveSystem.Exists(c.slot))
         {
             SaveData d = SaveSystem.Load(c.slot);
@@ -166,6 +178,17 @@ public class CoopManager : MonoBehaviour
     private void UpdateSecondInput()
     {
         Gamepad g = _p2.pad;
+        if (_p2.keyboardPlayer)
+        {
+            // Jugador 2 con teclado: la mochila la abre la propia ventana (I); mantener I 2 s le hace salir.
+            if (InputMap.KeyHeld(GameAction.Inventory))
+            {
+                _selectHeld += Time.unscaledDeltaTime;
+                if (_selectHeld >= LeaveHoldSeconds) { _selectHeld = 0f; InventoryScreen inv = FindAnyObjectByType<InventoryScreen>(); if (inv != null && inv.IsOpen) inv.Close(); Leave(); }
+            }
+            else _selectHeld = 0f;
+            return;
+        }
         if (g == null || !g.added)
         {
             Notifications.Show("Se desconectó el mando del jugador 2", FrostboundUI.Negative);
@@ -209,6 +232,8 @@ public class CoopManager : MonoBehaviour
         PlayerController pc = go.GetComponent<PlayerController>();
         pc.playerIndex = 1;
         pc.pad = pad;
+        pc.keyboardPlayer = pad == null && _spawnKeyboard;
+        _spawnKeyboard = false;
         PlayerLoadout loadout = go.GetComponent<PlayerLoadout>();
         if (loadout != null)
         {
@@ -238,6 +263,7 @@ public class CoopManager : MonoBehaviour
         {
             if (slot < 0 && saved != data) CopyIdentity(data, saved);
             saved.slot = slot;
+            saved.keyboard = pc.keyboardPlayer;
             saved.active = true;
         }
         StartCoroutine(AttachHud(pc));
@@ -443,6 +469,8 @@ public class CoopManager : MonoBehaviour
 
     private bool _pickerOpen;
     private Gamepad _pickerPad;
+    private bool _pickerKeyboard;
+    private bool _spawnKeyboard;
     private readonly List<PickOption> _options = new List<PickOption>();
     private int _pick;
     private bool _classStep;
@@ -450,15 +478,20 @@ public class CoopManager : MonoBehaviour
     private TextMeshProUGUI _pickerSub;
     private readonly List<(Image frame, TextMeshProUGUI title, TextMeshProUGUI detail)> _cards = new List<(Image, TextMeshProUGUI, TextMeshProUGUI)>();
     private float _navAt;
+    private float _pickerOpenedAt;
 
     private static int CurrentSlot => GameSession.Instance != null ? GameSession.Instance.CurrentSlot : -1;
 
-    public void OpenPicker(Gamepad pad)
+    public void OpenPicker(Gamepad pad) => OpenPicker(pad, false);
+
+    public void OpenPicker(Gamepad pad, bool keyboard)
     {
+        _pickerKeyboard = keyboard;
         GameDatabase db = GameDatabase.Instance;
         if (db == null || db.classes.Count == 0) return;
         _pickerPad = pad;
         _pickerOpen = true;
+        _pickerOpenedAt = Time.unscaledTime;
         GameplayInput.Block();
         ShowHeroStep();
     }
@@ -494,7 +527,7 @@ public class CoopManager : MonoBehaviour
         }
         _options.Add(new PickOption { kind = PickKind.Create, title = "NUEVO HÉROE", detail = "<size=72>+</size>\n<size=16><color=#9FB3C8>Crear y unirse</color></size>" });
         _pick = 0;
-        BuildPicker("Elige un héroe guardado o crea uno nuevo · A entrar · B cancelar");
+        BuildPicker("Elige un héroe guardado o crea uno nuevo · " + (_pickerKeyboard ? "← → elegir · Intro entrar · Esc cancelar" : "A entrar · B cancelar"));
     }
 
     private void ShowClassStep()
@@ -508,7 +541,7 @@ public class CoopManager : MonoBehaviour
             _options.Add(new PickOption { kind = PickKind.Class, cls = c, title = "CLASE", detail = c.displayName + "\n<size=16><color=#9FB3C8>empieza en nivel 1</color></size>" });
         }
         _pick = 0;
-        BuildPicker("Elige la clase del nuevo héroe · A crear · B volver");
+        BuildPicker("Elige la clase del nuevo héroe · " + (_pickerKeyboard ? "Intro crear · Esc volver" : "A crear · B volver"));
     }
 
     private void ClosePicker()
@@ -523,10 +556,15 @@ public class CoopManager : MonoBehaviour
     private void UpdatePicker()
     {
         Gamepad g = _pickerPad;
-        if (g == null || !g.added) { ClosePicker(); return; }
-        float x = g.leftStick.ReadValue().x;
+        if (!_pickerKeyboard && (g == null || !g.added)) { ClosePicker(); return; }
+        float x = g != null ? g.leftStick.ReadValue().x : 0f;
         int move = 0;
-        if (g.dpad.left.wasPressedThisFrame) move = -1;
+        if (_pickerKeyboard)
+        {
+            if (InputMap.KeyDown(UnityEngine.InputSystem.Key.LeftArrow) || InputMap.KeyDown(UnityEngine.InputSystem.Key.A)) move = -1;
+            else if (InputMap.KeyDown(UnityEngine.InputSystem.Key.RightArrow) || InputMap.KeyDown(UnityEngine.InputSystem.Key.D)) move = 1;
+        }
+        else if (g.dpad.left.wasPressedThisFrame) move = -1;
         else if (g.dpad.right.wasPressedThisFrame) move = 1;
         else if (Mathf.Abs(x) > 0.6f && Time.unscaledTime > _navAt) { move = x > 0 ? 1 : -1; _navAt = Time.unscaledTime + 0.25f; }
         if (Mathf.Abs(x) < 0.3f) _navAt = 0f;
@@ -535,13 +573,17 @@ public class CoopManager : MonoBehaviour
             _pick = (_pick + move + _options.Count) % _options.Count;
             RefreshPicker();
         }
-        if (g.buttonEast.wasPressedThisFrame)
+        bool back = _pickerKeyboard ? InputMap.KeyDown(UnityEngine.InputSystem.Key.Escape) || InputMap.KeyDown(UnityEngine.InputSystem.Key.Backspace) : g.buttonEast.wasPressedThisFrame;
+        if (back)
         {
             if (_classStep) ShowHeroStep();
             else ClosePicker();
             return;
         }
-        if (!g.buttonSouth.wasPressedThisFrame && !g.startButton.wasPressedThisFrame) return;
+        bool ok = _pickerKeyboard ? InputMap.KeyDown(UnityEngine.InputSystem.Key.Enter) || InputMap.KeyDown(UnityEngine.InputSystem.Key.Space)
+                                  : g.buttonSouth.wasPressedThisFrame || g.startButton.wasPressedThisFrame;
+        if (!ok || Time.unscaledTime < _pickerOpenedAt + 0.15f) return;
+        _spawnKeyboard = _pickerKeyboard;
         PickOption o = _options[_pick];
         switch (o.kind)
         {
@@ -726,8 +768,9 @@ public class CoopManager : MonoBehaviour
     {
         bool hint = _p2 == null && Gamepad.all.Count > 0 && Time.unscaledTime - _sceneStart < 14f && !LoadingScreen.Active;
         if (_hint.gameObject.activeSelf != hint) _hint.gameObject.SetActive(hint);
-        if (hint) _hint.text = "Mando: pulsa " + InputMap.PadName(InputMap.PadOf(GameAction.Pause)) + " para que entre el JUGADOR 2"
-            + (InputMap.Preferred == InputMap.Device.Gamepad ? " (con un segundo mando)" : "");
+        if (hint) _hint.text = KeyboardCanJoin
+            ? "Teclado: pulsa Intro para que entre el JUGADOR 2 (o " + InputMap.PadName(InputMap.PadOf(GameAction.Pause)) + " en un segundo mando)"
+            : "Mando: pulsa " + InputMap.PadName(InputMap.PadOf(GameAction.Pause)) + " para que entre el JUGADOR 2";
     }
 
     // ---------- Enemigos ----------

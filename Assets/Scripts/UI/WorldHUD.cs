@@ -110,6 +110,7 @@ public class WorldHUD : MonoBehaviour
     private readonly List<System.Action> _menuActions = new List<System.Action>();
     private readonly List<Image> _menuBorders = new List<Image>();
     private int _menuPick = -1;
+    private int _menuOpenedFrame = -1;
 
 
     void Awake()
@@ -329,6 +330,7 @@ public class WorldHUD : MonoBehaviour
         if (npc == null) return;
         CloseMenu();
         _menuNpc = npc;
+        _menuOpenedFrame = Time.frameCount;
         npc.InConversation = true;
         _menuOpenedAt = Time.time;
         _menuName.text = npc.displayName;
@@ -659,7 +661,8 @@ public class WorldHUD : MonoBehaviour
         if (_menuNpc == null) return;
         Keyboard kb = Keyboard.current;
         Gamepad pad = Gamepad.current;
-        if ((kb != null && kb.escapeKey.wasPressedThisFrame) || (pad != null && pad.buttonEast.wasPressedThisFrame))
+        // B también abre el menú (recoger/hablar): no se cierra en el mismo fotograma en que se abrió.
+        if (Time.frameCount != _menuOpenedFrame && ((kb != null && kb.escapeKey.wasPressedThisFrame) || (pad != null && pad.buttonEast.wasPressedThisFrame)))
         {
             CloseMenu();
             return;

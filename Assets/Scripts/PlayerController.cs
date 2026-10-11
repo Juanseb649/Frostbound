@@ -13,7 +13,19 @@ public class PlayerController : MonoBehaviour
 
     // Mando del jugador 2 (el jugador 1 usa teclado y ratón, o un mando que no esté reclamado).
     [System.NonSerialized] public Gamepad pad;
-    public bool IsPadPlayer => playerIndex > 0 || PadOf(this) != null;
+    // Jugador 2 con teclado y ratón (el jugador 1 pasa entonces al mando).
+    [System.NonSerialized] public bool keyboardPlayer;
+    public bool IsPadPlayer => playerIndex > 0 ? pad != null : PadOf(this) != null;
+
+    // ¿El teclado lo tiene el jugador 2?
+    public static bool KeyboardTakenBySecond
+    {
+        get
+        {
+            foreach (PlayerController p in Players.All) if (p != null && p.playerIndex > 0 && p.keyboardPlayer) return true;
+            return false;
+        }
+    }
 
     public static bool Claimed(Gamepad g)
     {
@@ -27,7 +39,7 @@ public class PlayerController : MonoBehaviour
     {
         get
         {
-            if (InputMap.Preferred != InputMap.Device.Gamepad) return null;
+            if (InputMap.Preferred != InputMap.Device.Gamepad && !KeyboardTakenBySecond) return null;
             Gamepad g = Gamepad.current;
             if (g != null && !Claimed(g)) return g;
             foreach (Gamepad other in Gamepad.all) if (!Claimed(other)) return other;
@@ -50,7 +62,8 @@ public class PlayerController : MonoBehaviour
     public static bool UsesKeyboard(Component c)
     {
         PlayerController pc = c != null ? c.GetComponent<PlayerController>() : null;
-        return pc == null || pc.playerIndex == 0;
+        if (pc == null) return !KeyboardTakenBySecond;
+        return pc.playerIndex == 0 ? !KeyboardTakenBySecond : pc.keyboardPlayer;
     }
 
     public static Vector2 Stick(Gamepad g)
@@ -154,19 +167,20 @@ public class PlayerController : MonoBehaviour
             PadUpdate();
             return;
         }
-        UpdateHover();
+        bool keys = UsesKeyboard(this);
+        if (keys) UpdateHover();
 
-        Vector2 input = Vector2.ClampMagnitude(ReadKeyboardInput(), 1f);
+        Vector2 input = keys ? Vector2.ClampMagnitude(ReadKeyboardInput(), 1f) : Vector2.zero;
 
         if (_clickTarget.HasValue && FlatOffset(_clickTarget.Value).sqrMagnitude < stopDistance * stopDistance)
             _clickTarget = null;
 
-        if (InputMap.KeyPressed(GameAction.Interact) && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
+        if (keys && InputMap.KeyPressed(GameAction.Interact) && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
 
         if (Time.time < _holdUntil)
         {
             _moveDirection = Vector3.zero;
-            ReadClick();
+            if (keys) ReadClick();
             return;
         }
 
@@ -185,7 +199,7 @@ public class PlayerController : MonoBehaviour
             }
             _moveDirection = (forward * input.y + right * input.x).normalized;
         }
-        else if (ReadClick())
+        else if (keys && ReadClick())
         {
             _moveDirection = Steer(_clickTarget.Value);
         }
@@ -231,7 +245,7 @@ public class PlayerController : MonoBehaviour
     {
         Gamepad g = PadOf(this);
         Vector2 input = GameplayInput.Blocked || (Stats != null && Stats.IsDead) ? Vector2.zero : Stick(g);
-        bool interact = InputMap.PadPressed(g, GameAction.Interact) || (playerIndex == 0 && InputMap.KeyPressed(GameAction.Interact));
+        bool interact = InputMap.PadPressed(g, GameAction.Interact) || (UsesKeyboard(this) && InputMap.KeyPressed(GameAction.Interact));
         if (interact && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
 
         if (Time.time < _holdUntil)

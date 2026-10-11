@@ -49,6 +49,7 @@ public class CompanionData
     public bool active;
     [UnityEngine.Tooltip("Ranura de partida de la que sale el héroe del jugador 2 (-1 = vive solo dentro de esta partida).")]
     public int slot = -1;
+    public bool keyboard;
     public string heroName = "";
     public string classId = "";
     public string plumageId = "";

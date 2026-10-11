@@ -26,6 +26,10 @@ public static class BalanceChecks
         sb.Append("| armas_mochila=").Append(weapons);
         sb.Append(" modelo=").Append(holder != null && holder.MainModel != null ? holder.MainModel.name + (holder.MainModel.activeInHierarchy ? "" : "(oculto)") : "ninguno");
         sb.Append(" vida=").Append(Mathf.RoundToInt(p.GetComponent<CharacterStats>().currentHealth));
+        var outfit = p.GetComponentInChildren<PenguinOutfit>();
+        sb.Append(" ropa=").Append(outfit != null ? string.Join(",", outfit.EquippedItems.Select(o => o.name)) : "sin PenguinOutfit");
+        var cs = p.GetComponent<CharacterStats>();
+        sb.Append(" clase=").Append(cs.characterClass != null ? cs.characterClass.name : "-").Append(" nv").Append(cs.level);
         return sb.ToString();
     }
 

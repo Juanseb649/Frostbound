@@ -158,7 +158,7 @@ public class GameHUD : MonoBehaviour
             _pointsChip.localScale = new Vector3(s, s, 1f);
         }
 
-        bool quick = (!secondary && InputMap.KeyPressed(GameAction.QuickPotion)) || InputMap.PadPressed(PlayerController.PadOf(player), GameAction.QuickPotion);
+        bool quick = (PlayerController.UsesKeyboard(player) && InputMap.KeyPressed(GameAction.QuickPotion)) || InputMap.PadPressed(PlayerController.PadOf(player), GameAction.QuickPotion);
         if (quick && !GameplayInput.Blocked)
         {
             if (!player.UseFirstHealing(out string msg) && msg.Length > 0) ShowMessage(msg, FrostboundUI.Negative);
