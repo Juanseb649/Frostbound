@@ -46,7 +46,8 @@ public class BossController : MonoBehaviour
         brain.damageMultiplier = damageMult;
         brain.leashOverride = 60f;
         Damageable d = brain.GetComponent<Damageable>();
-        d.maxHealth *= healthMult;
+        // En co-op los jefes aguantan bastante más.
+        d.maxHealth *= healthMult * (Players.PartyScale > 1 ? 1.75f : 1f);
         d.ResetHealth();
         d.displayName = title;
         brain.transform.localScale *= scale;

@@ -173,4 +173,48 @@ public static class CoopChecks
     }
 
     public static string Paused() => "pausa=" + PauseMenu.IsPaused + " j2=" + (Players.Get(1) != null);
+
+    public static string PickerOptions()
+    {
+        var cm = CoopManager.Instance;
+        var f = typeof(CoopManager).GetField("_options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var list = (System.Collections.IList)f.GetValue(cm);
+        var sb = new StringBuilder("opciones=" + list.Count + ":");
+        foreach (object o in list)
+        {
+            var t = o.GetType();
+            sb.Append(" [").Append(t.GetField("title").GetValue(o)).Append(" / ").Append(((string)t.GetField("detail").GetValue(o)).Split('\n')[0]).Append("]");
+        }
+        return sb.ToString();
+    }
+
+    public static string Huds()
+    {
+        var sb = new StringBuilder();
+        foreach (var h in Object.FindObjectsByType<GameHUD>())
+        {
+            var orb = h.transform.Find("Orbes") as RectTransform;
+            sb.Append(h.name).Append(h.secondary ? "(J2)" : "(J1)").Append(" jugador=").Append(h.player != null ? h.player.name : "-");
+            if (orb != null) sb.Append(" ancla=").Append(orb.anchorMin).Append(" escala=").Append(orb.localScale.x.ToString("0.00"));
+            var name = orb != null ? orb.Find("Jugador") : null;
+            if (name != null) sb.Append(" etiqueta='").Append(name.GetComponent<TMPro.TextMeshProUGUI>().text).Append("' visible=").Append(name.gameObject.activeSelf);
+            sb.Append(" | ");
+        }
+        return sb.ToString();
+    }
+
+    public static string EnemyCount() => "enemigos_vivos=" + EnemyBrain.All.Count(e => e != null && e.Current != EnemyBrain.State.Dead);
+
+    public static string Slots()
+    {
+        var sb = new StringBuilder("actual=" + (GameSession.Instance != null ? GameSession.Instance.CurrentSlot : -1));
+        for (int i = 0; i < SaveSystem.SlotCount; i++)
+        {
+            var d = SaveSystem.Load(i);
+            sb.Append(" | r").Append(i + 1).Append("=").Append(d == null ? "vacía" : d.heroName + " " + d.classId + " nv" + d.level + " equipo=" + d.equipment.Count);
+        }
+        var c = GameSession.Instance != null && GameSession.Instance.Current != null ? GameSession.Instance.Current.companion : null;
+        if (c != null) sb.Append(" | compañero activo=").Append(c.active).Append(" ranura=").Append(c.slot);
+        return sb.ToString();
+    }
 }

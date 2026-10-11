@@ -84,7 +84,7 @@ public class CitadelSiege : MonoBehaviour
         EnemyDefinition melee = EnemySpawner.Find("Corrupt_Melee"), ranged = EnemySpawner.Find("Corrupt_Ranged");
         for (Wave = 1; Wave <= WaveCount; Wave++)
         {
-            int m = Waves[Wave - 1, 0], r = Waves[Wave - 1, 1];
+            int m = Waves[Wave - 1, 0] * Players.PartyScale, r = Waves[Wave - 1, 1] * Players.PartyScale;
             for (int i = 0; i < m + r; i++)
             {
                 Vector3 local = _town.spawnPoints[rng.NextInt(0, _town.spawnPoints.Count)] + new Vector3(rng.Range(-1.5f, 1.5f), 0f, rng.Range(-1.5f, 1.5f));

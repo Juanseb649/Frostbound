@@ -16,6 +16,12 @@ public class GameHUD : MonoBehaviour
     [Tooltip("Tamaño de las estatuas con los orbes respecto al diseño original (1 = grande como en el diseño).")]
     [Range(0.3f, 1f)] public float orbStatueScale = 0.46f;
 
+    // Co-op: el HUD del jugador 2 es otro GameHUD igual (secondary) y los dos se encogen a una esquina cada uno.
+    [System.NonSerialized] public bool secondary;
+    private RectTransform _orbRoot;
+    private TextMeshProUGUI _coopName;
+    public const float CoopScale = 0.7f;
+
     private CharacterStats _stats;
     private RectTransform _hpFill, _mpFill, _xpFill;
     private TextMeshProUGUI _hpText, _mpText, _xpText, _levelText, _pointsText;
@@ -60,7 +66,31 @@ public class GameHUD : MonoBehaviour
         _stats.LeveledUp += OnLevelUp;
         _stats.ExperienceGained += OnExperienceGained;
         player.Inventory.ItemAdded += OnItemAdded;
-        Notifications.Register(this);
+        if (!secondary) Notifications.Register(this);
+    }
+
+    // Coloca este HUD en una esquina (co-op) o en el centro (un jugador).
+    public void SetCoop(bool coop, bool right, string label)
+    {
+        if (_orbRoot == null) return;
+        Vector2 a = !coop ? new Vector2(0.5f, 0f) : right ? new Vector2(1f, 0f) : new Vector2(0f, 0f);
+        _orbRoot.anchorMin = _orbRoot.anchorMax = _orbRoot.pivot = a;
+        _orbRoot.anchoredPosition = !coop ? Vector2.zero : new Vector2(right ? -12f : 12f, 0f);
+        _orbRoot.localScale = Vector3.one * (coop ? CoopScale : 1f);
+        if (_feed != null)
+        {
+            var vl = _feed.GetComponent<VerticalLayoutGroup>();
+            bool left = coop && !right;
+            _feed.anchorMin = _feed.anchorMax = _feed.pivot = left ? new Vector2(0f, 0f) : new Vector2(1f, 0f);
+            float y = coop ? 300f * CoopScale + 40f : 60f + 420f * orbStatueScale;
+            _feed.anchoredPosition = new Vector2(left ? 32f : -32f, y);
+            if (vl != null) vl.childAlignment = left ? TextAnchor.LowerLeft : TextAnchor.LowerRight;
+        }
+        if (_coopName != null)
+        {
+            _coopName.gameObject.SetActive(coop);
+            _coopName.text = label;
+        }
     }
 
     private void OnAbilityFailed(string msg) => ShowMessage(msg, FrostboundUI.Negative);
@@ -121,7 +151,7 @@ public class GameHUD : MonoBehaviour
             _pointsChip.localScale = new Vector3(s, s, 1f);
         }
 
-        Keyboard kb = Keyboard.current;
+        Keyboard kb = secondary ? null : Keyboard.current;
         if (kb != null && kb.qKey.wasPressedThisFrame && !GameplayInput.Blocked)
         {
             if (!player.UseFirstHealing(out string msg) && msg.Length > 0) ShowMessage(msg, FrostboundUI.Negative);
@@ -135,7 +165,7 @@ public class GameHUD : MonoBehaviour
 
     private void OnLevelUp(int level)
     {
-        _toastTitle.text = "¡NIVEL " + level + "!";
+        _toastTitle.text = (secondary ? "JUGADOR 2 · " : "") + "¡NIVEL " + level + "!";
         _toastSub.text = "+" + _stats.pointsPerLevel + " puntos de atributo  ·  pulsa C para repartirlos";
         _toastTime = 0f;
     }
@@ -277,8 +307,21 @@ public class GameHUD : MonoBehaviour
         rt.offsetMin = rt.offsetMax = Vector2.zero;
     }
 
-    private void BuildOrbHud(RectTransform root)
+    private void BuildOrbHud(RectTransform parent)
     {
+        // Contenedor del tamaño de las estatuas y la barra: en co-op se mueve entero a una esquina.
+        RectTransform root = _orbRoot = UIFactory.Node(parent, "Orbes");
+        root.anchorMin = root.anchorMax = root.pivot = new Vector2(0.5f, 0f);
+        root.anchoredPosition = Vector2.zero;
+        root.sizeDelta = new Vector2(920f, 300f);
+        _coopName = UIFactory.Text(root, "Jugador", "", skin.cinzel800, 18f, FrostboundUI.ChipGoldText, TextAlignmentOptions.Center, 2f);
+        _coopName.rectTransform.anchorMin = _coopName.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+        _coopName.rectTransform.pivot = new Vector2(0.5f, 0f);
+        _coopName.rectTransform.anchoredPosition = new Vector2(0f, 232f * DesignScale + 70f);
+        _coopName.rectTransform.sizeDelta = new Vector2(700f, 28f);
+        _coopName.outlineWidth = 0.22f;
+        _coopName.outlineColor = new Color32(5, 6, 8, 255);
+        _coopName.gameObject.SetActive(false);
         _hpOrb = OrbSide(root, true);
         _mpOrb = OrbSide(root, false);
 
@@ -313,6 +356,16 @@ public class GameHUD : MonoBehaviour
         }
 
         BuildAbility(bar);
+        if (secondary)
+        {
+            // El jugador 2 usa la cruceta: izquierda, arriba, derecha y abajo para las casillas 1 a 4.
+            string[] pad = { "◄", "▲", "►", "▼", "", "" };
+            for (int i = 0; i < PotionBelt.Size; i++)
+            {
+                Transform k = _beltIcons[i].transform.parent.Find("Tecla");
+                if (k != null) k.GetComponent<TextMeshProUGUI>().text = pad[i];
+            }
+        }
 
         _xpFill = UIFactory.Bar(bar, "Experiencia", skin.pill, new Color(0.03f, 0.04f, 0.05f, 1f), FrostboundUI.XpBar, out RectTransform xp);
         Anchor(xp, 709f, 192f, 1211f, 202f);
@@ -331,7 +384,7 @@ public class GameHUD : MonoBehaviour
         _pointsText = UIFactory.Text(chip.transform, "Label", "", skin.nunito800, 13f, FrostboundUI.ChipGoldText, TextAlignmentOptions.Center, 1.5f);
         UIFactory.Stretch(_pointsText.rectTransform);
         Button chipButton = UIFactory.MakeButton(chip);
-        chipButton.onClick.AddListener(() => { if (inventoryScreen != null) inventoryScreen.Open(); });
+        chipButton.onClick.AddListener(() => { if (inventoryScreen != null) { if (secondary) inventoryScreen.OpenFor(player, InventoryScreen.Tab.Character); else inventoryScreen.Open(); } });
     }
 
     // Casilla de la habilidad de clase, encima del extremo izquierdo del cinturón de pociones.
@@ -351,7 +404,7 @@ public class GameHUD : MonoBehaviour
         _abilityShade.fillClockwise = false;
         _abilityTimer = UIFactory.Text(frame.transform, "Tiempo", "", skin.nunito800, 16f, Color.white, TextAlignmentOptions.Center);
         UIFactory.Stretch(_abilityTimer.rectTransform);
-        TextMeshProUGUI key = UIFactory.Text(frame.transform, "Tecla", "F", skin.cinzel800, 11f, new Color32(207, 198, 184, 255), TextAlignmentOptions.TopLeft);
+        TextMeshProUGUI key = UIFactory.Text(frame.transform, "Tecla", secondary ? "RB" : "F", skin.cinzel800, 11f, new Color32(207, 198, 184, 255), TextAlignmentOptions.TopLeft);
         UIFactory.Stretch(key.rectTransform, 5f);
         key.outlineWidth = 0.25f; key.outlineColor = new Color32(5, 6, 8, 255);
         _abilityCost = UIFactory.Text(frame.transform, "Coste", "", skin.nunito800, 11f, new Color(0.55f, 0.75f, 1f), TextAlignmentOptions.BottomRight);
@@ -464,6 +517,11 @@ public class GameHUD : MonoBehaviour
         vl.childForceExpandHeight = false;
         vl.childForceExpandWidth = false;
 
+        if (secondary)
+        {
+            toast.anchoredPosition = new Vector2(0f, -230f);
+            return;
+        }
         // Teclas.
         string hints = "Espacio  Rodar     I  Inventario     C  Personaje     1–6  Pociones     Q  Poción de vida";
         if (showDebugHints && player.GetComponent<ProgressionDebug>() != null) hints += "\n<color=#5B6F8A>Depuración:  X  +experiencia     Mayús+X  subir nivel     G  objeto al azar</color>";

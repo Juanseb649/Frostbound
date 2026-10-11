@@ -604,7 +604,7 @@ public class CastleInterior : MonoBehaviour
         }
 
         EnemyDefinition melee = EnemySpawner.Find("Corrupt_Melee"), ranged = EnemySpawner.Find("Corrupt_Ranged");
-        for (int i = 0; i < room.troops; i++)
+        for (int i = 0; i < room.troops * Players.PartyScale; i++)
         {
             EnemyDefinition def = rng.Chance(0.35f) ? ranged : melee;
             EnemyBrain b = EnemySpawner.Spawn(def, RandomPoint(rs, rng), rng.Range(0f, 360f), _enemies, level, rng.Chance(0.06f), rng);
@@ -614,7 +614,7 @@ public class CastleInterior : MonoBehaviour
                 rs.enemies.Add(b);
             }
         }
-        for (int i = 0; i < room.elites; i++)
+        for (int i = 0; i < room.elites * Players.PartyScale; i++)
         {
             EnemyDefinition def = EnemySpawner.Find(EliteIds[rng.NextInt(0, EliteIds.Length)]);
             EnemyBrain b = EnemySpawner.Spawn(def, RandomPoint(rs, rng), rng.Range(0f, 360f), _enemies, level, false, rng);

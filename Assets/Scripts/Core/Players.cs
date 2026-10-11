@@ -80,5 +80,8 @@ public static class Players
         return g != null ? g.transform : null;
     }
 
+    // Con dos héroes los campamentos y oleadas traen el doble de enemigos.
+    public static int PartyScale => Count >= 2 ? 2 : 1;
+
     public static bool IsPlayer(Component c) => c != null && c.GetComponentInParent<PlayerController>() != null;
 }
