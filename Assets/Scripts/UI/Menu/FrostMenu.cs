@@ -34,7 +34,7 @@ public class FrostMenu : MonoBehaviour
     private PreviewDrag _drag;
 
     // Título.
-    private FrostButton _play, _continue, _create, _options, _credits, _quit;
+    private FrostButton _play, _continue, _options, _credits, _quit;
     private GameObject _lastHeroCard;
     private TextMeshProUGUI _lastHeroName, _lastHeroDetail;
 
@@ -249,7 +249,7 @@ public class FrostMenu : MonoBehaviour
         sub.characterSpacing = 30f;
         FrostUI.Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(1200f, 44f));
 
-        string[] labels = { "Jugar", "Continuar", "Crear héroe", "Opciones", "Créditos", "Salir" };
+        string[] labels = { "Nueva partida", "Continuar", "Opciones", "Créditos", "Salir" };
         var buttons = new FrostButton[labels.Length];
         for (int i = 0; i < labels.Length; i++)
         {
@@ -258,10 +258,9 @@ public class FrostMenu : MonoBehaviour
             TopLeft((RectTransform)b.transform, 112f, 372f + i * 84f, 400f, 62f);
             buttons[i] = b;
         }
-        _play = buttons[0]; _continue = buttons[1]; _create = buttons[2]; _options = buttons[3]; _credits = buttons[4]; _quit = buttons[5];
-        _play.button.onClick.AddListener(PlayLast);
+        _play = buttons[0]; _continue = buttons[1]; _options = buttons[2]; _credits = buttons[3]; _quit = buttons[4];
+        _play.button.onClick.AddListener(() => { _targetSlot = -1; Go(Screen.Create); });
         _continue.button.onClick.AddListener(() => Go(Screen.Heroes));
-        _create.button.onClick.AddListener(() => { _targetSlot = -1; Go(Screen.Create); });
         _options.button.onClick.AddListener(() => Go(Screen.Options));
         _credits.button.onClick.AddListener(() => Go(Screen.Credits));
         _quit.button.onClick.AddListener(Quit);
@@ -298,13 +297,6 @@ public class FrostMenu : MonoBehaviour
             _lastHeroName.text = d.heroName;
             _lastHeroDetail.text = ClassDisplay(d) + " · Nivel " + d.level + " · " + SceneIds.Title(ZoneTravel.ZoneOf(d));
         }
-    }
-
-    private void PlayLast()
-    {
-        int last = LastSlot();
-        if (last < 0) { _targetSlot = -1; Go(Screen.Create); return; }
-        Load(last);
     }
 
     private void Load(int slot)
@@ -364,6 +356,7 @@ public class FrostMenu : MonoBehaviour
     {
         if (string.IsNullOrEmpty(d.lastBonfire)) return "El poblado";
         if (d.lastBonfire == Bonfire.CastleId) return "El castillo";
+        if (d.lastBonfire.StartsWith(StairsLayout.BonfirePrefix)) return "La Escalinata " + d.lastBonfire.Substring(StairsLayout.BonfirePrefix.Length);
         if (d.lastBonfire.StartsWith(MountainLayout.BonfirePrefix)) return "Las Faldas " + d.lastBonfire.Substring(MountainLayout.BonfirePrefix.Length);
         return "Hoguera " + d.lastBonfire.Replace("hoguera_", "");
     }

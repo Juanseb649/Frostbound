@@ -19,7 +19,8 @@ public static class QuestLog
     public const int AscentNone = 0;
     public const int AscentTold = 1;         // Steve te mandó a la montaña: toma el sendero del norte.
     public const int AscentFoothills = 2;    // Estás en Las Faldas: llega al paso helado.
-    public const int AscentFoothillsDone = 3;
+    public const int AscentFoothillsDone = 3; // Guardianes del paso vencidos: sube la Escalinata.
+    public const int AscentRocco = 4;         // Rocco Vendaval derrotado: fin del capítulo I.
 
     public static event Action<string, int> Changed;
 
@@ -75,6 +76,7 @@ public static class QuestLog
             {
                 case AscentTold: return "Toma el sendero del norte hacia la montaña";
                 case AscentFoothills: return "Asciende por Las Faldas y vence a los guardianes del paso helado";
+                case AscentFoothillsDone: return "Sube la Escalinata hasta la cima del Frostspire";
                 default: return "";
             }
         return "";

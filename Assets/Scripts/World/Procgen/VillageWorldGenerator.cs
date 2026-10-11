@@ -39,6 +39,10 @@ public class VillageWorldGenerator : MonoBehaviour
 
         for (int i = 0; i < camps.Count && i < Layout.camps.Count; i++)
             camps[i].transform.position = Layout.camps[i];
+        // Más caballeros corruptos en las hordas.
+        EnemyDefinition knight = GameDatabase.Instance != null ? GameDatabase.Instance.FindEnemy("Corrupt_Knight") : null;
+        if (knight != null)
+            foreach (EnemyCamp c in camps) { c.meleeVariants = new[] { knight }; c.variantChance = 0.3f; }
 
         Transform root = new GameObject("Exterior_Generado").transform;
         root.SetParent(transform, false);
