@@ -124,6 +124,24 @@ public class InventoryScreen : MonoBehaviour
         _dirty = true;
     }
 
+    // El héroe que juega con el teclado (el jugador 1, o el 2 si entró con teclado).
+    private Equipment KeyboardOwner
+    {
+        get
+        {
+            foreach (PlayerController p in Players.All)
+                if (p != null && PlayerController.UsesKeyboard(p)) return p.GetComponent<Equipment>();
+            return _home != null ? _home : player;
+        }
+    }
+
+    private void PressFor(Equipment who, Tab tab)
+    {
+        if (IsOpen && player == who && Current == tab) { SetOpen(false); return; }
+        if (IsOpen && player == who) { SetTab(tab); return; }
+        OpenFor(who, tab);
+    }
+
     private Gamepad OwnerPad
     {
         get
@@ -152,8 +170,11 @@ public class InventoryScreen : MonoBehaviour
                 && EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null);
         if (!blocked)
         {
-            if (InputMap.KeyPressed(GameAction.Character) || (!IsOpen && InputMap.PadPressed(pad, GameAction.Character))) Press(Tab.Character);
-            else if (InputMap.KeyPressed(GameAction.Inventory)) Press(Tab.Inventory);
+            Equipment keyOwner = KeyboardOwner;
+            if (InputMap.KeyPressed(GameAction.Character) && keyOwner != null && keyOwner != (_home != null ? _home : player)) PressFor(keyOwner, Tab.Character);
+            else if (InputMap.KeyPressed(GameAction.Inventory) && keyOwner != null && keyOwner != (_home != null ? _home : player)) PressFor(keyOwner, Tab.Inventory);
+            else if ((InputMap.KeyPressed(GameAction.Character) && keyOwner != null) || (!IsOpen && InputMap.PadPressed(pad, GameAction.Character))) Press(Tab.Character);
+            else if (InputMap.KeyPressed(GameAction.Inventory) && keyOwner != null) Press(Tab.Inventory);
             else if ((kb != null && kb.tabKey.wasPressedThisFrame) || (IsOpen && pad != null && pad.rightShoulder.wasPressedThisFrame))
             {
                 if (IsOpen) SetTab((Tab)(((int)Current + 1) % 3));
@@ -212,7 +233,7 @@ public class InventoryScreen : MonoBehaviour
         if (IsOpen && EventSystem.current != null)
         {
             GameObject first = tab == Tab.Inventory && _cells.Count > 0 ? _cells[0].gameObject
-                : tab == Tab.Equipment ? _equipViews[EquipSlot.Weapon].gameObject : null;
+                : tab == Tab.Equipment ? _equipViews[EquipSlot.Weapon].gameObject : FirstPlus();
             EventSystem.current.SetSelectedGameObject(first);
         }
     }
@@ -737,11 +758,36 @@ public class InventoryScreen : MonoBehaviour
         Select(null);
     }
 
+    // Personaje con mando: se entra con la cruceta al primer «+» disponible; arriba/abajo recorre los atributos y A suma.
+    private GameObject FirstPlus()
+    {
+        LinkPlusNavigation();
+        foreach (var r in _rows) if (r.plus != null && r.plus.interactable) return r.plus.gameObject;
+        return _rows.Length > 0 && _rows[0].plus != null ? _rows[0].plus.gameObject : null;
+    }
+
+    private void LinkPlusNavigation()
+    {
+        for (int i = 0; i < _rows.Length; i++)
+        {
+            if (_rows[i].plus == null) continue;
+            var nav = new Navigation { mode = Navigation.Mode.Explicit };
+            nav.selectOnUp = _rows[(i + _rows.Length - 1) % _rows.Length].plus;
+            nav.selectOnDown = _rows[(i + 1) % _rows.Length].plus;
+            _rows[i].plus.navigation = nav;
+        }
+    }
+
     private void OnPlus(StatType type)
     {
         Keyboard kb = Keyboard.current;
         bool shift = kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed);
         _stats.AddPoints(type, shift ? 5 : 1);
+        if (_stats.pointsAvailable <= 0 && EventSystem.current != null && Current == Tab.Character)
+        {
+            // Sin puntos los «+» se apagan: la selección pasa a la pestaña para que la cruceta siga funcionando.
+            foreach (var b in _tabButtons) if (b.tab == Tab.Character) { EventSystem.current.SetSelectedGameObject(b.button.gameObject); break; }
+        }
     }
 
     private void SetFilter(Filter f)
