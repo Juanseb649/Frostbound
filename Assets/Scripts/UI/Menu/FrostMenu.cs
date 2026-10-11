@@ -296,7 +296,7 @@ public class FrostMenu : MonoBehaviour
         {
             SaveData d = _saves[last];
             _lastHeroName.text = d.heroName;
-            _lastHeroDetail.text = ClassDisplay(d) + " · Nivel " + d.level + " · Capítulo I";
+            _lastHeroDetail.text = ClassDisplay(d) + " · Nivel " + d.level + " · " + SceneIds.Title(ZoneTravel.ZoneOf(d));
         }
     }
 
@@ -309,17 +309,16 @@ public class FrostMenu : MonoBehaviour
 
     private void Load(int slot)
     {
-        if (GameSession.Ensure().LoadGame(slot)) StartCoroutine(FadeAndLoad());
+        if (GameSession.Ensure().LoadGame(slot)) StartCoroutine(FadeAndLoad(ZoneTravel.ZoneOf(GameSession.Instance.Current)));
     }
 
-    private IEnumerator FadeAndLoad()
+    private IEnumerator FadeAndLoad(string scene = SceneIds.Village)
     {
         _busy = true;
         foreach (var g in _groups.Values) g.interactable = false;
-        yield return ScreenFade.Instance.Fade(1f, 0.5f);
-        SceneManager.LoadScene(SceneIds.Village);
-        yield return null;
-        yield return ScreenFade.Instance.Fade(0f, 0.6f);
+        if (!Application.CanStreamedLevelBeLoaded(scene)) scene = SceneIds.Village;
+        LoadingScreen.Load(scene);
+        yield break;
     }
 
     private void Quit()
@@ -365,6 +364,7 @@ public class FrostMenu : MonoBehaviour
     {
         if (string.IsNullOrEmpty(d.lastBonfire)) return "El poblado";
         if (d.lastBonfire == Bonfire.CastleId) return "El castillo";
+        if (d.lastBonfire.StartsWith(MountainLayout.BonfirePrefix)) return "Las Faldas " + d.lastBonfire.Substring(MountainLayout.BonfirePrefix.Length);
         return "Hoguera " + d.lastBonfire.Replace("hoguera_", "");
     }
 
@@ -491,7 +491,7 @@ public class FrostMenu : MonoBehaviour
             {
                 s.level.text = d.level.ToString();
                 s.name.text = d.heroName;
-                s.detail.text = ShortName(ClassOf(d)) + " · " + (string.IsNullOrEmpty(d.lastBonfire) ? "El poblado" : "Capítulo I");
+                s.detail.text = ShortName(ClassOf(d)) + " · " + SceneIds.Title(ZoneTravel.ZoneOf(d));
                 s.ring.color = i == _selectedSlot ? FrostUI.Ice : FrostUI.Border;
             }
             s.button.Refresh();
@@ -503,7 +503,7 @@ public class FrostMenu : MonoBehaviour
         _playHero.button.interactable = sel != null;
         _newHero.button.interactable = FirstFree() >= 0;
         _heroName.text = sel != null ? sel.heroName : "";
-        _heroDetail.text = sel != null ? ClassDisplay(sel) + " · Nivel " + sel.level + " · Capítulo I: Las Faldas" : "No tienes héroes todavía";
+        _heroDetail.text = sel != null ? ClassDisplay(sel) + " · Nivel " + sel.level + " · " + SceneIds.Title(ZoneTravel.ZoneOf(sel)) : "No tienes héroes todavía";
         Summary(sel);
         if (_actor != null) _actor.SetActive(sel != null && _screen != Screen.Create);
         if (sel != null)

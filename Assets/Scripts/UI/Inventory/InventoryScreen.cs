@@ -95,6 +95,7 @@ public class InventoryScreen : MonoBehaviour
         if (IsOpen && toggle && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null
             && EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null) toggle = false;
 
+        if (PauseMenu.IsPaused || LoadingScreen.Active) toggle = false;
         if (toggle) SetOpen(!IsOpen);
         else if (IsOpen && UICancel.Pressed()) SetOpen(false);
 

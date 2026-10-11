@@ -282,6 +282,7 @@ public class MapSystem : MonoBehaviour
         }
         markers.Add(new Marker { kind = MarkerKind.Castle, position = _layout.castle.Door, label = "Castillo", always = true });
         markers.Add(new Marker { kind = MarkerKind.Citadel, position = _layout.castle.TownCenter, label = "Ciudadela caída" });
+        markers.Add(new Marker { kind = MarkerKind.Exit, position = VillageLayout.Trailhead, label = "Sendero del Frostspire", always = true });
 
         if (_steve == null)
         {
@@ -314,7 +315,11 @@ public class MapSystem : MonoBehaviour
             case QuestLog.CitadelNone: return _steve != null ? _steve.position : (Vector3?)null;
             case QuestLog.CitadelTalked: return _layout.castle.TownCenter;
             case QuestLog.CitadelBarbarian: return inside ? CastleInterior.Instance.ThroneCenter : _layout.castle.Door;
-            default: return null;
+            default:
+                int ascent = QuestLog.Stage(QuestLog.Ascent);
+                if (ascent == QuestLog.AscentNone) return _steve != null ? _steve.position : (Vector3?)null;
+                if (ascent == QuestLog.AscentTold) return VillageLayout.Trailhead;
+                return null;
         }
     }
 

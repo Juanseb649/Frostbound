@@ -119,15 +119,16 @@ public class AdventureHUD : MonoBehaviour
 
     private void UpdateTracker()
     {
-        int stage = QuestLog.Stage(QuestLog.Citadel);
-        string objective = QuestLog.Objective(QuestLog.Citadel, stage);
-        bool show = !string.IsNullOrEmpty(objective);
+        string quest = QuestLog.Tracked();
+        bool show = quest.Length > 0;
         _tracker.gameObject.SetActive(show);
         if (!show) return;
-        _questTitle.text = QuestLog.Title(QuestLog.Citadel);
+        int stage = QuestLog.Stage(quest);
+        string objective = QuestLog.Objective(quest, stage);
+        _questTitle.text = QuestLog.Title(quest);
         CitadelSiege siege = CitadelSiege.Instance;
         string detail = "";
-        if (stage == QuestLog.CitadelTalked && siege != null)
+        if (quest == QuestLog.Citadel && stage == QuestLog.CitadelTalked && siege != null)
         {
             if (siege.Current == CitadelSiege.Phase.Waves) { objective = "Resiste el asedio en la plaza"; detail = "Oleada " + Mathf.Max(1, siege.Wave) + "/" + siege.WaveCount + " · quedan " + siege.Remaining; }
             else if (siege.Current == CitadelSiege.Phase.Boss) { objective = "Derrota a Gorvald, el bárbaro corrupto"; detail = "Cuidado: su hacha envenena"; }
