@@ -48,12 +48,9 @@ public class EnemyCamp : MonoBehaviour
 
     void Update()
     {
-        if (_player == null)
-        {
-            GameObject p = GameObject.Find("Player");
-            if (p == null) return;
-            _player = p.transform;
-        }
+        Transform near = Players.NearestTransform(transform.position, false);
+        if (near != null) _player = near;
+        if (_player == null) return;
         float dist = Vector3.Distance(_player.position, transform.position);
         if (!_spawned)
         {

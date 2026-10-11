@@ -67,12 +67,9 @@ public class CoinPile : MonoBehaviour
         else transform.Rotate(0f, 40f * Time.deltaTime, 0f, Space.World);
 
         if (Time.time - _born < 0.45f) return;
-        if (_player == null)
-        {
-            GameObject p = GameObject.Find("Player");
-            if (p == null) return;
-            _player = p.transform;
-        }
+        Transform near = Players.NearestTransform(transform.position);
+        if (near != null) _player = near;
+        if (_player == null) return;
         Vector3 to = _player.position + Vector3.up * 0.5f - transform.position;
         float d = to.magnitude;
         if (d < MagnetRadius && _landed) transform.position += to.normalized * Mathf.Min(d, 9f * Time.deltaTime);

@@ -21,13 +21,40 @@ public class CameraFollow : MonoBehaviour
         _shakeUntil = Time.unscaledTime + _shakeDuration;
     }
 
+    private float _zoom = 1f;
+
+    // En co-op la cámara encuadra a los dos héroes vivos (su punto medio) y se aleja un poco si se separan.
+    private Vector3 Focus(out float spread)
+    {
+        spread = 0f;
+        Vector3 focus = target.position;
+        if (Players.Count < 2) return focus;
+        Vector3 sum = Vector3.zero;
+        int n = 0;
+        Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
+        foreach (PlayerController p in Players.All)
+        {
+            if (!Players.IsAlive(p)) continue;
+            Vector3 q = p.transform.position;
+            sum += q;
+            n++;
+            min = Vector3.Min(min, q);
+            max = Vector3.Max(max, q);
+        }
+        if (n == 0) return focus;
+        if (n > 1) spread = new Vector2(max.x - min.x, max.z - min.z).magnitude;
+        return sum / n;
+    }
+
     void LateUpdate()
     {
         if (target == null) return;
 
-        Vector3 desired = target.position + offset;
+        Vector3 focus = Focus(out float spread);
+        _zoom = Mathf.Lerp(_zoom, 1f + Mathf.Clamp01((spread - 6f) / 16f) * 0.55f, Time.deltaTime * 3f);
+        Vector3 desired = focus + offset * _zoom;
         transform.position = Vector3.SmoothDamp(transform.position, desired, ref _velocity, smoothTime);
-        transform.LookAt(target.position + Vector3.up * lookHeight);
+        transform.LookAt(focus + Vector3.up * lookHeight);
         float left = _shakeUntil - Time.unscaledTime;
         if (left > 0f)
         {

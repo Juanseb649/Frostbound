@@ -37,8 +37,31 @@ public class SaveData
     public int stashCoins;
     public List<SavedStack> stash = new List<SavedStack>();
     public List<SavedFog> explored = new List<SavedFog>();
+    public CompanionData companion = new CompanionData();
 
     public bool HasProgress => level > 1 || experience > 0 || inventory.Count > 0;
+}
+
+// Héroe del jugador 2 (co-op local): se guarda junto a la partida del jugador 1.
+[Serializable]
+public class CompanionData
+{
+    public bool active;
+    public string heroName = "";
+    public string classId = "";
+    public string plumageId = "";
+    public int level = 1;
+    public int experience;
+    public int pointsAvailable;
+    public StatBlock allocated;
+    public float health = -1f;
+    public float mana = -1f;
+    public int coins;
+    public List<SavedStack> inventory = new List<SavedStack>();
+    public List<SavedStack> equipment = new List<SavedStack>();
+    public List<string> belt = new List<string>();
+
+    public bool Exists => !string.IsNullOrEmpty(classId);
 }
 
 [Serializable]

@@ -11,6 +11,62 @@ public class PlayerController : MonoBehaviour
 
     public CharacterStats Stats => _stats != null ? _stats : _stats = GetComponent<CharacterStats>();
 
+    // Mando del jugador 2 (el jugador 1 usa teclado y ratón, o un mando que no esté reclamado).
+    [System.NonSerialized] public Gamepad pad;
+    public bool IsPadPlayer => playerIndex > 0;
+
+    private static Gamepad _p1Pad;
+    private static float _p1PadAt = -100f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetPads()
+    {
+        _p1Pad = null;
+        _p1PadAt = -100f;
+    }
+
+    public static bool Claimed(Gamepad g)
+    {
+        if (g == null) return false;
+        foreach (PlayerController p in Players.All) if (p != null && p.playerIndex > 0 && p.pad == g) return true;
+        return false;
+    }
+
+    // Mando que maneja a este héroe (null = ninguno).
+    public static Gamepad PadOf(Component c)
+    {
+        PlayerController pc = c != null ? c.GetComponent<PlayerController>() : null;
+        if (pc != null && pc.playerIndex > 0) return pc.pad;
+        if (_p1Pad != null && _p1Pad.added && !Claimed(_p1Pad)) return _p1Pad;
+        Gamepad g = Gamepad.current;
+        if (g != null && !Claimed(g)) return g;
+        foreach (Gamepad other in Gamepad.all) if (!Claimed(other)) return other;
+        return null;
+    }
+
+    // El mando que el jugador 1 tocó hace poco (para no confundirlo con el que pulsa START para unirse).
+    public static Gamepad RecentP1Pad => Time.unscaledTime - _p1PadAt < 10f ? _p1Pad : null;
+
+    public static void NoteP1Pad(Gamepad g)
+    {
+        if (g == null || Claimed(g)) return;
+        _p1Pad = g;
+        _p1PadAt = Time.unscaledTime;
+    }
+
+    public static bool UsesKeyboard(Component c)
+    {
+        PlayerController pc = c != null ? c.GetComponent<PlayerController>() : null;
+        return pc == null || pc.playerIndex == 0;
+    }
+
+    public static Vector2 Stick(Gamepad g)
+    {
+        if (g == null) return Vector2.zero;
+        Vector2 v = g.leftStick.ReadValue();
+        return v.sqrMagnitude < 0.04f ? Vector2.zero : Vector2.ClampMagnitude(v, 1f);
+    }
+
     void OnEnable() => Players.Register(this);
     void OnDestroy() => Players.Unregister(this);
 
@@ -100,9 +156,21 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (_camera == null) _camera = Camera.main;
+        if (IsPadPlayer)
+        {
+            PadUpdate();
+            return;
+        }
         UpdateHover();
 
         Vector2 input = Vector2.ClampMagnitude(ReadKeyboardInput(), 1f);
+        if (input.sqrMagnitude < 0.01f)
+        {
+            Gamepad g = PadOf(this);
+            Vector2 stick = Stick(g);
+            if (stick.sqrMagnitude > 0f) { input = stick; NoteP1Pad(g); }
+            if (g != null && g.buttonNorth.wasPressedThisFrame && !GameplayInput.Blocked) { NoteP1Pad(g); if (!PickUpNearest()) TalkToNearest(); }
+        }
 
         if (_clickTarget.HasValue && FlatOffset(_clickTarget.Value).sqrMagnitude < stopDistance * stopDistance)
             _clickTarget = null;
@@ -157,12 +225,71 @@ public class PlayerController : MonoBehaviour
             _targetRotation = Quaternion.LookRotation(_moveDirection, Vector3.up);
 
         WorldHUD hud = WorldHUD.Instance;
-        if (hud != null && hud.MenuOpen)
+        if (hud != null && hud.MenuOpen) CloseMenuIfAway(hud);
+    }
+
+    // El menú del NPC se cierra cuando ningún héroe sigue a su lado.
+    private void CloseMenuIfAway(WorldHUD hud)
+    {
+        NPCInteractable npc = hud.MenuTarget;
+        if (npc == null) return;
+        float limit = npc.interactRange + menuCloseMargin;
+        PlayerController near = Players.Nearest(npc.transform.position);
+        Vector3 from = near != null ? near.transform.position : transform.position;
+        Vector3 d = npc.transform.position - from;
+        d.y = 0f;
+        if (d.sqrMagnitude > limit * limit) hud.CloseMenu();
+    }
+
+    // Jugador 2: se mueve con el stick izquierdo; Y recoge o habla. Ataque, habilidad y esquiva los leen sus componentes.
+    private void PadUpdate()
+    {
+        Gamepad g = pad;
+        Vector2 input = GameplayInput.Blocked || (Stats != null && Stats.IsDead) ? Vector2.zero : Stick(g);
+        if (g != null && g.buttonNorth.wasPressedThisFrame && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
+
+        if (Time.time < _holdUntil)
         {
-            NPCInteractable npc = hud.MenuTarget;
-            float limit = npc.interactRange + menuCloseMargin;
-            if (FlatOffset(npc.transform.position).sqrMagnitude > limit * limit) hud.CloseMenu();
+            _moveDirection = Vector3.zero;
+            return;
         }
+        if (input.sqrMagnitude > 0f)
+        {
+            _clickTarget = null;
+            _interactTarget = null;
+            _pickupTarget = null;
+            _attackTarget = null;
+            Vector3 forward = Vector3.forward, right = Vector3.right;
+            if (_camera != null)
+            {
+                forward = Vector3.ProjectOnPlane(_camera.transform.forward, Vector3.up).normalized;
+                right = Vector3.ProjectOnPlane(_camera.transform.right, Vector3.up).normalized;
+            }
+            _moveDirection = (forward * input.y + right * input.x).normalized;
+        }
+        else if (_pickupTarget != null) _moveDirection = ApproachPickupTarget();
+        else if (_interactTarget != null) _moveDirection = ApproachInteractTarget();
+        else _moveDirection = Vector3.zero;
+
+        if (_moveDirection.sqrMagnitude > 0.01f)
+            _targetRotation = Quaternion.LookRotation(_moveDirection, Vector3.up);
+        WorldHUD hud = WorldHUD.Instance;
+        if (hud != null && hud.MenuOpen) CloseMenuIfAway(hud);
+    }
+
+    // Dirección en la que apunta el mando (stick) o, si está suelto, hacia donde mira.
+    public Vector3 PadAimDirection()
+    {
+        Vector2 st = Stick(PadOf(this));
+        if (st.sqrMagnitude > 0f && _camera != null)
+        {
+            Vector3 f = Vector3.ProjectOnPlane(_camera.transform.forward, Vector3.up).normalized;
+            Vector3 r = Vector3.ProjectOnPlane(_camera.transform.right, Vector3.up).normalized;
+            return (f * st.y + r * st.x).normalized;
+        }
+        Vector3 fw = transform.forward;
+        fw.y = 0f;
+        return fw.sqrMagnitude > 0.01f ? fw.normalized : Vector3.forward;
     }
 
     void FixedUpdate()

@@ -57,14 +57,19 @@ public class Equipment : MonoBehaviour
         }
     }
 
+    // El jugador 2 trae su propio héroe guardado: CoopManager rellena estos ganchos antes de que empiece.
+    [NonSerialized] public Func<Equipment, bool> restoreHook;
+    [NonSerialized] public Action<Equipment> finishHook;
+
     void Start()
     {
         _started = true;
         GameSession session = GameSession.Instance;
-        bool restored = session != null && session.RestorePlayer(this);
+        bool restored = restoreHook != null ? restoreHook(this) : session != null && session.RestorePlayer(this);
         if (!restored && UsesItems()) GiveStartingItems();
         Apply();
-        if (restored) session.FinishRestore(this);
+        if (restored && restoreHook != null) finishHook?.Invoke(this);
+        else if (restored) session.FinishRestore(this);
     }
 
     public void SetEquippedStack(EquipSlot slot, ItemStack stack)

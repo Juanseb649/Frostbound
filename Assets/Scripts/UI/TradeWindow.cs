@@ -41,12 +41,20 @@ public class TradeWindow : MonoBehaviour
 
     public static ShopKind KindOf(NPCInteractable npc) => npc != null && (npc.role == "Mago" || npc.displayName == "Anciano Pingo") ? ShopKind.Mage : ShopKind.Merchant;
 
-    public static void OpenStash(NPCInteractable npc) => Ensure().Open(Mode.Stash);
+    private NPCInteractable _npc;
+
+    public static void OpenStash(NPCInteractable npc)
+    {
+        TradeWindow w = Ensure();
+        w._npc = npc;
+        w.Open(Mode.Stash);
+    }
     public static void OpenShop(NPCInteractable npc, bool selling)
     {
         TradeWindow w = Ensure();
         w._shop = KindOf(npc);
         w._shopName = npc != null ? npc.displayName : "";
+        w._npc = npc;
         w.Open(Mode.Shop);
     }
 
@@ -70,7 +78,8 @@ public class TradeWindow : MonoBehaviour
 
     private void Open(Mode mode)
     {
-        _player = FindAnyObjectByType<Equipment>();
+        // Atiende al héroe que está hablando con el NPC (el más cercano, por si juegan dos).
+        _player = _npc != null ? _npc.Customer() : FindAnyObjectByType<Equipment>();
         if (_player == null) return;
         _wallet = Wallet.Of(_player.gameObject);
         _mode = mode;

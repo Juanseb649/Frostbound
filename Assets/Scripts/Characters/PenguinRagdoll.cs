@@ -134,10 +134,12 @@ public class PenguinRagdoll : MonoBehaviour
         // Las piezas del mismo pingüino no chocan entre sí, ni con el héroe (no se tropieza con los cuerpos).
         for (int i = 0; i < colliders.Count; i++)
             for (int k = i + 1; k < colliders.Count; k++) Physics.IgnoreCollision(colliders[i], colliders[k]);
-        GameObject player = GameObject.Find("Player");
-        if (player != null)
-            foreach (Collider pc in player.GetComponentsInChildren<Collider>())
+        foreach (PlayerController hero in Players.All)
+        {
+            if (hero == null || hero.transform == transform) continue;
+            foreach (Collider pc in hero.GetComponentsInChildren<Collider>())
                 foreach (Collider c in colliders) Physics.IgnoreCollision(c, pc);
+        }
 
         foreach (Rigidbody rb in Bodies) rb.linearVelocity = velocity;
         if (made.TryGetValue("Spine", out Rigidbody spine)) spine.AddForce(hit, ForceMode.VelocityChange);

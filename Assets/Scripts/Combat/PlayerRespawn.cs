@@ -44,12 +44,31 @@ public class PlayerRespawn : MonoBehaviour
         StartCoroutine(Die());
     }
 
+    [Tooltip("Co-op: segundos hasta que un héroe caído se levanta junto a su compañero.")]
+    public float coopReviveSeconds = 10f;
+
+    private bool _blocked;
+    private bool _awaitingParty;
+    public bool AwaitingParty => _awaitingParty;
+
+    private PlayerController Me => GetComponent<PlayerController>();
+    private bool IsSecond => Me != null && Me.playerIndex > 0;
+
+    private static PlayerController AlivePartner(PlayerController me)
+    {
+        foreach (PlayerController p in Players.All)
+            if (p != null && p != me && Players.IsAlive(p)) return p;
+        return null;
+    }
+
     private IEnumerator Die()
     {
         _dying = true;
         _deathPosition = transform.position;
-        GameplayInput.Block();
-        CloseMenus();
+        bool coop = AlivePartner(Me) != null;
+        _blocked = !coop;
+        if (_blocked) GameplayInput.Block();
+        if (!coop) CloseMenus();
         PauseControl();
 
         Vector3 dir = _stats.lastHitDirection;
@@ -70,6 +89,30 @@ public class PlayerRespawn : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.7f);
         Time.timeScale = 1f;
         yield return new WaitForSecondsRealtime(screenDelay);
+
+        // Co-op: mientras el compañero siga en pie, el caído se levanta a su lado al cabo de unos segundos.
+        string who = IsSecond ? "El jugador 2" : "El jugador 1";
+        float waited = 0f;
+        bool announced = false;
+        while (AlivePartner(Me) != null && waited < coopReviveSeconds)
+        {
+            if (!announced) { Notifications.Show(who + " ha caído. Se levantará en " + Mathf.RoundToInt(coopReviveSeconds) + " s si su compañero aguanta.", FrostboundUI.Negative); announced = true; }
+            waited += Time.deltaTime;
+            yield return null;
+        }
+        PlayerController partner = AlivePartner(Me);
+        if (announced && partner != null)
+        {
+            ReviveNear(partner.transform, 0.5f);
+            yield break;
+        }
+        // Todo el grupo cayó. El jugador 2 espera a que el jugador 1 elija dónde reaparecer.
+        if (IsSecond)
+        {
+            _awaitingParty = true;
+            yield break;
+        }
+        if (!_blocked) { _blocked = true; GameplayInput.Block(); CloseMenus(); }
 
         UISkin skin = null;
         GameHUD hud = FindAnyObjectByType<GameHUD>();
@@ -124,13 +167,52 @@ public class PlayerRespawn : MonoBehaviour
         ResumeControl();
         SetHudVisible(true, null);
 
+        // Los compañeros caídos despiertan con él.
+        foreach (PlayerController p in Players.All)
+        {
+            if (p == null || p.transform == transform) continue;
+            PlayerRespawn other = p.GetComponent<PlayerRespawn>();
+            if (other != null && other.IsDying) other.ReviveNear(transform, 1f);
+        }
+
         yield return null;
         if (_screen != null) yield return _screen.FadeAwayAndDestroy();
         _screen = null;
-        GameplayInput.Unblock();
+        if (_blocked) GameplayInput.Unblock();
+        _blocked = false;
         _dying = false;
         if (GameSession.Instance != null) GameSession.Instance.SaveNow();
         Notifications.Show(bonfire != null ? "Despiertas junto a la hoguera con todo tu equipo (algo desgastado)." : "Despiertas en el poblado con todo tu equipo (algo desgastado).", FrostboundUI.Muted);
+    }
+
+    // Levanta al héroe junto a otro (co-op). healthFraction: vida con la que vuelve.
+    public void ReviveNear(Transform anchor, float healthFraction)
+    {
+        StopAllCoroutines();
+        if (_screen != null) Destroy(_screen.gameObject);
+        _screen = null;
+        if (_ragdoll != null) _ragdoll.Deactivate();
+        Vector3 side = anchor.right * (IsSecond ? 1.4f : -1.4f);
+        Vector3 pos = anchor.position + side;
+        if (UnityEngine.AI.NavMesh.SamplePosition(pos, out UnityEngine.AI.NavMeshHit hit, 2f, UnityEngine.AI.NavMesh.AllAreas)) pos = hit.position + Vector3.up * 0.05f;
+        if (_rb != null)
+        {
+            _rb.position = pos;
+            _rb.isKinematic = false;
+            _rb.linearVelocity = Vector3.zero;
+        }
+        transform.position = pos;
+        _stats.currentHealth = 1f;
+        _stats.Heal(_stats.MaxHealth * Mathf.Clamp01(healthFraction) - 1f);
+        _stats.lastHitDirection = Vector3.zero;
+        PlayerAfflictions afflictions = GetComponent<PlayerAfflictions>();
+        if (afflictions != null) afflictions.Cure();
+        ResumeControl();
+        if (_blocked) GameplayInput.Unblock();
+        _blocked = false;
+        _awaitingParty = false;
+        _dying = false;
+        Notifications.Show((IsSecond ? "El jugador 2" : "El jugador 1") + " vuelve a la lucha.", FrostboundUI.Positive);
     }
 
     private void ReturnToTitle()
