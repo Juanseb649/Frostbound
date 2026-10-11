@@ -29,6 +29,9 @@ public static class InputMap
     private const string PrefDevice = "controls_device";
     private const string PrefKeys = "controls_keys";
     private const string PrefPad = "controls_pad";
+    private const string PrefVersion = "controls_version";
+    // Sube cuando cambian los botones por defecto del mando: las asignaciones guardadas de antes se restablecen.
+    private const int PadDefaultsVersion = 2;
 
     public static readonly GameAction[] All = (GameAction[])Enum.GetValues(typeof(GameAction));
 
@@ -68,7 +71,7 @@ public static class InputMap
         }
     }
 
-    // Como en Minecraft Dungeons: X ataca, A rueda, Y recoge, RB habilidad, LB poción, cruceta = cinturón.
+    // Como en Minecraft Dungeons: X ataca, A rueda, B recoge/habla, Y mochila, Vista mapa, RB habilidad, LB poción, cruceta = cinturón.
     public static int DefaultPad(GameAction a)
     {
         switch (a)
@@ -76,7 +79,7 @@ public static class InputMap
             case GameAction.Attack: return (int)GamepadButton.West;
             case GameAction.Ability: return (int)GamepadButton.RightShoulder;
             case GameAction.Dodge: return (int)GamepadButton.South;
-            case GameAction.Interact: return (int)GamepadButton.North;
+            case GameAction.Interact: return (int)GamepadButton.East;
             case GameAction.QuickPotion: return (int)GamepadButton.LeftShoulder;
             case GameAction.Belt1: return (int)GamepadButton.DpadLeft;
             case GameAction.Belt2: return (int)GamepadButton.DpadUp;
@@ -84,9 +87,9 @@ public static class InputMap
             case GameAction.Belt4: return (int)GamepadButton.DpadDown;
             case GameAction.Belt5: return (int)GamepadButton.LeftTrigger;
             case GameAction.Belt6: return (int)GamepadButton.RightTrigger;
-            case GameAction.Inventory: return (int)GamepadButton.Select;
+            case GameAction.Inventory: return (int)GamepadButton.North;
             case GameAction.Character: return (int)GamepadButton.RightStick;
-            case GameAction.Map: return (int)GamepadButton.LeftStick;
+            case GameAction.Map: return (int)GamepadButton.Select;
             case GameAction.Pause: return (int)GamepadButton.Start;
             default: return NoPad;
         }
@@ -134,7 +137,12 @@ public static class InputMap
         Pads.Clear();
         foreach (GameAction a in All) { Keys[a] = DefaultKey(a); Pads[a] = DefaultPad(a); }
         Parse(PlayerPrefs.GetString(PrefKeys, ""), Keys);
-        Parse(PlayerPrefs.GetString(PrefPad, ""), Pads);
+        if (PlayerPrefs.GetInt(PrefVersion, 1) >= PadDefaultsVersion) Parse(PlayerPrefs.GetString(PrefPad, ""), Pads);
+        else
+        {
+            PlayerPrefs.SetInt(PrefVersion, PadDefaultsVersion);
+            PlayerPrefs.DeleteKey(PrefPad);
+        }
     }
 
     private static void Parse(string s, Dictionary<GameAction, int> into)
@@ -214,19 +222,34 @@ public static class InputMap
     // ---------- Lectura ----------
 
 
-    private static UnityEngine.InputSystem.Controls.ButtonControl KbControl(int code)
+    // Se leen todos los teclados y ratones conectados: algunos mandos o programas crean un teclado virtual que
+    // pasaría a ser Keyboard.current y dejaría al héroe sin moverse aunque se pulsen las teclas reales.
+    private static bool KbCheck(int code, bool pressedThisFrame)
     {
-        if (code == None) return null;
+        if (code == None) return false;
         if (code < 0)
         {
-            Mouse m = Mouse.current;
-            if (m == null) return null;
-            return code == MouseLeft ? m.leftButton : code == MouseRight ? m.rightButton : m.middleButton;
+            foreach (InputDevice d in InputSystem.devices)
+            {
+                if (!(d is Mouse m)) continue;
+                var c = code == MouseLeft ? m.leftButton : code == MouseRight ? m.rightButton : m.middleButton;
+                if (pressedThisFrame ? c.wasPressedThisFrame : c.isPressed) return true;
+            }
+            return false;
         }
-        Keyboard kb = Keyboard.current;
-        if (kb == null || code == (int)Key.None) return null;
-        try { return kb[(Key)code]; } catch { return null; }
+        if (code == (int)Key.None) return false;
+        foreach (InputDevice d in InputSystem.devices)
+        {
+            if (!(d is Keyboard kb)) continue;
+            UnityEngine.InputSystem.Controls.KeyControl c;
+            try { c = kb[(Key)code]; } catch { continue; }
+            if (c != null && (pressedThisFrame ? c.wasPressedThisFrame : c.isPressed)) return true;
+        }
+        return false;
     }
+
+    public static bool KeyDown(Key k) => KbCheck((int)k, true);
+    public static bool KeyIsDown(Key k) => KbCheck((int)k, false);
 
     private static UnityEngine.InputSystem.Controls.ButtonControl PadControl(Gamepad g, int code)
     {
@@ -234,8 +257,8 @@ public static class InputMap
         try { return g[(GamepadButton)code]; } catch { return null; }
     }
 
-    public static bool KeyPressed(GameAction a) { var c = KbControl(KeyOf(a)); return c != null && c.wasPressedThisFrame; }
-    public static bool KeyHeld(GameAction a) { var c = KbControl(KeyOf(a)); return c != null && c.isPressed; }
+    public static bool KeyPressed(GameAction a) => KbCheck(KeyOf(a), true);
+    public static bool KeyHeld(GameAction a) => KbCheck(KeyOf(a), false);
     public static bool PadPressed(Gamepad g, GameAction a) { var c = PadControl(g, PadOf(a)); return c != null && c.wasPressedThisFrame; }
     public static bool PadHeld(Gamepad g, GameAction a) { var c = PadControl(g, PadOf(a)); return c != null && c.isPressed; }
 
@@ -258,12 +281,10 @@ public static class InputMap
     public static Vector2 KeyboardMove()
     {
         Vector2 v = Vector2.zero;
-        Keyboard kb = Keyboard.current;
-        if (kb == null) return v;
-        if (KeyHeld(GameAction.MoveUp) || kb.upArrowKey.isPressed) v.y += 1f;
-        if (KeyHeld(GameAction.MoveDown) || kb.downArrowKey.isPressed) v.y -= 1f;
-        if (KeyHeld(GameAction.MoveLeft) || kb.leftArrowKey.isPressed) v.x -= 1f;
-        if (KeyHeld(GameAction.MoveRight) || kb.rightArrowKey.isPressed) v.x += 1f;
+        if (KeyHeld(GameAction.MoveUp) || KeyIsDown(Key.UpArrow)) v.y += 1f;
+        if (KeyHeld(GameAction.MoveDown) || KeyIsDown(Key.DownArrow)) v.y -= 1f;
+        if (KeyHeld(GameAction.MoveLeft) || KeyIsDown(Key.LeftArrow)) v.x -= 1f;
+        if (KeyHeld(GameAction.MoveRight) || KeyIsDown(Key.RightArrow)) v.x += 1f;
         return Vector2.ClampMagnitude(v, 1f);
     }
 
