@@ -87,6 +87,8 @@ public static class VillageLayout
     public const float CampRadius = 5f;
     public const float ForestRadius = 150f;
     public static readonly Vector3 SteveClearing = new Vector3(-11f, 0f, -47f);
+    // Inicio del sendero de la montaña: al final del camino del norte, pasado el bosque.
+    public static readonly Vector3 Trailhead = new Vector3(0f, 0f, 166f);
 
     public const int PineCount = 210;
     public const int MoundCount = 30;

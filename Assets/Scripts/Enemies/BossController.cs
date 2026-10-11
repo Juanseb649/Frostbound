@@ -128,7 +128,7 @@ public class BossController : MonoBehaviour
         if (blinkInterval > 0f && !Speaking && Engaged && Time.time >= _nextBlink)
         {
             _nextBlink = Time.time + blinkInterval * UnityEngine.Random.Range(0.8f, 1.25f);
-            Transform p = EnemyBrain.Player;
+            Transform p = Brain != null ? Brain.Target : EnemyBrain.Player;
             if (p != null && (p.position - transform.position).magnitude < 16f && Time.time > 3f)
             {
                 Vector3 behind = p.position - p.forward * 2.2f;

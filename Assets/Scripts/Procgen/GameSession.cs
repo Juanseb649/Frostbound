@@ -89,6 +89,12 @@ public class GameSession : MonoBehaviour
         return true;
     }
 
+    // Al cambiar de zona el héroe de la escena nueva debe cargar lo guardado (nivel, equipo, mochila...).
+    public void PrepareZoneChange()
+    {
+        if (Current != null) PendingRestore = true;
+    }
+
     public void EndGame()
     {
         SaveNow();
@@ -129,10 +135,14 @@ public class GameSession : MonoBehaviour
 
     void OnApplicationQuit() => SaveNow();
 
+    // Otros sistemas (el jugador 2) guardan su parte justo antes de escribir la partida.
+    public static event System.Action<SaveData> BeforeSave;
+
     public bool SaveNow()
     {
         if (Current == null) return false;
         if (_player != null) Capture(_player, Current);
+        BeforeSave?.Invoke(Current);
         Stash.Capture(Current);
         Current.playSeconds = _playSeconds;
         Current.worldSeed = worldSeed;

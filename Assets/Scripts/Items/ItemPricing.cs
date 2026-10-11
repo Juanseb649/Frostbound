@@ -13,6 +13,7 @@ public static class ItemPricing
         float v;
         if (it.IsWeapon) v = 4f + s.BaseDamage * 2.2f;
         else if (it.IsRune) v = 30f;
+        else if (it.townPortal) v = 15f;
         else if (it.IsConsumable) v = 3f + it.heal * 0.12f + it.restoreMana * 0.12f;
         else if (it.IsEquippable) v = 6f + it.armor * 3f + it.StatBonus.Total * 4f;
         else v = 2f;
@@ -49,5 +50,20 @@ public static class ItemPricing
             case ItemRarity.Epic: return 2.2f;
             default: return 1f;
         }
+    }
+
+    // Lo que cobra la herrera por dejar un objeto como nuevo: según cuánto le falta, su nivel y las runas grabadas.
+    public static int RepairCost(ItemStack s)
+    {
+        if (s == null || s.item == null || !s.item.HasDurability) return 0;
+        s.EnsureInstance();
+        float missing = 1f - s.Durability01;
+        if (missing <= 0.0001f) return 0;
+        int level = Mathf.Max(1, Mathf.Max(s.itemLevel, s.item.requiredLevel));
+        int runes = s.runes != null ? s.runes.Count : 0;
+        float full = 12f + 6f * level + 20f * runes;
+        full *= s.quality >= LootQuality.Rare ? 1.5f : s.quality == LootQuality.Magic ? 1.2f : 1f;
+        if (s.IsBroken) full *= 1.25f;
+        return Mathf.Max(1, Mathf.CeilToInt(missing * full));
     }
 }

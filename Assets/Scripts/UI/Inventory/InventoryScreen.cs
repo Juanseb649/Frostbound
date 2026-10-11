@@ -6,14 +6,18 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-// Pantalla de personaje e inventario (I o C). Tres columnas:
-// atributos (reparto de puntos) · equipo por piezas + detalle del objeto · mochila con filtros.
+// Ventana del héroe por pestañas, como en Diablo II: Personaje (C) con nivel, atributos y habilidad,
+// Equipo con las piezas puestas y su resumen, e Inventario (I) con la mochila. Tab cambia de pestaña.
+// Usa la tipografía y los colores del menú principal (FrostUI).
 public class InventoryScreen : MonoBehaviour
 {
     public UISkin skin;
     public Equipment player;
 
     public bool IsOpen { get; private set; }
+
+    public enum Tab { Character, Equipment, Inventory }
+    public Tab Current { get; private set; } = Tab.Inventory;
 
     private enum Filter { All, Armor, Weapons, Consumables, Other }
 
@@ -56,8 +60,19 @@ public class InventoryScreen : MonoBehaviour
     private ItemSlotView _hovered;
     private bool _confirmDiscard;
 
-    private const float WindowW = 1392f;
-    private const float WindowH = 844f;
+    // Pestañas
+    private readonly List<(Tab tab, FrostButton button)> _tabButtons = new List<(Tab, FrostButton)>();
+    private readonly Dictionary<Tab, List<RectTransform>> _pages = new Dictionary<Tab, List<RectTransform>>();
+    private RectTransform _detailPanel;
+    private TextMeshProUGUI _kicker;
+    private Image _abilityIcon;
+    private TextMeshProUGUI _abilityName, _abilityText, _abilityStats, _journeyValues, _summaryValues, _summarySets, _durability, _purseCoins, _purseInfo;
+
+    private TMP_FontAsset DisplayFont => FrostUI.Display != null ? FrostUI.Display : DisplayFont;
+
+    private const float WindowW = 988f;
+    private const float WindowH = 910f;
+    private const float Top = 152f;
 
     void Start()
     {
@@ -68,6 +83,7 @@ public class InventoryScreen : MonoBehaviour
             enabled = false;
             return;
         }
+        _home = player;
         _stats = player.Stats;
         _inventory = player.Inventory;
         Build();
@@ -75,6 +91,46 @@ public class InventoryScreen : MonoBehaviour
         _inventory.Changed += MarkDirty;
         player.Changed += MarkDirty;
         SetOpen(false);
+    }
+
+    // Co-op: la misma ventana sirve al jugador 2 (la abre con SELECT en su mando).
+    private Equipment _home;
+    private int _openedFrame = -1;
+    public int ClosedFrame { get; private set; } = -1;
+    public Equipment Owner => player;
+
+    public void OpenFor(Equipment who, Tab tab = Tab.Inventory)
+    {
+        if (who == null) return;
+        if (IsOpen) SetOpen(false);
+        Bind(who);
+        Current = tab;
+        SetOpen(true);
+        _openedFrame = Time.frameCount;
+    }
+
+    private void Bind(Equipment who)
+    {
+        if (who == null || who == player) return;
+        if (_stats != null) _stats.StatsChanged -= MarkDirty;
+        if (_inventory != null) _inventory.Changed -= MarkDirty;
+        if (player != null) player.Changed -= MarkDirty;
+        player = who;
+        _stats = who.Stats;
+        _inventory = who.Inventory;
+        _stats.StatsChanged += MarkDirty;
+        _inventory.Changed += MarkDirty;
+        player.Changed += MarkDirty;
+        _dirty = true;
+    }
+
+    private Gamepad OwnerPad
+    {
+        get
+        {
+            PlayerController pc = player != null ? player.GetComponent<PlayerController>() : null;
+            return pc != null && pc.playerIndex > 0 ? pc.pad : PlayerController.PadOf(_home != null ? _home : player);
+        }
     }
 
     void OnDestroy()
@@ -90,15 +146,25 @@ public class InventoryScreen : MonoBehaviour
     void Update()
     {
         Keyboard kb = Keyboard.current;
-        bool toggle = kb != null && (kb.iKey.wasPressedThisFrame || kb.cKey.wasPressedThisFrame || kb.tabKey.wasPressedThisFrame);
-        if (Gamepad.current != null && Gamepad.current.selectButton.wasPressedThisFrame) toggle = true;
-        if (IsOpen && toggle && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null
-            && EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null) toggle = false;
+        Gamepad pad = IsOpen ? OwnerPad : PlayerController.PadOf(_home != null ? _home : player);
+        bool blocked = PauseMenu.IsPaused || LoadingScreen.Active
+            || (IsOpen && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null
+                && EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null);
+        if (!blocked)
+        {
+            if (kb != null && kb.cKey.wasPressedThisFrame) Press(Tab.Character);
+            else if (kb != null && kb.iKey.wasPressedThisFrame) Press(Tab.Inventory);
+            else if ((kb != null && kb.tabKey.wasPressedThisFrame) || (IsOpen && pad != null && pad.rightShoulder.wasPressedThisFrame))
+            {
+                if (IsOpen) SetTab((Tab)(((int)Current + 1) % 3));
+                else SetOpen(true);
+            }
+            else if (IsOpen && pad != null && pad.leftShoulder.wasPressedThisFrame) SetTab((Tab)(((int)Current + 2) % 3));
+            else if (pad != null && pad.selectButton.wasPressedThisFrame && Time.frameCount != _openedFrame) SetOpen(!IsOpen);
+            else if (IsOpen && UICancel.Pressed()) SetOpen(false);
+        }
 
-        if (toggle) SetOpen(!IsOpen);
-        else if (IsOpen && UICancel.Pressed()) SetOpen(false);
-
-        if (IsOpen && Gamepad.current != null && Gamepad.current.buttonWest.wasPressedThisFrame && _selected != null) DoAction(_selected);
+        if (IsOpen && pad != null && pad.buttonWest.wasPressedThisFrame && _selected != null) DoAction(_selected);
     }
 
     void LateUpdate()
@@ -108,8 +174,48 @@ public class InventoryScreen : MonoBehaviour
         if (_dirty) Refresh();
     }
 
-    public void Open() => SetOpen(true);
+    public void Open() => OpenTab(Tab.Character);
     public void Close() => SetOpen(false);
+
+    public void OpenTab(Tab tab)
+    {
+        SetTab(tab);
+        SetOpen(true);
+    }
+
+    // La tecla de una pestaña la abre; si ya está abierta en esa pestaña, cierra la ventana.
+    private void Press(Tab tab)
+    {
+        if (IsOpen && Current == tab) SetOpen(false);
+        else OpenTab(tab);
+    }
+
+    public void SetTab(Tab tab)
+    {
+        Current = tab;
+        if (_group == null) return;
+        foreach (var page in _pages)
+            foreach (RectTransform rt in page.Value) rt.gameObject.SetActive(page.Key == tab);
+        bool detail = tab != Tab.Character;
+        _detailPanel.gameObject.SetActive(detail);
+        if (detail) UIFactory.TopLeft(_detailPanel, 32f, tab == Tab.Equipment ? Top + 396f : Top, 380f, 304f);
+        foreach (var b in _tabButtons)
+        {
+            b.button.selectedLook = b.tab == tab;
+            b.button.Refresh();
+        }
+        _kicker.text = (tab == Tab.Character ? "Personaje · C" : tab == Tab.Equipment ? "Equipo · Tab" : "Inventario · I").ToUpperInvariant()
+            + (_home != null && player != _home ? "  ·  JUGADOR 2" : "");
+        _hovered = null;
+        Select(null);
+        _dirty = true;
+        if (IsOpen && EventSystem.current != null)
+        {
+            GameObject first = tab == Tab.Inventory && _cells.Count > 0 ? _cells[0].gameObject
+                : tab == Tab.Equipment ? _equipViews[EquipSlot.Weapon].gameObject : null;
+            EventSystem.current.SetSelectedGameObject(first);
+        }
+    }
 
     private void SetOpen(bool open)
     {
@@ -127,14 +233,16 @@ public class InventoryScreen : MonoBehaviour
         if (open)
         {
             _dirty = true;
+            SetTab(Current);
             Refresh();
-            if (EventSystem.current != null && _cells.Count > 0) EventSystem.current.SetSelectedGameObject(_cells[0].gameObject);
         }
         else
         {
             _hovered = null;
             _confirmDiscard = false;
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+            if (_home != null && player != _home) Bind(_home);
+            ClosedFrame = Time.frameCount;
         }
     }
 
@@ -165,6 +273,74 @@ public class InventoryScreen : MonoBehaviour
         RefreshEquipment();
         RefreshBackpack();
         RefreshDetail();
+        RefreshPages();
+    }
+
+    private string Hex(Color c) => FrostboundUI.RichHex(c);
+
+    // Paneles propios de cada pestaña: habilidad y viaje, resumen del equipo, monedas y cinturón.
+    private void RefreshPages()
+    {
+        PlayerAbility ability = player.GetComponent<PlayerAbility>();
+        if (ability != null)
+        {
+            PlayerAbility.Info info = ability.Data;
+            _abilityIcon.sprite = FrostUI.Icon(info.icon);
+            _abilityName.text = info.name;
+            _abilityText.text = info.description;
+            _abilityStats.text = "<color=" + Hex(FrostUI.Label) + ">Tecla F</color>     <color=#7FB0FF>" + Mathf.CeilToInt(info.cost) + " de maná</color>     "
+                + "<color=" + Hex(FrostUI.Secondary) + ">Recarga " + info.cooldown.ToString("0.#") + " s</color>\n"
+                + "<color=" + Hex(FrostUI.Secondary) + ">Potencia: +" + Mathf.RoundToInt(_stats.Mana * ability.manaScaling * 100f) + "% por tu Maná</color>";
+        }
+
+        GameSession session = GameSession.Instance;
+        SaveData save = session != null ? session.Current : null;
+        string quest = QuestLog.Tracked();
+        string objective = quest.Length > 0 ? QuestLog.Objective(quest, QuestLog.Stage(quest)) : "Ninguna misión pendiente";
+        int minutes = save != null ? Mathf.FloorToInt(save.playSeconds / 60f) : 0;
+        _journeyValues.text =
+            "<color=" + Hex(FrostUI.Secondary) + ">Zona</color>\n" + SceneIds.Title(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) + "\n\n" +
+            "<color=" + Hex(FrostUI.Secondary) + ">Misión</color>\n" + objective + "\n\n" +
+            "<color=" + Hex(FrostUI.Secondary) + ">Hogueras encendidas</color>   " + (save != null ? save.litBonfires.Count : 0) +
+            "     <color=" + Hex(FrostUI.Secondary) + ">Tiempo jugado</color>   " + (minutes >= 60 ? minutes / 60 + " h " + minutes % 60 + " min" : minutes + " min");
+
+        PlayerCombat combat = player.GetComponent<PlayerCombat>();
+        ItemStack weapon = player.MainWeapon;
+        _summaryValues.text =
+            "Daño<pos=230>" + _stats.Damage.ToString("0.#") + "\n" +
+            "Ataques por segundo<pos=230>" + (combat != null ? combat.AttacksPerSecond.ToString("0.00") : "-") + "\n" +
+            "Alcance<pos=230>" + (combat != null ? combat.Range.ToString("0.0") + " m" : "-") + "\n" +
+            "Armadura<pos=230>" + _stats.Armor + "  <color=" + Hex(FrostUI.Secondary) + ">(-" + Mathf.RoundToInt(_stats.DamageReduction * 100f) + "%)</color>\n" +
+            "Arma<pos=230>" + (weapon != null ? weapon.DisplayName : "Sin arma");
+
+        var dur = new StringBuilder();
+        foreach (EquipSlot slot in Equipment.Slots)
+        {
+            ItemStack st = player.GetStack(slot);
+            if (st == null || st.item == null || !st.item.HasDurability) continue;
+            int pct = Mathf.RoundToInt(st.Durability01 * 100f);
+            Color c = st.IsBroken ? FrostboundUI.Negative : pct <= 20 ? FrostUI.Gold : FrostboundUI.Positive;
+            dur.Append(st.item.displayName).Append("<pos=230><color=").Append(Hex(c)).Append(">").Append(st.IsBroken ? "Rota" : pct + "%").Append("</color>\n");
+        }
+        _durability.text = dur.Length > 0 ? dur.ToString() : "<color=" + Hex(FrostUI.Disabled) + ">Nada que se desgaste</color>";
+        _summarySets.text = _setText.text;
+
+        Wallet wallet = player.GetComponent<Wallet>();
+        _purseCoins.text = (wallet != null ? wallet.Coins : 0).ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES")) + " monedas";
+        var belt = new StringBuilder();
+        belt.Append("<color=").Append(Hex(FrostUI.Secondary)).Append(">Espacio</color>   ").Append(_inventory.UsedSlots).Append(" / ").Append(_inventory.Capacity).Append("\n\n");
+        belt.Append("<color=").Append(Hex(FrostUI.Secondary)).Append(">Cinturón</color>\n");
+        PotionBelt pb = player.GetComponent<PotionBelt>();
+        bool any = false;
+        if (pb != null)
+            for (int i = 0; i < PotionBelt.Size; i++)
+            {
+                if (pb.slots[i] == null) continue;
+                any = true;
+                belt.Append(i + 1).Append("  ").Append(pb.slots[i].displayName).Append("  ×").Append(pb.Count(i)).Append("\n");
+            }
+        if (!any) belt.Append("<color=").Append(Hex(FrostUI.Disabled)).Append(">Vacío</color>\n");
+        _purseInfo.text = belt.ToString();
     }
 
     private void RefreshAttributes()
@@ -224,7 +400,7 @@ public class InventoryScreen : MonoBehaviour
             int n = player.PiecesEquipped(set);
             if (n < 2) continue;
             if (sb.Length > 0) sb.Append("\n");
-            sb.Append("<color=").Append(FrostboundUI.RichHex(FrostboundUI.Gold)).Append(">").Append(set.displayName)
+            sb.Append("<color=").Append(FrostboundUI.RichHex(FrostUI.Gold)).Append(">").Append(set.displayName)
               .Append(" ").Append(n).Append("/").Append(set.PieceCount).Append("</color>");
             foreach (ArmorSet.Bonus b in set.bonuses)
                 if (n >= b.piecesRequired) sb.Append("  ·  ").Append(ArmorSet.Describe(b));
@@ -235,7 +411,8 @@ public class InventoryScreen : MonoBehaviour
     private void RefreshBackpack()
     {
         int capacity = _inventory.Capacity;
-        while (_cells.Count < capacity) _cells.Add(CreateCell(_cells.Count));
+        if (_grid.gameObject.activeInHierarchy) while (_cells.Count < capacity) _cells.Add(CreateCell(_cells.Count));
+        if (_cells.Count < capacity) capacity = _cells.Count;
 
         int shown = 0;
         for (int i = 0; i < capacity; i++)
@@ -260,7 +437,7 @@ public class InventoryScreen : MonoBehaviour
         {
             bool on = tab.filter == _filter;
             tab.fill.color = on ? FrostboundUI.SurfaceSelected : FrostboundUI.Surface;
-            tab.border.GetComponent<UIButtonFx>().normalBorder = on ? FrostboundUI.Ice : FrostboundUI.Border;
+            tab.border.GetComponent<UIButtonFx>().normalBorder = on ? FrostboundUI.Ice : FrostUI.BorderDim;
             tab.label.color = on ? FrostboundUI.Ice : FrostboundUI.Muted;
         }
 
@@ -349,7 +526,7 @@ public class InventoryScreen : MonoBehaviour
         string pos = FrostboundUI.RichHex(FrostboundUI.Positive);
         string neg = FrostboundUI.RichHex(FrostboundUI.Negative);
         string muted = FrostboundUI.RichHex(FrostboundUI.Muted);
-        string gold = FrostboundUI.RichHex(FrostboundUI.Gold);
+        string gold = FrostboundUI.RichHex(FrostUI.Gold);
 
         if (item.IsRune)
         {
@@ -583,37 +760,112 @@ public class InventoryScreen : MonoBehaviour
         _group = gameObject.GetComponent<CanvasGroup>();
         if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
 
-        Image dim = UIFactory.Img(root, "Dim", null, FrostboundUI.Dim);
+        Image dim = UIFactory.Img(root, "Dim", null, new Color(0.01f, 0.02f, 0.05f, 0.78f));
         UIFactory.Stretch(dim.rectTransform);
         dim.raycastTarget = true;
 
         _window = UIFactory.Node(root, "Window");
         _window.anchorMin = _window.anchorMax = _window.pivot = new Vector2(0.5f, 0.5f);
         _window.sizeDelta = new Vector2(WindowW, WindowH);
+        Image frame = FrostUI.Panel(_window, "Marco", out _, 20f);
+        FrostUI.Stretch(frame.rectTransform);
+        frame.raycastTarget = true;
 
-        TextMeshProUGUI kicker = UIFactory.Text(_window, "Kicker", "PERSONAJE  ·  INVENTARIO", skin.nunito800, 13f, FrostboundUI.Gold, TextAlignmentOptions.TopLeft, 5f);
-        UIFactory.TopLeft(kicker.rectTransform, 32f, 12f, 600f, 18f);
-        _heroName = UIFactory.Text(_window, "HeroName", "", skin.cinzel800, 32f, FrostboundUI.Title, TextAlignmentOptions.TopLeft, 3f);
-        UIFactory.TopLeft(_heroName.rectTransform, 32f, 32f, 900f, 44f);
+        _kicker = FrostUI.Kicker(_window, "Kicker", "", 16f, FrostUI.Ice);
+        UIFactory.TopLeft(_kicker.rectTransform, 34f, 20f, 600f, 22f);
+        _heroName = FrostUI.Title(_window, "HeroName", "", 46f, TextAlignmentOptions.MidlineLeft, 0.22f);
+        UIFactory.TopLeft(_heroName.rectTransform, 32f, 40f, 700f, 58f);
 
-        Button close = UIFactory.FramedButton(_window, "BtnClose", skin, skin.round10, "Cerrar  ·  Esc", 14f, FrostboundUI.Surface, FrostboundUI.Border, FrostboundUI.Text, out _, out _);
-        UIFactory.TopLeft((RectTransform)close.transform, WindowW - 32f - 170f, 22f, 170f, 44f);
-        close.onClick.AddListener(Close);
+        FrostButton close = FrostButton.Create(_window, "BtnClose", "Cerrar · Esc", new Vector2(190f, 50f), FrostButton.Style.Normal, 20f);
+        UIFactory.TopLeft((RectTransform)close.transform, WindowW - 32f - 190f, 30f, 190f, 50f);
+        close.button.onClick.AddListener(Close);
 
-        TextMeshProUGUI help = UIFactory.Text(_window, "Help",
-            "Clic: seleccionar   ·   Clic otra vez, doble clic o clic derecho: equipar / usar   ·   Mayús + «+»: repartir 5 puntos   ·   Mando: A seleccionar, X acción",
-            skin.nunito700, 13f, FrostboundUI.Version);
-        UIFactory.TopLeft(help.rectTransform, 32f, 806f, 1328f, 20f);
+        var tabs = new (Tab, string)[] { (Tab.Character, "Personaje"), (Tab.Equipment, "Equipo"), (Tab.Inventory, "Inventario") };
+        for (int i = 0; i < tabs.Length; i++)
+        {
+            Tab t = tabs[i].Item1;
+            FrostButton b = FrostButton.Create(_window, "Pestana_" + t, tabs[i].Item2, new Vector2(300f, 54f), FrostButton.Style.Normal, 26f);
+            UIFactory.TopLeft((RectTransform)b.transform, 32f + i * 312f, 88f, 300f, 54f);
+            b.button.onClick.AddListener(() => SetTab(t));
+            _tabButtons.Add((t, b));
+            _pages[t] = new List<RectTransform>();
+        }
+
+        TextMeshProUGUI help = FrostUI.Text(_window, "Help",
+            "C personaje  ·  I inventario  ·  Tab cambia de pestaña  ·  Clic otra vez, doble clic o clic derecho: equipar / usar  ·  Mayús + «+»: 5 puntos",
+            13f, FrostUI.Disabled, TextAlignmentOptions.Center, FrostUI.BodyLight);
+        UIFactory.TopLeft(help.rectTransform, 32f, WindowH - 34f, WindowW - 64f, 20f);
 
         BuildAttributes();
+        BuildAbilityPage();
         BuildEquipment();
+        BuildSummary();
         BuildDetail();
+        BuildPurse();
         BuildBackpack();
+        while (_cells.Count < _inventory.Capacity) _cells.Add(CreateCell(_cells.Count));
+        SetTab(Current);
+    }
+
+    private void BuildAbilityPage()
+    {
+        RectTransform p = Panel("HabilidadPanel", 436f, Top, 520f, 330f, "HABILIDAD DE CLASE");
+        _pages[Tab.Character].Add(p);
+        Image ring = UIFactory.Frame(p, "Aro", skin.round16, FrostUI.PanelSolid, FrostUI.Border, out _);
+        UIFactory.TopLeft(ring.rectTransform, 24f, 56f, 92f, 92f);
+        _abilityIcon = UIFactory.Img(ring.transform, "Icono", null, FrostUI.Ice);
+        UIFactory.Stretch(_abilityIcon.rectTransform, 16f);
+        _abilityName = FrostUI.Title(p, "Nombre", "", 34f, TextAlignmentOptions.MidlineLeft, 0.2f);
+        UIFactory.TopLeft(_abilityName.rectTransform, 134f, 60f, 370f, 44f);
+        _abilityText = FrostUI.Text(p, "Descripcion", "", 17f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.BodyLight);
+        _abilityText.textWrappingMode = TextWrappingModes.Normal;
+        UIFactory.TopLeft(_abilityText.rectTransform, 134f, 106f, 362f, 90f);
+        _abilityStats = FrostUI.Text(p, "Datos", "", 15f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.Body);
+        _abilityStats.textWrappingMode = TextWrappingModes.Normal;
+        UIFactory.TopLeft(_abilityStats.rectTransform, 24f, 220f, 472f, 80f);
+        UIFactory.SetLineHeight(_abilityStats, 1.6f);
+
+        RectTransform j = Panel("ViajePanel", 436f, Top + 346f, 520f, 354f, "VIAJE");
+        _pages[Tab.Character].Add(j);
+        _journeyValues = FrostUI.Text(j, "Valores", "", 17f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.Body);
+        _journeyValues.textWrappingMode = TextWrappingModes.Normal;
+        UIFactory.TopLeft(_journeyValues.rectTransform, 24f, 54f, 472f, 280f);
+        UIFactory.SetLineHeight(_journeyValues, 1.35f);
+    }
+
+    private void BuildSummary()
+    {
+        RectTransform p = Panel("ResumenPanel", 436f, Top, 520f, 700f, "RESUMEN DEL EQUIPO");
+        _pages[Tab.Equipment].Add(p);
+        _summaryValues = FrostUI.Text(p, "Valores", "", 18f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.Body);
+        UIFactory.TopLeft(_summaryValues.rectTransform, 24f, 56f, 472f, 210f);
+        _summaryValues.textWrappingMode = TextWrappingModes.Normal;
+        UIFactory.SetLineHeight(_summaryValues, 1.6f);
+        SectionLabel(p, "DURABILIDAD", 24f, 284f);
+        _durability = FrostUI.Text(p, "Durabilidad", "", 16f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.Body);
+        UIFactory.TopLeft(_durability.rectTransform, 24f, 312f, 472f, 200f);
+        UIFactory.SetLineHeight(_durability, 1.5f);
+        SectionLabel(p, "BONOS DE SET", 24f, 530f);
+        _summarySets = FrostUI.Text(p, "Sets", "", 15f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.Body);
+        _summarySets.textWrappingMode = TextWrappingModes.Normal;
+        UIFactory.TopLeft(_summarySets.rectTransform, 24f, 558f, 472f, 120f);
+    }
+
+    private void BuildPurse()
+    {
+        RectTransform p = Panel("BolsaPanel", 32f, Top + 320f, 380f, 380f, "BOLSA");
+        _pages[Tab.Inventory].Add(p);
+        _purseCoins = FrostUI.Text(p, "Monedas", "", 30f, FrostUI.Gold, TextAlignmentOptions.MidlineLeft, DisplayFont);
+        UIFactory.TopLeft(_purseCoins.rectTransform, 24f, 54f, 332f, 44f);
+        _purseInfo = FrostUI.Text(p, "Info", "", 16f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.Body);
+        _purseInfo.textWrappingMode = TextWrappingModes.Normal;
+        UIFactory.TopLeft(_purseInfo.rectTransform, 24f, 112f, 332f, 250f);
+        UIFactory.SetLineHeight(_purseInfo, 1.45f);
     }
 
     private RectTransform Panel(string name, float x, float y, float w, float h, string title)
     {
-        Image frame = UIFactory.Frame(_window, name, skin.round20, FrostboundUI.Surface, FrostboundUI.Border, out _);
+        Image frame = FrostUI.Panel(_window, name, out _, 16f, FrostUI.BorderDim, FrostUI.Hex("#08101D"));
         frame.raycastTarget = true;
         UIFactory.TopLeft(frame.rectTransform, x, y, w, h);
         if (!string.IsNullOrEmpty(title)) SectionLabel(frame.rectTransform, title, 24f, 20f);
@@ -622,23 +874,24 @@ public class InventoryScreen : MonoBehaviour
 
     private TextMeshProUGUI SectionLabel(RectTransform parent, string text, float x, float y)
     {
-        TextMeshProUGUI t = UIFactory.Text(parent, "Label_" + text, text, skin.nunito800, 12f, FrostboundUI.Muted, TextAlignmentOptions.TopLeft, 4f);
-        UIFactory.TopLeft(t.rectTransform, x, y, 250f, 18f);
+        TextMeshProUGUI t = FrostUI.Kicker(parent, "Label_" + text, text, 14f, FrostUI.Label);
+        UIFactory.TopLeft(t.rectTransform, x, y, 300f, 20f);
         return t;
     }
 
     private void BuildAttributes()
     {
-        RectTransform p = Panel("AttributesPanel", 32f, 84f, 380f, 700f, null);
+        RectTransform p = Panel("AttributesPanel", 32f, Top, 380f, 700f, null);
+        _pages[Tab.Character].Add(p);
 
-        Image badge = UIFactory.Frame(p, "LevelBadge", skin.circle, FrostboundUI.Bg, FrostboundUI.Gold, out _);
+        Image badge = UIFactory.Frame(p, "LevelBadge", skin.circle, FrostboundUI.Bg, FrostUI.Gold, out _);
         UIFactory.TopLeft(badge.rectTransform, 24f, 24f, 64f, 64f);
-        _levelText = UIFactory.Text(badge.transform, "Level", "1", skin.cinzel800, 26f, FrostboundUI.Title, TextAlignmentOptions.Center);
+        _levelText = UIFactory.Text(badge.transform, "Level", "1", DisplayFont, 26f, FrostboundUI.Title, TextAlignmentOptions.Center);
         UIFactory.Stretch(_levelText.rectTransform);
-        TextMeshProUGUI nv = UIFactory.Text(badge.transform, "Caption", "NIVEL", skin.nunito800, 8f, FrostboundUI.Gold, TextAlignmentOptions.Center, 2f);
+        TextMeshProUGUI nv = UIFactory.Text(badge.transform, "Caption", "NIVEL", skin.nunito800, 8f, FrostUI.Gold, TextAlignmentOptions.Center, 2f);
         UIFactory.TopLeft(nv.rectTransform, 0f, 8f, 64f, 10f);
 
-        _className = UIFactory.Text(p, "ClassName", "", skin.cinzel800, 17f, FrostboundUI.Title);
+        _className = UIFactory.Text(p, "ClassName", "", DisplayFont, 17f, FrostboundUI.Title);
         UIFactory.TopLeft(_className.rectTransform, 104f, 30f, 252f, 24f);
         _className.overflowMode = TextOverflowModes.Ellipsis;
         _xpText = UIFactory.Text(p, "Xp", "", skin.nunito700, 13f, FrostboundUI.Muted);
@@ -647,7 +900,7 @@ public class InventoryScreen : MonoBehaviour
         UIFactory.TopLeft(xp, 24f, 104f, 332f, 10f);
 
         SectionLabel(p, "ATRIBUTOS", 24f, 138f);
-        Image chip = UIFactory.Frame(p, "PointsChip", skin.pill, FrostboundUI.ChipGoldBg, FrostboundUI.Border, out _pointsFill);
+        Image chip = UIFactory.Frame(p, "PointsChip", skin.pill, FrostboundUI.ChipGoldBg, FrostUI.BorderDim, out _pointsFill);
         UIFactory.TopLeft(chip.rectTransform, 356f - 132f, 132f, 132f, 28f);
         chip.color = new Color(0f, 0f, 0f, 0f);
         _pointsText = UIFactory.Text(chip.transform, "Label", "", skin.nunito800, 12f, FrostboundUI.ChipGoldText, TextAlignmentOptions.Center, 1.5f);
@@ -657,7 +910,7 @@ public class InventoryScreen : MonoBehaviour
         {
             StatType type = StatBlock.All[i];
             float y = 172f + i * 66f;
-            Image row = UIFactory.Frame(p, "Row_" + type, skin.round12, FrostboundUI.Bg, FrostboundUI.Border, out _);
+            Image row = UIFactory.Frame(p, "Row_" + type, skin.round12, FrostboundUI.Bg, FrostUI.BorderDim, out _);
             UIFactory.TopLeft(row.rectTransform, 24f, y, 332f, 58f);
 
             Image icon = UIFactory.Img(row.transform, "Icon", skin.StatIcon(type), Color.white);
@@ -668,17 +921,17 @@ public class InventoryScreen : MonoBehaviour
             UIFactory.TopLeft(effect.rectTransform, 54f, 32f, 180f, 16f);
 
             var r = new AttrRow();
-            r.value = UIFactory.Text(row.transform, "Value", "", skin.cinzel800, 22f, FrostboundUI.Title, TextAlignmentOptions.Right);
+            r.value = UIFactory.Text(row.transform, "Value", "", DisplayFont, 22f, FrostboundUI.Title, TextAlignmentOptions.Right);
             UIFactory.TopLeft(r.value.rectTransform, 190f, 12f, 74f, 34f);
 
-            Image plus = UIFactory.Frame(row.transform, "BtnPlus", skin.round10, FrostboundUI.Ice, FrostboundUI.Border, out r.plusFill);
+            Image plus = UIFactory.Frame(row.transform, "BtnPlus", skin.round10, FrostboundUI.Ice, FrostUI.BorderDim, out r.plusFill);
             UIFactory.TopLeft(plus.rectTransform, 332f - 12f - 40f, 9f, 40f, 40f);
             r.plus = UIFactory.MakeButton(plus);
             var fx = plus.gameObject.AddComponent<UIButtonFx>();
             fx.border = plus;
-            fx.normalBorder = FrostboundUI.Border;
+            fx.normalBorder = FrostUI.BorderDim;
             fx.activeBorder = FrostboundUI.White;
-            r.plusLabel = UIFactory.Text(plus.transform, "Label", "+", skin.cinzel800, 24f, FrostboundUI.Bg, TextAlignmentOptions.Center);
+            r.plusLabel = UIFactory.Text(plus.transform, "Label", "+", DisplayFont, 24f, FrostboundUI.Bg, TextAlignmentOptions.Center);
             UIFactory.Stretch(r.plusLabel.rectTransform);
             r.plus.onClick.AddListener(() => OnPlus(type));
             _rows[i] = r;
@@ -695,7 +948,8 @@ public class InventoryScreen : MonoBehaviour
 
     private void BuildEquipment()
     {
-        RectTransform p = Panel("EquipmentPanel", 436f, 84f, 380f, 380f, "EQUIPO");
+        RectTransform p = Panel("EquipmentPanel", 32f, Top, 380f, 380f, "EQUIPO");
+        _pages[Tab.Equipment].Add(p);
         AddEquipSlot(p, EquipSlot.Head, 146f, 52f);
         AddEquipSlot(p, EquipSlot.Amulet, 262f, 52f);
         AddEquipSlot(p, EquipSlot.Weapon, 30f, 148f);
@@ -722,13 +976,14 @@ public class InventoryScreen : MonoBehaviour
 
     private void BuildDetail()
     {
-        RectTransform p = Panel("DetailPanel", 436f, 480f, 380f, 304f, null);
+        RectTransform p = Panel("DetailPanel", 32f, Top, 380f, 304f, null);
+        _detailPanel = p;
 
         _dEmpty = UIFactory.Text(p, "Empty", "Selecciona un objeto para ver sus detalles.", skin.nunito700, 14f, FrostboundUI.Version, TextAlignmentOptions.Center);
         UIFactory.Stretch(_dEmpty.rectTransform, 24f);
         _dEmpty.textWrappingMode = TextWrappingModes.Normal;
 
-        _dName = UIFactory.Text(p, "Name", "", skin.cinzel800, 20f, FrostboundUI.Title);
+        _dName = UIFactory.Text(p, "Name", "", DisplayFont, 20f, FrostboundUI.Title);
         UIFactory.TopLeft(_dName.rectTransform, 22f, 18f, 336f, 28f);
         _dName.overflowMode = TextOverflowModes.Ellipsis;
         _dMeta = UIFactory.Text(p, "Meta", "", skin.nunito700, 13f, FrostboundUI.Muted);
@@ -745,16 +1000,17 @@ public class InventoryScreen : MonoBehaviour
         _dPrimary = UIFactory.FramedButton(p, "BtnPrimary", skin, skin.round12, "Equipar", 15f, FrostboundUI.Ice, FrostboundUI.White, FrostboundUI.Bg, out _dPrimaryLabel, out _dPrimaryFill);
         UIFactory.TopLeft((RectTransform)_dPrimary.transform, 22f, 242f, 196f, 44f);
         _dPrimary.onClick.AddListener(OnPrimary);
-        _dSecondary = UIFactory.FramedButton(p, "BtnSecondary", skin, skin.round12, "Tirar", 14f, FrostboundUI.Surface, FrostboundUI.Border, FrostboundUI.Text, out _dSecondaryLabel, out _);
+        _dSecondary = UIFactory.FramedButton(p, "BtnSecondary", skin, skin.round12, "Tirar", 14f, FrostUI.PanelSolid, FrostUI.BorderDim, FrostboundUI.Text, out _dSecondaryLabel, out _);
         UIFactory.TopLeft((RectTransform)_dSecondary.transform, 230f, 242f, 128f, 44f);
         _dSecondary.onClick.AddListener(OnSecondary);
     }
 
     private void BuildBackpack()
     {
-        RectTransform p = Panel("BackpackPanel", 840f, 84f, 520f, 700f, "MOCHILA");
+        RectTransform p = Panel("BackpackPanel", 436f, Top, 520f, 700f, "MOCHILA");
+        _pages[Tab.Inventory].Add(p);
 
-        Button sort = UIFactory.FramedButton(p, "BtnSort", skin, skin.round10, "Ordenar", 12f, FrostboundUI.Surface, FrostboundUI.Border, FrostboundUI.Text, out _, out _);
+        Button sort = UIFactory.FramedButton(p, "BtnSort", skin, skin.round10, "Ordenar", 12f, FrostUI.PanelSolid, FrostUI.BorderDim, FrostboundUI.Text, out _, out _);
         UIFactory.TopLeft((RectTransform)sort.transform, 520f - 24f - 112f, 14f, 112f, 34f);
         sort.onClick.AddListener(() => { _inventory.Sort(); Select(null); });
         _countText = UIFactory.Text(p, "Count", "", skin.nunito800, 14f, FrostboundUI.Muted, TextAlignmentOptions.Right);
@@ -764,7 +1020,7 @@ public class InventoryScreen : MonoBehaviour
         for (int i = 0; i < tabs.Length; i++)
         {
             Filter f = tabs[i].Item1;
-            Button b = UIFactory.FramedButton(p, "Tab_" + f, skin, skin.pill, tabs[i].Item2, 12f, FrostboundUI.Surface, FrostboundUI.Border, FrostboundUI.Muted, out TextMeshProUGUI label, out Image fill);
+            Button b = UIFactory.FramedButton(p, "Tab_" + f, skin, skin.pill, tabs[i].Item2, 12f, FrostUI.PanelSolid, FrostUI.BorderDim, FrostboundUI.Muted, out TextMeshProUGUI label, out Image fill);
             UIFactory.TopLeft((RectTransform)b.transform, 24f + i * 96f, 60f, 88f, 32f);
             b.onClick.AddListener(() => SetFilter(f));
             _tabs.Add((f, (Image)b.targetGraphic, fill, label));
@@ -811,14 +1067,14 @@ public class InventoryScreen : MonoBehaviour
 
     private ItemSlotView CreateSlotView(Transform parent, string name, float size, float iconSize)
     {
-        Image frame = UIFactory.Frame(parent, name, skin.round12, FrostboundUI.Surface, FrostboundUI.Border, out Image fill);
+        Image frame = UIFactory.Frame(parent, name, skin.round12, FrostUI.PanelSolid, FrostUI.BorderDim, out Image fill);
         ((RectTransform)frame.transform).sizeDelta = new Vector2(size, size);
         var v = frame.gameObject.AddComponent<ItemSlotView>();
         v.border = frame;
         v.fill = fill;
         v.button = UIFactory.MakeButton(frame);
 
-        v.placeholder = UIFactory.Img(frame.transform, "Placeholder", null, new Color(FrostboundUI.Border.r, FrostboundUI.Border.g, FrostboundUI.Border.b, 0.9f));
+        v.placeholder = UIFactory.Img(frame.transform, "Placeholder", null, new Color(FrostUI.BorderDim.r, FrostUI.BorderDim.g, FrostUI.BorderDim.b, 0.9f));
         UIFactory.Anchored(v.placeholder.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), new Vector2(iconSize * 0.8f, iconSize * 0.8f)).pivot = new Vector2(0.5f, 0.5f);
         v.placeholder.preserveAspect = true;
 

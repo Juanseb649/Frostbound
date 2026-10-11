@@ -85,12 +85,39 @@ public class NPCInteractable : MonoBehaviour
         }
         else if (option == NPCOption.Reparar)
         {
-            Equipment player = FindAnyObjectByType<Equipment>();
-            int n = player != null ? player.RepairAll() : 0;
-            string text = n > 0 ? "¡Listo! " + (n == 1 ? "Tu arma quedó" : "Tus " + n + " armas quedaron") + " como nuevas." : "Tus armas están en perfecto estado.";
+            Equipment player = Customer();
+            int cost = player != null ? player.RepairCostAll() : 0;
+            Wallet wallet = player != null ? Wallet.Of(player.gameObject) : null;
+            string text;
+            if (cost <= 0) text = "Tus armas están en perfecto estado.";
+            else if (wallet == null || !wallet.Spend(cost))
+                text = "Eso son " + cost + " monedas de trabajo. Vuelve cuando las tengas" + (wallet != null ? " (te faltan " + (cost - wallet.Coins) + ")." : ".");
+            else
+            {
+                int n = player.RepairAll();
+                text = "¡Listo! " + (n == 1 ? "Tu arma quedó" : "Tus " + n + " armas quedaron") + " como nuevas. Son " + cost + " monedas.";
+                if (GameSession.Instance != null) GameSession.Instance.SaveNow();
+            }
             TalkUntil = Time.time + 3.5f;
             hud.Say(transform, headHeight * transform.lossyScale.y, text, 3.5f);
         }
+    }
+
+    // El héroe que habla con el NPC (el más cercano, por si juegan dos).
+    public Equipment Customer()
+    {
+        PlayerController p = Players.Nearest(transform.position);
+        Equipment eq = p != null ? p.GetComponent<Equipment>() : null;
+        return eq != null ? eq : FindAnyObjectByType<Equipment>();
+    }
+
+    // Texto del botón; "Reparar" muestra lo que cuesta.
+    public string LabelFor(NPCOption o)
+    {
+        if (o != NPCOption.Reparar) return Label(o);
+        Equipment eq = Customer();
+        int cost = eq != null ? eq.RepairCostAll() : 0;
+        return cost > 0 ? "Reparar (" + cost + " monedas)" : "Reparar";
     }
 
     public static string Label(NPCOption o)

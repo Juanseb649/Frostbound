@@ -38,9 +38,28 @@ public class EnemyBrain : MonoBehaviour
 
     private static readonly List<EnemyBrain> Active = new List<EnemyBrain>();
     private static int _meleeAttackers;
-    private static Transform _player;
-    private static CharacterStats _playerStats;
-    private static PlayerDodge _playerDodge;
+    // Caídos recientes: los chamanes corruptos pueden devolverlos a la vida.
+    public class Corpse
+    {
+        public EnemyDefinition def;
+        public int level;
+        public Vector3 position;
+        public Color plumage;
+        public EnemyCamp camp;
+        public float time;
+        public GameObject body;
+    }
+
+    public static readonly List<Corpse> Corpses = new List<Corpse>();
+
+    // Héroe al que persigue este corrupto: el más cercano de los vivos (co-op), revisado cada medio segundo.
+    private Transform _player;
+    private SnowGolem _golem;
+    private Transform TargetT => _golem != null ? _golem.transform : _player;
+    private Vector3 TargetPos => TargetT.position;
+    private CharacterStats _playerStats;
+    private PlayerDodge _playerDodge;
+    private float _retargetAt;
 
     private NavMeshAgent _agent;
     private Damageable _dmg;
@@ -62,7 +81,17 @@ public class EnemyBrain : MonoBehaviour
 
     public static IReadOnlyList<EnemyBrain> All => Active;
     public Color Plumage => _plumage;
-    public static Transform Player => FindPlayer() ? _player : null;
+    public static Transform Player
+    {
+        get
+        {
+            GameObject p = Players.PrimaryObject;
+            return p != null ? p.transform : null;
+        }
+    }
+
+    // El héroe que persigue ahora mismo (puede ser el jugador 2).
+    public Transform Target => FindPlayer() ? _player : null;
 
     // Teletransporte (el ninja maldito aparece a la espalda del héroe).
     public void Blink(Vector3 to)
@@ -98,6 +127,7 @@ public class EnemyBrain : MonoBehaviour
         _agent.angularSpeed = 720f;
         _agent.acceleration = 24f;
 
+        if (def.id == EnemyCamp.ShamanId && GetComponent<ShamanCaster>() == null) gameObject.AddComponent<ShamanCaster>();
         PenguinOutfit outfit = GetComponentInChildren<PenguinOutfit>();
         if (outfit != null && def.gear != null)
         {
@@ -128,9 +158,27 @@ public class EnemyBrain : MonoBehaviour
 
     private void EquipBow()
     {
-        if (_rig == null) return;
         ItemDefinition bow = GameDatabase.Instance != null && GameDatabase.Instance.items != null ? GameDatabase.Instance.items.Find("bow") : null;
-        if (bow == null || bow.weaponModel == null) return;
+        EquipWeapon(bow);
+    }
+
+    // Pone un arma de verdad en la aleta (arco con cuerda y flecha, espada, báculo...). La usan los jefes que cambian de arma.
+    public void EquipWeapon(ItemDefinition item)
+    {
+        if (_rig == null || item == null || item.weaponModel == null) return;
+        bool isBow = item.WeaponInfo.grip == WeaponGrip.Bow;
+        if (!isBow)
+        {
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+                if (r.name.Contains("Weapon_L") || r.name.Contains("Weapon_R")) r.enabled = false;
+            WeaponHolder h = _rig.GetComponent<WeaponHolder>();
+            if (h == null) h = _rig.gameObject.AddComponent<WeaponHolder>();
+            h.Show(item, null);
+            _archery = null;
+            _arrowModel = null;
+            return;
+        }
+        ItemDefinition bow = item;
         foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
             if (r.name.Contains("Weapon_L") || r.name.Contains("Weapon_R")) r.enabled = false;
         WeaponHolder holder = _rig.GetComponent<WeaponHolder>();
@@ -182,18 +230,22 @@ public class EnemyBrain : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        Corpses.Clear();
         Active.Clear();
         _meleeAttackers = 0;
-        _player = null;
-        _playerStats = null;
-        _playerDodge = null;
     }
 
-    private static bool FindPlayer()
+    private bool FindPlayer()
     {
-        if (_player != null) return true;
-        GameObject p = GameObject.Find("Player");
+        if (_player != null && Time.time < _retargetAt) return true;
+        _retargetAt = Time.time + 0.5f;
+        // Mientras ataca no cambia de víctima salvo que caiga.
+        bool busy = _player != null && _playerStats != null && !_playerStats.IsDead && Current == State.Windup;
+        if (busy) return true;
+        PlayerController pc = Players.Nearest(transform.position);
+        GameObject p = pc != null ? pc.gameObject : (_player != null ? _player.gameObject : Players.PrimaryObject);
         if (p == null) return false;
+        if (_player == p.transform) return true;
         _player = p.transform;
         _playerStats = p.GetComponent<CharacterStats>();
         _playerDodge = p.GetComponent<PlayerDodge>();
@@ -219,10 +271,12 @@ public class EnemyBrain : MonoBehaviour
         _agent.isStopped = _dmg.IsFrozen;
         if (_dmg.IsFrozen) return;
 
-        Vector3 toPlayer = _player.position - transform.position;
+        // Los gólems de nieve del mago atraen a los corruptos que pasan cerca.
+        _golem = SnowGolem.PickFor(transform.position, _player.position, definition.sightRange, _golem);
+        Vector3 toPlayer = TargetPos - transform.position;
         toPlayer.y = 0f;
         float dist = toPlayer.magnitude;
-        bool playerGone = _playerStats == null || _playerStats.IsDead || SafeZone.Contains(_player.position, 1.5f);
+        bool playerGone = _golem == null && (_playerStats == null || _playerStats.IsDead || SafeZone.Contains(_player.position, 1.5f));
 
         switch (Current)
         {
@@ -295,7 +349,7 @@ public class EnemyBrain : MonoBehaviour
         float ring = canAttack ? 1.3f : 3f;
         float angle = Slot * 60f + Time.time * 8f;
         Vector3 offset = Quaternion.Euler(0f, angle, 0f) * Vector3.forward * ring;
-        Vector3 target = dist > 5f ? _player.position : _player.position + offset;
+        Vector3 target = dist > 5f ? TargetPos : TargetPos + offset;
         SetDestination(target);
         if (dist < 2.5f) Face(toPlayer);
     }
@@ -311,7 +365,7 @@ public class EnemyBrain : MonoBehaviour
         }
         if (dist > pref.y || !HasLineOfSight())
         {
-            SetDestination(_player.position);
+            SetDestination(TargetPos);
             return;
         }
         if (dist < pref.x) SetDestination(transform.position - toPlayer.normalized * 1.5f);
@@ -336,9 +390,9 @@ public class EnemyBrain : MonoBehaviour
     private bool HasLineOfSight()
     {
         Vector3 from = transform.position + Vector3.up * 0.7f;
-        Vector3 to = _player.position + Vector3.up * 0.7f;
+        Vector3 to = TargetPos + Vector3.up * 0.7f;
         if (Physics.Linecast(from, to, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore))
-            return hit.transform.IsChildOf(_player) || hit.collider.GetComponentInParent<EnemyBrain>() != null;
+            return hit.transform.IsChildOf(TargetT) || hit.collider.GetComponentInParent<EnemyBrain>() != null;
         return true;
     }
 
@@ -367,7 +421,10 @@ public class EnemyBrain : MonoBehaviour
     {
         if (definition.ranged) Shoot();
         else if (definition.areaRadius > 0f ? dist <= definition.areaRadius : dist <= definition.attackRange + 0.5f)
-            HitPlayer(toPlayer);
+        {
+            if (_golem != null) _golem.Health.TakeHit(new DamageInfo { amount = RollDamage(), type = DamageType.Physical, source = gameObject, direction = toPlayer });
+            else HitPlayer(toPlayer);
+        }
 
         _hitsLeft--;
         if (_hitsLeft > 0)
@@ -444,8 +501,8 @@ public class EnemyBrain : MonoBehaviour
     private void Shoot()
     {
         Vector3 origin = _archery != null && _archery.Ready ? _archery.LaunchPoint : transform.position + Vector3.up * 0.75f + transform.forward * 0.45f;
-        Vector3 aim = _player.position + Vector3.up * 0.7f;
-        Rigidbody rb = _player.GetComponent<Rigidbody>();
+        Vector3 aim = TargetPos + Vector3.up * 0.7f;
+        Rigidbody rb = TargetT.GetComponent<Rigidbody>();
         if (rb != null)
         {
             Vector3 v = rb.linearVelocity;
@@ -520,14 +577,20 @@ public class EnemyBrain : MonoBehaviour
         SetEyes(Color.black);
         foreach (Collider c in GetComponentsInChildren<Collider>()) c.enabled = false;
 
-        if (FindPlayer() && _playerStats != null)
-            _playerStats.AddExperience(Mathf.RoundToInt(definition.ExperienceAt(Level) * (Champion ? 2.5f : 1f)));
+        // En co-op la experiencia es para todos los héroes (cada uno según su nivel).
+        foreach (PlayerController pc in Players.All)
+        {
+            CharacterStats st = pc != null ? pc.Stats : null;
+            if (st == null) continue;
+            st.AddExperience(Mathf.RoundToInt(definition.ExperienceAt(Level) * (Champion ? 2.5f : 1f) * EnemyDefinition.LevelGapFactor(Level, st.level)));
+        }
         if (Camp != null) Camp.OnMemberDied(this);
         else
             foreach (EnemyBrain b in Active)
                 if (b != this && (b.transform.position - transform.position).sqrMagnitude < 36f) b.Frenzy();
 
         Killed?.Invoke(this);
+        if (GetComponent<BossController>() == null) Corpses.Add(new Corpse { def = definition, level = Level, position = transform.position, plumage = _plumage, camp = Camp, time = Time.time, body = gameObject });
         Vector3 center = transform.position + Vector3.up * 0.6f;
         EnemyLoot.Drop(this, center);
         // Estallido de hielo solo si lo mató un arma con runa de hielo; si no, el cuerpo cae con física.

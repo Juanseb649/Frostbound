@@ -29,12 +29,34 @@ public class TradeWindow : MonoBehaviour
     // Existencias de la tienda (se renuevan cuando el héroe sube de nivel).
     private static readonly List<ItemStack> Stock = new List<ItemStack>();
     private static int _stockLevel = -1;
+    private static ShopKind _stockKind;
 
     private const float Cell = 50f, Gap = 4f;
     private const int Cols = 10;
 
-    public static void OpenStash(NPCInteractable npc) => Ensure().Open(Mode.Stash);
-    public static void OpenShop(NPCInteractable npc, bool selling) => Ensure().Open(Mode.Shop);
+    // Tienda del mago: solo pociones y pergaminos. La del mercader añade armas y armaduras.
+    public enum ShopKind { Merchant, Mage }
+    private ShopKind _shop;
+    private string _shopName = "";
+
+    public static ShopKind KindOf(NPCInteractable npc) => npc != null && (npc.role == "Mago" || npc.displayName == "Anciano Pingo") ? ShopKind.Mage : ShopKind.Merchant;
+
+    private NPCInteractable _npc;
+
+    public static void OpenStash(NPCInteractable npc)
+    {
+        TradeWindow w = Ensure();
+        w._npc = npc;
+        w.Open(Mode.Stash);
+    }
+    public static void OpenShop(NPCInteractable npc, bool selling)
+    {
+        TradeWindow w = Ensure();
+        w._shop = KindOf(npc);
+        w._shopName = npc != null ? npc.displayName : "";
+        w._npc = npc;
+        w.Open(Mode.Shop);
+    }
 
     private static TradeWindow Ensure()
     {
@@ -56,7 +78,8 @@ public class TradeWindow : MonoBehaviour
 
     private void Open(Mode mode)
     {
-        _player = FindAnyObjectByType<Equipment>();
+        // Atiende al héroe que está hablando con el NPC (el más cercano, por si juegan dos).
+        _player = _npc != null ? _npc.Customer() : FindAnyObjectByType<Equipment>();
         if (_player == null) return;
         _wallet = Wallet.Of(_player.gameObject);
         _mode = mode;
@@ -71,7 +94,7 @@ public class TradeWindow : MonoBehaviour
         _group.blocksRaycasts = true;
         _group.interactable = true;
         _armed = null;
-        _title.text = mode == Mode.Stash ? "ARCÓN DE LA TABERNA" : "TIENDA DE TICO";
+        _title.text = mode == Mode.Stash ? "ARCÓN DE LA TABERNA" : (_shop == ShopKind.Mage ? "BOTICA DE " : "TIENDA DE ") + (string.IsNullOrEmpty(_shopName) ? "TICO" : _shopName.ToUpperInvariant());
         _leftLabel.text = mode == Mode.Stash ? "ARCÓN  ·  60 CASILLAS" : "A LA VENTA";
         _coinButtons.gameObject.SetActive(mode == Mode.Stash);
         SetInfo("", mode == Mode.Stash
@@ -115,14 +138,17 @@ public class TradeWindow : MonoBehaviour
     {
         CharacterStats stats = _player.Stats;
         int level = stats != null ? stats.level : 1;
-        if (level == _stockLevel && Stock.Count > 0) return;
+        if (level == _stockLevel && _stockKind == _shop && Stock.Count > 0) return;
         _stockLevel = level;
+        _stockKind = _shop;
         Stock.Clear();
         GameDatabase gdb = GameDatabase.Instance;
         ItemDatabase db = gdb != null ? gdb.items : null;
         if (db == null) return;
+        // Pociones de vida y maná y pergaminos de regreso: siempre a la venta, sin límite.
         foreach (ItemDefinition it in db.items)
-            if (it != null && it.IsConsumable && (it.heal > 0f || it.restoreMana > 0f)) Stock.Add(new ItemStack(it, 1));
+            if (it != null && it.IsConsumable && (it.heal > 0f || it.restoreMana > 0f || it.townPortal)) Stock.Add(new ItemStack(it, 1));
+        if (_shop == ShopKind.Mage) return;
         int seed = SeedUtil.Combine(GameSession.Instance != null ? GameSession.Instance.worldSeed : 12345, SeedUtil.FromString("tienda"), level);
         var rng = new DeterministicRng(seed);
         for (int tries = 0; tries < 200 && Stock.Count < 14; tries++)

@@ -7,11 +7,12 @@ public static class LootRoller
 {
     public struct Table
     {
-        public float noDrop, potions, weapons, armor, jewelry, runes;
+        public float noDrop, potions, weapons, armor, jewelry, runes, scrolls;
     }
 
-    public static readonly Table Trooper = new Table { noDrop = 60f, potions = 16f, weapons = 14f, armor = 14f, jewelry = 3f, runes = 1.2f };
-    public static readonly Table Elite = new Table { noDrop = 20f, potions = 14f, weapons = 18f, armor = 18f, jewelry = 5f, runes = 3f };
+    // El equipo es escaso (cada arma o armadura debe sentirse como un hallazgo); pociones y runas son el botín habitual.
+    public static readonly Table Trooper = new Table { noDrop = 52f, potions = 30f, weapons = 4f, armor = 4f, jewelry = 1f, runes = 6f, scrolls = 3f };
+    public static readonly Table Elite = new Table { noDrop = 14f, potions = 32f, weapons = 9f, armor = 9f, jewelry = 3f, runes = 13f, scrolls = 5f };
 
     private struct QualityOdds
     {
@@ -66,14 +67,20 @@ public static class LootRoller
 
     public static ItemStack RollOne(ItemDatabase db, Table t, int ilvl, bool elite, float magicFind, DeterministicRng rng, bool forceMagic = false)
     {
-        var kinds = new List<int> { 0, 1, 2, 3, 4, 5 };
-        var weights = new List<float> { forceMagic ? 0f : t.noDrop, forceMagic ? 0f : t.potions, t.weapons, t.armor, t.jewelry, forceMagic ? 0f : t.runes };
+        var kinds = new List<int> { 0, 1, 2, 3, 4, 5, 6 };
+        var weights = new List<float> { forceMagic ? 0f : t.noDrop, forceMagic ? 0f : t.potions, t.weapons, t.armor, t.jewelry, forceMagic ? 0f : t.runes, forceMagic ? 0f : t.scrolls };
         int kind = rng.PickWeighted(kinds, weights);
         switch (kind)
         {
             case 0: return null;
-            case 1: return Simple(db, rng, it => it.IsConsumable && (it.heal > 0f || it.restoreMana > 0f));
+            case 1:
+            {
+                ItemStack p = Simple(db, rng, it => it.IsConsumable && (it.heal > 0f || it.restoreMana > 0f));
+                if (p != null && elite && rng.Chance(0.35f)) p.quantity = 2;
+                return p;
+            }
             case 5: return Simple(db, rng, it => it.IsRune);
+            case 6: return Simple(db, rng, it => it.townPortal);
             default:
                 return Equipment(db, kind, ilvl, elite, magicFind, rng, forceMagic);
         }

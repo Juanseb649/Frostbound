@@ -44,6 +44,8 @@ public static class EnemyLoot
             WorldItem.Spawn(drops[i], center + Vector3.up * 0.2f, v);
             if (LootQualityInfo.HasBeam(drops[i]))
                 Notifications.Show("¡" + drops[i].DisplayName + "!", drops[i].DisplayColor);
+            else if (drops[i].item.IsRune)
+                Notifications.Show("¡" + drops[i].item.displayName + "!", LootQualityInfo.Rune);
         }
     }
 }

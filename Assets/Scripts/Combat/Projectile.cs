@@ -56,6 +56,9 @@ public class Projectile : MonoBehaviour
         {
             if (_owner != null && h.transform.IsChildOf(_owner.transform)) continue;
             if (h.collider.GetComponentInParent<WorldItem>() != null) continue;
+            Damageable ally = h.collider.GetComponentInParent<Damageable>();
+            if (ally != null && ally.friendly && Damageable.IsAlly(_owner)) continue;
+            if (_owner != null && Damageable.IsAlly(_owner) && h.collider.GetComponentInParent<PlayerController>() != null) continue;
             if (h.distance < best)
             {
                 best = h.distance;

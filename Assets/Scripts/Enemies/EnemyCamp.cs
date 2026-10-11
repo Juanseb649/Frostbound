@@ -14,6 +14,12 @@ public class EnemyCamp : MonoBehaviour
     [Tooltip("Élites que pueden acompañar al grupo.")]
     public EnemyDefinition[] elites = new EnemyDefinition[0];
 
+    [Tooltip("Otras tropas cuerpo a cuerpo que pueden sustituir a la normal (por ejemplo, caballeros corruptos).")]
+    public EnemyDefinition[] meleeVariants = new EnemyDefinition[0];
+    [Range(0f, 1f)] public float variantChance = 0.35f;
+    [Tooltip("Las clases malditas (caballeros, magos, ninjas y vikingos corruptos) solo aparecen tras derrotar a un jefe. Marcado = aparecen siempre (guardianes de un paso).")]
+    public bool ignoreCurseGate;
+
     [Header("Grupo")]
     public Vector2Int groupSize = new Vector2Int(4, 7);
     [Range(0f, 1f)] public float rangedFraction = 0.3f;
@@ -42,12 +48,9 @@ public class EnemyCamp : MonoBehaviour
 
     void Update()
     {
-        if (_player == null)
-        {
-            GameObject p = GameObject.Find("Player");
-            if (p == null) return;
-            _player = p.transform;
-        }
+        Transform near = Players.NearestTransform(transform.position, false);
+        if (near != null) _player = near;
+        if (_player == null) return;
         float dist = Vector3.Distance(_player.position, transform.position);
         if (!_spawned)
         {
@@ -72,12 +75,20 @@ public class EnemyCamp : MonoBehaviour
         int rangedCount = ranged != null ? Mathf.RoundToInt(count * rangedFraction) : 0;
         CharacterStats heroStats = _player != null ? _player.GetComponent<CharacterStats>() : null;
         bool eliteUnlocked = heroStats != null && heroStats.level >= eliteMinPlayerLevel;
-        bool withElite = eliteUnlocked && elites != null && elites.Length > 0 && rng.Chance(eliteChance);
+        bool cursed = ignoreCurseGate || CursedAwake;
+        bool withElite = cursed && eliteUnlocked && elites != null && elites.Length > 0 && rng.Chance(eliteChance);
         int slot = 0;
+        // Tras la caída de Rocco Vendaval, los chamanes corruptos se unen a las hordas (invocan gólems y reviven a los caídos).
+        EnemyDefinition shaman = ShamansAwake && GameDatabase.Instance != null ? GameDatabase.Instance.FindEnemy(ShamanId) : null;
+        bool withShaman = shaman != null && rng.Chance(0.6f);
+        if (withShaman) count++;
         for (int i = 0; i < count; i++)
         {
             EnemyDefinition def = i < rangedCount ? ranged : melee;
+            if (cursed && def == melee && meleeVariants != null && meleeVariants.Length > 0 && rng.Chance(variantChance))
+                def = meleeVariants[rng.NextInt(0, meleeVariants.Length)] ?? melee;
             if (withElite && i == count - 1) def = elites[rng.NextInt(0, elites.Length)];
+            if (withShaman && i == count - (withElite ? 2 : 1)) def = shaman;
             if (def == null || def.prefab == null) continue;
             if (!FindPoint(rng, out Vector3 pos)) continue;
 
@@ -91,6 +102,27 @@ public class EnemyCamp : MonoBehaviour
             if (!def.ranged) brain.Slot = slot++;
             _members.Add(brain);
         }
+    }
+
+    // Al principio solo hay esbirros corruptos; las clases malditas despiertan cuando cae el primer jefe.
+    public static bool CursedAwake => QuestLog.Stage(QuestLog.Citadel) >= QuestLog.CitadelBarbarian
+                                      || QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentFoothillsDone;
+
+    public const string ShamanId = "Corrupt_Shaman";
+    public static bool ShamansAwake => QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentRocco;
+
+    // Un caído vuelve a la vida (chamanes): se une a este campamento.
+    public EnemyBrain SpawnMember(EnemyDefinition def, Vector3 position, int level, Color plumage)
+    {
+        if (def == null || def.prefab == null) return null;
+        if (NavMesh.SamplePosition(position, out NavMeshHit hit, 3f, NavMesh.AllAreas)) position = hit.position;
+        GameObject go = Instantiate(def.prefab, position, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), transform);
+        go.name = def.displayName + "_revivido";
+        EnemyBrain brain = go.GetComponent<EnemyBrain>();
+        brain.Setup(def, this, level, false, plumage);
+        _members.Add(brain);
+        _spawned = true;
+        return brain;
     }
 
     private bool FindPoint(DeterministicRng rng, out Vector3 pos)

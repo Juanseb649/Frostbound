@@ -13,6 +13,15 @@ public static class QuestLog
     public const int CitadelBarbarian = 2;   // El bárbaro cayó: entra al castillo.
     public const int CitadelDone = 3;        // El ninja maldito cayó.
 
+    public const string Ascent = "ascenso_frostspire";
+
+    // Etapas de "El ascenso".
+    public const int AscentNone = 0;
+    public const int AscentTold = 1;         // Steve te mandó a la montaña: toma el sendero del norte.
+    public const int AscentFoothills = 2;    // Estás en Las Faldas: llega al paso helado.
+    public const int AscentFoothillsDone = 3; // Guardianes del paso vencidos: sube la Escalinata.
+    public const int AscentRocco = 4;         // Rocco Vendaval derrotado: fin del capítulo I.
+
     public static event Action<string, int> Changed;
 
     private static readonly Dictionary<string, int> Memory = new Dictionary<string, int>();
@@ -50,19 +59,35 @@ public static class QuestLog
         if (GameSession.Instance != null) GameSession.Instance.SaveNow();
     }
 
-    public static string Title(string id) => id == Citadel ? "La ciudadela caída" : id;
+    public static string Title(string id) => id == Citadel ? "La ciudadela caída" : id == Ascent ? "El ascenso" : id;
 
     // Texto del objetivo para el panel de misiones (vacío = no se muestra).
     public static string Objective(string id, int stage)
     {
-        if (id != Citadel) return "";
-        switch (stage)
-        {
-            case CitadelTalked: return "Limpia el poblado al pie del castillo de corruptos";
-            case CitadelBarbarian: return "Entra al castillo y derrota al ninja maldito";
-            case CitadelDone: return "";
-            default: return "";
-        }
+        if (id == Citadel)
+            switch (stage)
+            {
+                case CitadelTalked: return "Limpia el poblado al pie del castillo de corruptos";
+                case CitadelBarbarian: return "Entra al castillo y derrota al ninja maldito";
+                default: return "";
+            }
+        if (id == Ascent)
+            switch (stage)
+            {
+                case AscentTold: return "Toma el sendero del norte hacia la montaña";
+                case AscentFoothills: return "Asciende por Las Faldas y vence a los guardianes del paso helado";
+                case AscentFoothillsDone: return "Sube la Escalinata hasta la cima del Frostspire";
+                default: return "";
+            }
+        return "";
+    }
+
+    // La misión que se muestra en pantalla: la primera con objetivo pendiente.
+    public static string Tracked()
+    {
+        if (Objective(Citadel, Stage(Citadel)).Length > 0) return Citadel;
+        if (Objective(Ascent, Stage(Ascent)).Length > 0) return Ascent;
+        return "";
     }
 
     public static bool Active(string id)

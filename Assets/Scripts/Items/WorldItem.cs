@@ -90,7 +90,8 @@ public class WorldItem : MonoBehaviour
             box.size = new Vector3(size, size, 0.05f);
         }
 
-        if (LootQualityInfo.HasBeam(stack)) AddBeam(stack.DisplayColor);
+        if (LootQualityInfo.HasBeam(stack)) AddBeam(stack.DisplayColor, 3.2f, 0f);
+        else if (Glow(stack.item, out Color glow, out float height, out float light)) AddBeam(glow, height, light);
 
         _rb = gameObject.AddComponent<Rigidbody>();
         _rb.mass = 1f;
@@ -101,11 +102,51 @@ public class WorldItem : MonoBehaviour
     }
 
     // Haz de luz vertical del color de la rareza (raro o superior). No gira con el objeto.
-    private void AddBeam(Color color)
+    private void AddBeam(Color color, float height, float light)
     {
         var go = new GameObject("Haz");
         go.transform.SetParent(transform, false);
-        go.AddComponent<LootBeam>().Init(color);
+        go.AddComponent<LootBeam>().Init(color, height, light);
+    }
+
+    // Pociones, runas y pergaminos brillan al caer: son el botín habitual y se tienen que ver desde lejos.
+    public static bool Glow(ItemDefinition item, out Color color, out float height, out float light)
+    {
+        color = Color.white;
+        height = 0f;
+        light = 0f;
+        if (item == null) return false;
+        if (item.IsRune) { color = LootQualityInfo.Rune; height = 2.6f; light = 2.2f; return true; }
+        if (item.townPortal) { color = new Color(1f, 0.86f, 0.55f); height = 1.4f; light = 1.2f; return true; }
+        if (item.IsConsumable && item.heal > 0f) { color = new Color(1f, 0.3f, 0.3f); height = 1.2f; light = 1.4f; return true; }
+        if (item.IsConsumable && item.restoreMana > 0f) { color = new Color(0.35f, 0.6f, 1f); height = 1.2f; light = 1.4f; return true; }
+        return false;
+    }
+
+    // Lo que se recoge solo al pasar por encima (como las monedas).
+    public bool AutoPickup => stack != null && stack.item != null && (stack.item.IsRune || stack.item.IsConsumable);
+
+    private float _nextAuto;
+
+    void Update()
+    {
+        if (!AutoPickup || !CanPickUp || Time.time < _nextAuto) return;
+        _nextAuto = Time.time + 0.1f;
+        PlayerController p = Players.Nearest(transform.position);
+        if (p == null) return;
+        Vector3 d = p.transform.position - transform.position;
+        if (Mathf.Abs(d.y) > 2f) return;
+        d.y = 0f;
+        if (d.sqrMagnitude > 1.5f * 1.5f) return;
+        Inventory inv = p.GetComponent<Inventory>();
+        if (inv == null || !inv.HasSpaceFor(stack.item, stack.quantity)) return;
+        string text = "+" + stack.quantity + " " + stack.item.displayName;
+        Color c = Glow(stack.item, out Color g, out _, out _) ? g : Color.white;
+        if (TryPickUp(inv))
+        {
+            if (WorldHUD.Instance != null) WorldHUD.Instance.Popup(p.transform.position + Vector3.up * 2.1f, text, Color.Lerp(c, Color.white, 0.35f), stack.item.IsRune ? 1.15f : 0.9f);
+            if (stack.item.IsRune) Notifications.Show("Recogiste " + stack.item.displayName + ": grábala en tu arma desde la mochila", LootQualityInfo.Rune);
+        }
     }
 
     // Pieza de armadura tal como se ve puesta (casco, peto, botas...), en vez del icono.
