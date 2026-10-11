@@ -928,6 +928,8 @@ public class FrostMenu : MonoBehaviour
         if (rig == null) return;
         WeaponHolder holder = rig.GetComponent<WeaponHolder>();
         if (holder == null) holder = rig.gameObject.AddComponent<WeaponHolder>();
+        if (_carry != null) _carry.Release();
+        _carry = null;
         ItemDefinition main = null, off = null;
         if (cls != null && cls.startingItems != null)
             foreach (ItemDefinition item in cls.startingItems)
@@ -937,7 +939,11 @@ public class FrostMenu : MonoBehaviour
                 else if (item.equipSlot == EquipSlot.Offhand && off == null && item.weaponModel != null) off = item;
             }
         holder.Show(main, off);
+        // El shinobi lleva la katana envainada a la espalda, como en el juego.
+        _carry = WeaponCarry.For(cls, main, holder, rig);
     }
+
+    private WeaponCarry _carry;
 
     // Zona central invisible: arrastrar gira al héroe.
     private void DragArea(RectTransform root)

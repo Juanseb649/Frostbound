@@ -20,7 +20,6 @@ MonoBehaviour:
   materialOverride: {fileID: 0}
   onlyParts:
   - Robe
-  - Cloak
   - Belt
   - Tunic
   fitBones: []

@@ -77,6 +77,36 @@ public class PlayerCombat : MonoBehaviour
 
     public bool IsAttacking => _pending || Time.time < _readyAt;
 
+    // Cómo se lleva el arma entre golpes (en la mano, o en la vaina de la espalda para las espadas del shinobi).
+    private WeaponCarry _carry;
+    private ItemDefinition _carryItem;
+    private GameObject _carryModel;
+    private bool _queued;
+    private Vector3 _queuedPoint;
+
+    public WeaponCarry Carry => _carry;
+
+    private void UpdateCarry()
+    {
+        if (_holder == null) return;
+        ItemDefinition item = Weapon != null ? Weapon.item : null;
+        if (_carry == null || item != _carryItem || _holder.MainModel != _carryModel)
+        {
+            if (_carry != null) _carry.Release();
+            CharacterClass cls = _stats.characterClass;
+            if (cls == null && GameSession.Instance != null) cls = GameSession.Instance.SelectedClass;
+            _carryItem = item;
+            _carryModel = _holder.MainModel;
+            _carry = WeaponCarry.For(cls, item, _holder, _rig);
+        }
+        _carry.Tick(IsAttacking || _queued, Time.deltaTime);
+        if (_queued && _carry.Ready)
+        {
+            _queued = false;
+            TryAttack(_queuedPoint);
+        }
+    }
+
     void Awake()
     {
         _eq = GetComponent<Equipment>();
@@ -104,6 +134,7 @@ public class PlayerCombat : MonoBehaviour
         if (_holder == null) _holder = GetComponentInChildren<WeaponHolder>();
         if (_cam == null) _cam = Camera.main;
 
+        UpdateCarry();
         if (_holder != null) _holder.SetTrail(Time.time >= _trailOn && Time.time < _trailOff);
         if (_comboStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + comboWindow) _comboStep = 0;
         if (_heavyStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + heavyComboWindow) _heavyStep = 0;
@@ -195,6 +226,19 @@ public class PlayerCombat : MonoBehaviour
     public bool TryAttack(Vector3 targetPoint)
     {
         if (Time.time < _readyAt || _pending) return false;
+        if (_carry != null && !_carry.Ready)
+        {
+            // Primero desenfunda; el golpe sale en cuanto la espada está en la mano.
+            _carry.RequestDraw();
+            _queued = true;
+            _queuedPoint = targetPoint;
+            if (_pc != null)
+            {
+                Vector3 face = targetPoint - transform.position;
+                _pc.FaceAndHold(face, BackSheathCarry.DrawTime);
+            }
+            return true;
+        }
         Vector3 dir = targetPoint - transform.position;
         dir.y = 0f;
         if (dir.sqrMagnitude < 0.001f) dir = transform.forward;

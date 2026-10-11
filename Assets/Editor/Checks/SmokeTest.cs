@@ -175,6 +175,42 @@ public static class SmokeTest
 
     public static string OrbCount() => "orbes=" + Object.FindObjectsByType<MagicOrb>().Length + " destellos=" + GameObject.FindObjectsByType<Light>().Length;
 
+    public static string NinjaSetup()
+    {
+        GameObject p = GameObject.Find("Player");
+        var eq = p.GetComponent<Equipment>();
+        var db = GameDatabase.Instance;
+        p.GetComponent<CharacterStats>().characterClass = db.FindClass("Ninja");
+        eq.SetEquippedStack(EquipSlot.Chest, new ItemStack(db.items.Find("ninja_suit"), 1));
+        eq.SetEquippedStack(EquipSlot.Head, new ItemStack(db.items.Find("ninja_hood"), 1));
+        eq.SetEquippedStack(EquipSlot.Weapon, new ItemStack(db.items.Find("ninja_katana"), 1));
+        return "katana=" + (eq.MainWeapon != null ? eq.MainWeapon.item.displayName : "no");
+    }
+
+    public static string NinjaState()
+    {
+        GameObject p = GameObject.Find("Player");
+        var c = p.GetComponent<PlayerCombat>();
+        var holder = p.GetComponentInChildren<WeaponHolder>();
+        var sb = new System.Text.StringBuilder();
+        sb.Append("estilo=").Append(c.Carry != null ? c.Carry.GetType().Name : "-");
+        if (c.Carry is BackSheathCarry b) sb.Append(" envainada=").Append(b.Sheathed);
+        sb.Append(" lista=").Append(c.Carry != null && c.Carry.Ready);
+        sb.Append(" arma_en=").Append(holder.MainModel != null && holder.MainModel.transform.parent != null ? holder.MainModel.transform.parent.name : "-");
+        var parts = new System.Text.StringBuilder();
+        foreach (var r in p.GetComponentsInChildren<SkinnedMeshRenderer>())
+            if (r.name.StartsWith("Outfit_Pieza_Ninja")) parts.Append(r.name.Replace("Outfit_Pieza_Ninja_", "")).Append(",");
+        sb.Append(" piezas=").Append(parts);
+        return sb.ToString();
+    }
+
+    public static string Attack()
+    {
+        GameObject p = GameObject.Find("Player");
+        var c = p.GetComponent<PlayerCombat>();
+        return "ataque=" + c.TryAttack(p.transform.position + p.transform.forward * 3f);
+    }
+
     public static string InventoryTabs()
     {
         var inv = Object.FindAnyObjectByType<InventoryScreen>();

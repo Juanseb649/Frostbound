@@ -92,13 +92,13 @@ public class SnowGolem : MonoBehaviour
         BuildModel();
 
         var col = gameObject.AddComponent<CapsuleCollider>();
-        col.radius = 0.42f;
-        col.height = 1.9f;
-        col.center = new Vector3(0f, 0.95f, 0f);
+        col.radius = 0.42f * Size;
+        col.height = 1.9f * Size;
+        col.center = new Vector3(0f, 0.95f * Size, 0f);
 
         _agent = gameObject.AddComponent<NavMeshAgent>();
-        _agent.radius = 0.4f;
-        _agent.height = 1.9f;
+        _agent.radius = 0.4f * Size;
+        _agent.height = 1.9f * Size;
         _agent.speed = 4.2f;
         _agent.acceleration = 14f;
         _agent.angularSpeed = 540f;
@@ -107,7 +107,7 @@ public class SnowGolem : MonoBehaviour
         Health = gameObject.AddComponent<Damageable>();
         Health.displayName = "Gólem de nieve";
         Health.maxHealth = health;
-        Health.popupHeight = 2.1f;
+        Health.popupHeight = 2.1f * Size;
         Health.visual = _model;
         Health.friendly = true;
         Health.Died += OnDied;
@@ -184,6 +184,9 @@ public class SnowGolem : MonoBehaviour
         return t;
     }
 
+    // Tamaño del gólem respecto al modelo: un poco más bajo que el pingüino (unos 0,9 m).
+    public const float Size = 0.48f;
+
     // Diámetros de las tres bolas de nieve (base, cuerpo, cabeza).
     private const float BaseSize = 0.86f, BodySize = 0.66f, HeadSize = 0.5f;
 
@@ -209,8 +212,13 @@ public class SnowGolem : MonoBehaviour
         Shape(PrimitiveType.Cylinder, _body, "Bufanda", new Vector3(0f, 0.27f, 0f), new Vector3(0.5f, 0.05f, 0.5f), _scarf);
         Shape(PrimitiveType.Cube, _body, "Bufanda_Cola", new Vector3(0.12f, 0.12f, 0.27f), new Vector3(0.12f, 0.3f, 0.04f), _scarf, new Vector3(-18f, 0f, -10f));
 
-        _armL = Part("Brazo_L", new Vector3(-0.26f, 0.14f, 0f));
-        _armR = Part("Brazo_R", new Vector3(0.26f, 0.14f, 0f));
+        // Los brazos salen de la bola del medio, a los lados y un poco por encima de su ecuador.
+        _armL = Part("Brazo_L", Vector3.zero);
+        _armR = Part("Brazo_R", Vector3.zero);
+        _armL.SetParent(_body, false);
+        _armR.SetParent(_body, false);
+        _armL.localPosition = new Vector3(-BodySize * 0.44f, 0.07f, 0f);
+        _armR.localPosition = new Vector3(BodySize * 0.44f, 0.07f, 0f);
         foreach (Transform arm in new[] { _armL, _armR })
         {
             float side = arm == _armR ? 1f : -1f;
@@ -252,10 +260,10 @@ public class SnowGolem : MonoBehaviour
         for (float t = 0f; t < 0.5f; t += Time.deltaTime)
         {
             float k = Mathf.SmoothStep(0f, 1f, t / 0.5f);
-            _model.localScale = new Vector3(Mathf.Lerp(0.6f, 1f, k), Mathf.Lerp(0.05f, 1f, k), Mathf.Lerp(0.6f, 1f, k));
+            _model.localScale = new Vector3(Mathf.Lerp(0.6f, 1f, k), Mathf.Lerp(0.05f, 1f, k), Mathf.Lerp(0.6f, 1f, k)) * Size;
             yield return null;
         }
-        _model.localScale = Vector3.one;
+        _model.localScale = Vector3.one * Size;
     }
 
     // ---------- Comportamiento ----------
@@ -323,7 +331,7 @@ public class SnowGolem : MonoBehaviour
         _throwT = 0f;
         yield return new WaitForSeconds(0.22f);
         if (!Alive || target == null || target.IsDead) yield break;
-        Vector3 origin = _armR.position + _armR.up * 0.6f;
+        Vector3 origin = _armR.position + _armR.up * 0.6f * Size;
         Vector3 aim = target.PopupPoint - Vector3.up * 0.7f;
         Projectile ball = Projectile.Launch(null, origin, aim - origin, 17f, 16f, gameObject, (hit, point) =>
         {

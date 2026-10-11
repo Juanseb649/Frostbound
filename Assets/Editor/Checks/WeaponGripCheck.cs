@@ -82,7 +82,7 @@ public static class WeaponGripCheck
     public static string GearParts()
     {
         var sb = new StringBuilder();
-        foreach (string g in new[] { "Knight", "Mage", "Ninja", "Viking" })
+        foreach (string g in new[] { "Ninja" })
         {
             var go = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Gear/Frostbound_" + g + "_Gear.fbx");
             if (go == null) continue;
@@ -91,7 +91,9 @@ public static class WeaponGripCheck
             {
                 string bones = "";
                 foreach (var b in smr.bones) if (b != null && (b.name.Contains("Weapon") || b.name.Contains("Hand") || b.name.Contains("Offhand"))) bones += b.name + ",";
-                sb.Append(smr.name).Append("(").Append(smr.sharedMesh != null ? smr.sharedMesh.bounds.size.ToString("F2") : "-").Append(" ").Append(bones).Append(") ");
+                sb.Append(smr.name).Append("(").Append(smr.sharedMesh.bounds.min.ToString("F2")).Append("..").Append(smr.sharedMesh.bounds.max.ToString("F2")).Append(" mats=");
+                foreach (var m in smr.sharedMaterials) sb.Append(m != null ? m.name : "null").Append(",");
+                sb.Append(") ");
             }
             foreach (var mr in go.GetComponentsInChildren<MeshRenderer>(true)) sb.Append("[rigido ").Append(mr.name).Append("] ");
             sb.Append(" | ");
@@ -172,6 +174,140 @@ public static class WeaponGripCheck
             sb.Append(g).Append(" slot=").Append(o.slot).Append(" mat=").Append(o.materialOverride != null ? o.materialOverride.name : "-").Append(" | ");
         }
         return sb.ToString();
+    }
+
+    // ¿La cabeza asoma por la capucha del shinobi? Por direcciones desde el centro de la cabeza, compara el radio
+    // de la cabeza con el de la capucha (mallas deformadas) en reposo y caminando.
+    public static string HoodGaps()
+    {
+        var db = AssetDatabase.LoadAssetAtPath<GameDatabase>("Assets/Resources/GameDatabase.asset");
+        var hoodItem = AssetDatabase.LoadAssetAtPath<OutfitItem>("Assets/Data/Outfits/Pieces/Pieza_Ninja_Casco.asset");
+        var sb = new StringBuilder();
+        GameObject go = Object.Instantiate(db.penguinPrefab);
+        go.hideFlags = HideFlags.HideAndDontSave;
+        var outfit = go.GetComponentInChildren<PenguinOutfit>();
+        outfit.useClassOutfit = false;
+        outfit.Equip(hoodItem);
+        var rig = go.GetComponentInChildren<PenguinRigAnimator>();
+        foreach (var pose in new[] { (0f, 0f), (1.2f, 1f), (2.6f, 1f), (4.2f, 1f) })
+        {
+            rig.DebugPose(pose.Item1, pose.Item2, PenguinRigAnimator.IdleAction.None, 0f);
+            SkinnedMeshRenderer body = null, hood = null;
+            foreach (var r in go.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (r.name == "Penguin_Body") body = r;
+                if (r.name.Contains("Hood")) hood = r;
+            }
+            if (hood == null) return "sin capucha";
+            Transform head = System.Array.Find(body.bones, b => b.name == "Head");
+            Vector3 c = head.position + head.up * 0.12f;
+            var hb = new Mesh(); hood.BakeMesh(hb, true);
+            var bb = new Mesh(); body.BakeMesh(bb, true);
+            var hoodR = new System.Collections.Generic.Dictionary<int, float>();
+            foreach (Vector3 v in hb.vertices)
+            {
+                Vector3 w = hood.transform.TransformPoint(v) - c;
+                int k = Bin(head.InverseTransformDirection(w));
+                hoodR[k] = Mathf.Max(hoodR.TryGetValue(k, out float r0) ? r0 : 0f, w.magnitude);
+            }
+            int out1 = 0, total = 0; float worst = 0f; Vector3 worstDir = Vector3.zero; float minGap = 9f;
+            int headIdx = System.Array.FindIndex(body.bones, b => b.name == "Head");
+            BoneWeight[] bw = body.sharedMesh.boneWeights;
+            Vector3[] bv = bb.vertices;
+            for (int i = 0; i < bv.Length; i++)
+            {
+                if (bw[i].boneIndex0 != headIdx || bw[i].weight0 < 0.5f) continue;
+                Vector3 w = body.transform.TransformPoint(bv[i]) - c;
+                Vector3 local = head.InverseTransformDirection(w);
+                if (local.y < -0.02f) continue;
+                total++;
+                int k = Bin(local);
+                if (!hoodR.TryGetValue(k, out float hr)) continue;
+                float poke = w.magnitude - hr;
+                if (local.y > 0.05f) minGap = Mathf.Min(minGap, -poke);
+                if (poke > 0.002f) { out1++; if (poke > worst) { worst = poke; worstDir = local.normalized; } }
+            }
+            sb.Append("pose ").Append(pose.Item1).Append(": asoman ").Append(out1).Append("/").Append(total).Append(" peor=").Append(worst.ToString("F3")).Append(" holguraMin=").Append(minGap.ToString("F3")).Append(" | ");
+            Object.DestroyImmediate(hb); Object.DestroyImmediate(bb);
+        }
+        Object.DestroyImmediate(go);
+        return sb.ToString();
+    }
+
+    private static int Bin(Vector3 d)
+    {
+        d.Normalize();
+        int a = Mathf.Clamp(Mathf.FloorToInt((Mathf.Atan2(d.x, d.z) + Mathf.PI) / (2f * Mathf.PI) * 24f), 0, 23);
+        int b = Mathf.Clamp(Mathf.FloorToInt((d.y + 1f) * 0.5f * 12f), 0, 11);
+        return a * 12 + b;
+    }
+
+    public static string KatanaBack()
+    {
+        var go = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Gear/Frostbound_Ninja_Gear.fbx");
+        var sb = new StringBuilder();
+        foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            if (smr.name != "Katana_Back" && smr.name != "Hood") continue;
+            Mesh m = smr.sharedMesh;
+            Vector3[] v = m.vertices;
+            for (int sub = 0; sub < m.subMeshCount; sub++)
+            {
+                int[] t = m.GetTriangles(sub);
+                Bounds b = new Bounds(v[t[0]], Vector3.zero);
+                foreach (int i in t) b.Encapsulate(v[i]);
+                sb.Append(smr.name).Append("[").Append(sub).Append(" ").Append(smr.sharedMaterials[sub].name).Append("] ").Append(b.min.ToString("F2")).Append("..").Append(b.max.ToString("F2")).Append(" tris=").Append(t.Length / 3).Append(" | ");
+            }
+            var bones = new StringBuilder();
+            BoneWeight[] w = m.boneWeights;
+            var counts = new System.Collections.Generic.Dictionary<string, int>();
+            foreach (var bw in w) { string n = smr.bones[bw.boneIndex0].name; counts[n] = counts.TryGetValue(n, out int c) ? c + 1 : 1; }
+            foreach (var kv in counts) sb.Append(kv.Key).Append("=").Append(kv.Value).Append(" ");
+            sb.Append(" || ");
+        }
+        return sb.ToString();
+    }
+
+    // Bordes abiertos de la capucha (aristas con un solo triángulo), por altura: un agujero arriba se vería al moverse.
+    public static string HoodHolesOriginal() => HoodHoles(true);
+
+    public static string HoodHoles() => HoodHoles(false);
+
+    private static string HoodHoles(bool original)
+    {
+        var mesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Models/Gear/Generated/Ninja_HoodFull.asset");
+        if (original)
+            foreach (var smr in AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Gear/Frostbound_Ninja_Gear.fbx").GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (smr.name == "Hood") mesh = smr.sharedMesh;
+        Vector3[] v = mesh.vertices;
+        var key = new System.Collections.Generic.Dictionary<Vector3, int>();
+        int[] id = new int[v.Length];
+        for (int i = 0; i < v.Length; i++)
+        {
+            Vector3 q = new Vector3(Mathf.Round(v[i].x * 1000f), Mathf.Round(v[i].y * 1000f), Mathf.Round(v[i].z * 1000f));
+            if (!key.TryGetValue(q, out int k)) { k = key.Count; key[q] = k; }
+            id[i] = k;
+        }
+        var edges = new System.Collections.Generic.Dictionary<long, int>();
+        int[] t = mesh.triangles;
+        for (int i = 0; i < t.Length; i += 3)
+            for (int e = 0; e < 3; e++)
+            {
+                int a = id[t[i + e]], b = id[t[i + (e + 1) % 3]];
+                long k = a < b ? ((long)a << 32) | (uint)b : ((long)b << 32) | (uint)a;
+                edges[k] = edges.TryGetValue(k, out int c) ? c + 1 : 1;
+            }
+        var pos = new Vector3[key.Count];
+        foreach (var kv in key) pos[kv.Value] = kv.Key / 1000f;
+        int top = 0, all = 0; float maxY = -9f; Vector3 sample = Vector3.zero;
+        foreach (var kv in edges)
+        {
+            if (kv.Value != 1) continue;
+            all++;
+            Vector3 a = pos[(int)(kv.Key >> 32)];
+            if (a.y > 0.85f) { top++; if (a.y > maxY) { maxY = a.y; sample = a; } }
+        }
+        return "bordes abiertos=" + all + " arriba(>0.85)=" + top + " más alto=" + sample.ToString("F2") + " limites=" + mesh.bounds.min.ToString("F2") + ".." + mesh.bounds.max.ToString("F2");
     }
 
     public static string Models()

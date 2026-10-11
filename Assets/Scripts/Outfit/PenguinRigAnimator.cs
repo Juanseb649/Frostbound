@@ -226,6 +226,21 @@ public class PenguinRigAnimator : MonoBehaviour
 
     public bool PolearmCombo => _polearm && _comboStep > 0;
 
+    // Desenfundar o envainar: la aleta derecha sube abierta (sin pegarse al cuerpo) hasta la empuñadura de la espalda.
+    private float _sheathT = 1f, _sheathDur = 0.2f;
+    private bool _drawing;
+    private Transform _sheathTarget;
+
+    public void PlaySheath(bool draw, float duration, Transform target)
+    {
+        _drawing = draw;
+        _sheathDur = Mathf.Max(0.05f, duration);
+        _sheathT = 0f;
+        _sheathTarget = target;
+    }
+
+    public bool Sheathing => _sheathT < 1f;
+
     public void SetBow(bool equipped)
     {
         _bowEquipped = equipped;
@@ -328,6 +343,7 @@ public class PenguinRigAnimator : MonoBehaviour
             }
         }
         _aimWeight = Mathf.MoveTowards(_aimWeight, _bowEquipped && Time.time < _aimUntil ? 1f : 0f, dt * (Time.time < _aimUntil ? 6f : 2.5f));
+        if (_sheathT < 1f) _sheathT = Mathf.Min(1f, _sheathT + dt / _sheathDur);
 
         ApplyPose(Time.time + _seed);
     }
@@ -480,6 +496,7 @@ public class PenguinRigAnimator : MonoBehaviour
         if (_bowEquipped && (_aimWeight > 0.001f || _bowTime < _bowDuration))
             BowPose(ref spineYaw, ref headYaw, ref headPitch, ref lean, ref extraCrouch, ref saluteL, ref saluteR, swingL, swingR, outL, outR, time);
         else { BowNocked = false; BowDraw01 = 0f; }
+        if (_sheathT < 1f && _flipR != null && _sheathTarget != null) SheathPose(ref saluteR, ref outR, ref outL, ref spineYaw, ref headYaw, swingR);
         ModifyPose(ref swingL, ref swingR, ref outL, ref outR, ref spineYaw, ref headPitch, ref headRoll, ref lean, ref extraCrouch);
         if (_hips != null)
             _hips.t.position = transform.TransformPoint(_hips.restPos + Vector3.down * (crouchDepth * combo.crouch * combo.weight + extraCrouch));
@@ -577,6 +594,28 @@ public class PenguinRigAnimator : MonoBehaviour
             Quaternion fullR = Quaternion.FromToRotation(baseR * restR, Quaternion.Inverse(spineD) * dir);
             saluteR = Quaternion.Slerp(saluteR, fullR, aim);
         }
+    }
+
+    // ---------- Vaina ----------
+
+    private void SheathPose(ref Quaternion saluteR, ref float outR, ref float outL, ref float spineYaw, ref float headYaw, float swingR)
+    {
+        float t = _sheathT;
+        float peak = _drawing ? 0.45f : 0.55f;
+        float w = t < peak ? Smooth(0f, peak, t) : 1f - Smooth(peak, 1f, t);
+        outR += 30f * w;
+        outL += 14f * w;
+        spineYaw += -10f * w;
+        headYaw += -12f * w;
+        Vector3 reach = transform.InverseTransformPoint(_sheathTarget.position) - _flipR.restPos;
+        if (reach.sqrMagnitude < 1e-5f) return;
+        Quaternion spineD = Quaternion.AngleAxis(spineYaw, Vector3.up);
+        float sideR = Side(_flipR);
+        Quaternion baseR = Quaternion.AngleAxis(-swingR, Vector3.right) * Quaternion.AngleAxis(outR * sideR, Vector3.forward);
+        Vector3 restR = (_handRestR - _flipR.restPos).normalized;
+        if (restR.sqrMagnitude < 0.5f) restR = new Vector3(sideR * 0.4f, -1f, 0f).normalized;
+        Quaternion fullR = Quaternion.FromToRotation(baseR * restR, Quaternion.Inverse(spineD) * reach.normalized);
+        saluteR = Quaternion.Slerp(saluteR, fullR, w);
     }
 
     // ---------- Dos manos ----------
