@@ -137,6 +137,7 @@ public class InventoryScreen : MonoBehaviour
 
     private void PressFor(Equipment who, Tab tab)
     {
+        if (IsOpen && player != who) return;
         if (IsOpen && player == who && Current == tab) { SetOpen(false); return; }
         if (IsOpen && player == who) { SetTab(tab); return; }
         OpenFor(who, tab);
@@ -156,7 +157,7 @@ public class InventoryScreen : MonoBehaviour
         if (_stats != null) _stats.StatsChanged -= MarkDirty;
         if (_inventory != null) _inventory.Changed -= MarkDirty;
         if (player != null) player.Changed -= MarkDirty;
-        if (IsOpen) GameplayInput.Unblock();
+        if (IsOpen) { GameplayInput.Unblock(); UIDeviceFocus.Release(); }
     }
 
     private void MarkDirty() => _dirty = true;
@@ -171,18 +172,20 @@ public class InventoryScreen : MonoBehaviour
         if (!blocked)
         {
             Equipment keyOwner = KeyboardOwner;
+            // Con la mochila de otro abierta, el teclado no la toca (ni la cambia por la suya).
+            if (IsOpen && player != keyOwner) keyOwner = null;
             if (InputMap.KeyPressed(GameAction.Character) && keyOwner != null && keyOwner != (_home != null ? _home : player)) PressFor(keyOwner, Tab.Character);
             else if (InputMap.KeyPressed(GameAction.Inventory) && keyOwner != null && keyOwner != (_home != null ? _home : player)) PressFor(keyOwner, Tab.Inventory);
             else if ((InputMap.KeyPressed(GameAction.Character) && keyOwner != null) || (!IsOpen && InputMap.PadPressed(pad, GameAction.Character))) Press(Tab.Character);
             else if (InputMap.KeyPressed(GameAction.Inventory) && keyOwner != null) Press(Tab.Inventory);
-            else if ((kb != null && kb.tabKey.wasPressedThisFrame) || (IsOpen && pad != null && pad.rightShoulder.wasPressedThisFrame))
+            else if ((keyOwner != null && InputMap.KeyDown(Key.Tab)) || (IsOpen && pad != null && pad.rightShoulder.wasPressedThisFrame))
             {
                 if (IsOpen) SetTab((Tab)(((int)Current + 1) % 3));
                 else SetOpen(true);
             }
             else if (IsOpen && pad != null && pad.leftShoulder.wasPressedThisFrame) SetTab((Tab)(((int)Current + 2) % 3));
             else if (InputMap.PadPressed(pad, GameAction.Inventory) && Time.frameCount != _openedFrame) SetOpen(!IsOpen);
-            else if (IsOpen && UICancel.Pressed()) SetOpen(false);
+            else if (IsOpen && ((keyOwner != null && InputMap.KeyDown(Key.Escape)) || (pad != null && pad.buttonEast.wasPressedThisFrame))) SetOpen(false);
         }
 
         if (IsOpen && pad != null && pad.buttonWest.wasPressedThisFrame && _selected != null) DoAction(_selected);
@@ -249,6 +252,9 @@ public class InventoryScreen : MonoBehaviour
         _group.blocksRaycasts = open;
         if (open && !wasOpen) GameplayInput.Block();
         if (!open && wasOpen) GameplayInput.Unblock();
+        // La mochila solo la maneja su dueño (su mando, o su teclado y ratón).
+        if (open) UIDeviceFocus.FocusOn(player);
+        else UIDeviceFocus.Release();
         if (open != wasOpen) FreezePlayer(open);
 
         if (open)
