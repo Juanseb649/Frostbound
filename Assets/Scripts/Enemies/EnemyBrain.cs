@@ -52,12 +52,14 @@ public class EnemyBrain : MonoBehaviour
 
     public static readonly List<Corpse> Corpses = new List<Corpse>();
 
-    private static Transform _player;
+    // Héroe al que persigue este corrupto: el más cercano de los vivos (co-op), revisado cada medio segundo.
+    private Transform _player;
     private SnowGolem _golem;
     private Transform TargetT => _golem != null ? _golem.transform : _player;
     private Vector3 TargetPos => TargetT.position;
-    private static CharacterStats _playerStats;
-    private static PlayerDodge _playerDodge;
+    private CharacterStats _playerStats;
+    private PlayerDodge _playerDodge;
+    private float _retargetAt;
 
     private NavMeshAgent _agent;
     private Damageable _dmg;
@@ -79,7 +81,17 @@ public class EnemyBrain : MonoBehaviour
 
     public static IReadOnlyList<EnemyBrain> All => Active;
     public Color Plumage => _plumage;
-    public static Transform Player => FindPlayer() ? _player : null;
+    public static Transform Player
+    {
+        get
+        {
+            GameObject p = Players.PrimaryObject;
+            return p != null ? p.transform : null;
+        }
+    }
+
+    // El héroe que persigue ahora mismo (puede ser el jugador 2).
+    public Transform Target => FindPlayer() ? _player : null;
 
     // Teletransporte (el ninja maldito aparece a la espalda del héroe).
     public void Blink(Vector3 to)
@@ -221,16 +233,19 @@ public class EnemyBrain : MonoBehaviour
         Corpses.Clear();
         Active.Clear();
         _meleeAttackers = 0;
-        _player = null;
-        _playerStats = null;
-        _playerDodge = null;
     }
 
-    private static bool FindPlayer()
+    private bool FindPlayer()
     {
-        if (_player != null) return true;
-        GameObject p = GameObject.Find("Player");
+        if (_player != null && Time.time < _retargetAt) return true;
+        _retargetAt = Time.time + 0.5f;
+        // Mientras ataca no cambia de víctima salvo que caiga.
+        bool busy = _player != null && _playerStats != null && !_playerStats.IsDead && Current == State.Windup;
+        if (busy) return true;
+        PlayerController pc = Players.Nearest(transform.position);
+        GameObject p = pc != null ? pc.gameObject : (_player != null ? _player.gameObject : Players.PrimaryObject);
         if (p == null) return false;
+        if (_player == p.transform) return true;
         _player = p.transform;
         _playerStats = p.GetComponent<CharacterStats>();
         _playerDodge = p.GetComponent<PlayerDodge>();
@@ -562,8 +577,13 @@ public class EnemyBrain : MonoBehaviour
         SetEyes(Color.black);
         foreach (Collider c in GetComponentsInChildren<Collider>()) c.enabled = false;
 
-        if (FindPlayer() && _playerStats != null)
-            _playerStats.AddExperience(Mathf.RoundToInt(definition.ExperienceAt(Level) * (Champion ? 2.5f : 1f) * EnemyDefinition.LevelGapFactor(Level, _playerStats.level)));
+        // En co-op la experiencia es para todos los héroes (cada uno según su nivel).
+        foreach (PlayerController pc in Players.All)
+        {
+            CharacterStats st = pc != null ? pc.Stats : null;
+            if (st == null) continue;
+            st.AddExperience(Mathf.RoundToInt(definition.ExperienceAt(Level) * (Champion ? 2.5f : 1f) * EnemyDefinition.LevelGapFactor(Level, st.level)));
+        }
         if (Camp != null) Camp.OnMemberDied(this);
         else
             foreach (EnemyBrain b in Active)

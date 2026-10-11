@@ -147,9 +147,44 @@ public class PlayerCombat : MonoBehaviour
         }
 
         if (GameplayInput.Blocked || _stats.IsDead || (_dodge != null && _dodge.IsRolling)) return;
+        // Mando: X (cuadrado) ataca; apunta solo al enemigo más cercano en la dirección del stick.
+        Gamepad pad = PlayerController.PadOf(this);
+        if (pad != null && pad.buttonWest.isPressed)
+        {
+            if (PlayerController.UsesKeyboard(this)) PlayerController.NoteP1Pad(pad);
+            TryAttack(PadAimPoint());
+            return;
+        }
+        if (!PlayerController.UsesKeyboard(this)) return;
         Mouse mouse = Mouse.current;
         bool wants = mouse != null && mouse.rightButton.isPressed && !GameplayInput.PointerOverUI;
         if (wants && CursorPoint(out Vector3 p)) TryAttack(p);
+    }
+
+    // Punto al que golpea quien juega con mando: el enemigo más cercano delante de él, o un paso al frente.
+    public Vector3 PadAimPoint()
+    {
+        PlayerController pc = GetComponent<PlayerController>();
+        Vector3 dir = pc != null ? pc.PadAimDirection() : transform.forward;
+        float reach = Range + (IsRanged || UsesMagic ? 6f : 2.5f);
+        Damageable best = null;
+        float bestScore = float.MaxValue;
+        foreach (EnemyBrain e in EnemyBrain.All)
+        {
+            if (e == null) continue;
+            Damageable d = e.GetComponent<Damageable>();
+            if (d == null || d.IsDead || d.friendly) continue;
+            Vector3 to = e.transform.position - transform.position;
+            to.y = 0f;
+            float dist = to.magnitude;
+            if (dist > reach) continue;
+            float angle = Vector3.Angle(dir, to);
+            if (angle > 70f && dist > 1.6f) continue;
+            float score = dist + angle * 0.05f;
+            if (score < bestScore) { bestScore = score; best = d; }
+        }
+        if (best != null) return best.transform.position;
+        return transform.position + dir * Mathf.Max(1.5f, Range);
     }
 
     // ----- Datos del arma -----

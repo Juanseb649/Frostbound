@@ -281,7 +281,7 @@ public class SnowGolem : MonoBehaviour
         if (Time.time - _bornAt > Lifetime) { Melt(); return; }
         if (_owner == null && !Hostile)
         {
-            GameObject p = GameObject.Find("Player");
+            GameObject p = Players.PrimaryObject;
             if (p != null) _owner = p.transform;
         }
         AnimateIdle();
@@ -342,7 +342,7 @@ public class SnowGolem : MonoBehaviour
 
     private void HostileUpdate()
     {
-        Transform player = EnemyBrain.Player;
+        Transform player = Players.NearestTransform(transform.position);
         CharacterStats ps = player != null ? player.GetComponent<CharacterStats>() : null;
         // Objetivo: el gólem aliado más cercano si está más cerca que el héroe; si no, el héroe.
         _foe = null;

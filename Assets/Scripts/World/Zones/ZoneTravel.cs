@@ -19,6 +19,7 @@ public static class ZoneTravel
             s.SaveNow();
             s.Current.zone = scene;
             s.SaveNow();
+            s.PrepareZoneChange();
         }
         LoadingScreen.Load(scene);
     }

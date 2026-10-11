@@ -9,16 +9,35 @@ public class PlayerLoadout : MonoBehaviour
     [Tooltip("Nombre si se prueba la escena sin pasar por el menú.")]
     public string fallbackName = "Pingüino";
 
+    // Jugador 2: su propia clase, plumaje y nombre (los pone CoopManager antes de activarlo).
+    [System.NonSerialized] public CharacterClass overrideClass;
+    [System.NonSerialized] public string overridePlumage;
+    [System.NonSerialized] public string overrideName;
+
+    private bool IsSecond => overrideClass != null;
+
     void Awake()
     {
         GameSession s = GameSession.Instance;
-        if (s == null || s.SelectedClass == null) return;
+        CharacterClass cls = IsSecond ? overrideClass : s != null ? s.SelectedClass : null;
+        if (cls == null) return;
         CharacterStats stats = GetComponent<CharacterStats>();
-        if (stats != null) stats.InitFromClass(s.SelectedClass);
+        if (stats != null) stats.InitFromClass(cls);
     }
 
     void Start()
     {
+        if (IsSecond)
+        {
+            gameObject.name = "Player2";
+            NameTag t2 = GetComponent<NameTag>();
+            if (t2 == null) t2 = gameObject.AddComponent<NameTag>();
+            t2.isPlayer = true;
+            t2.SetName(string.IsNullOrWhiteSpace(overrideName) ? overrideClass.displayName : overrideName.Trim(), "Jugador 2");
+            PenguinAppearance look2 = GetComponentInChildren<PenguinAppearance>();
+            if (look2 != null && palette != null && !string.IsNullOrEmpty(overridePlumage)) look2.SetPlumage(palette.ColorOf(overridePlumage));
+            return;
+        }
         gameObject.name = "Player";
         NameTag tag = GetComponent<NameTag>();
         if (tag == null) tag = gameObject.AddComponent<NameTag>();

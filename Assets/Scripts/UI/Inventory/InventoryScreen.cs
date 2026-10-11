@@ -83,6 +83,7 @@ public class InventoryScreen : MonoBehaviour
             enabled = false;
             return;
         }
+        _home = player;
         _stats = player.Stats;
         _inventory = player.Inventory;
         Build();
@@ -90,6 +91,46 @@ public class InventoryScreen : MonoBehaviour
         _inventory.Changed += MarkDirty;
         player.Changed += MarkDirty;
         SetOpen(false);
+    }
+
+    // Co-op: la misma ventana sirve al jugador 2 (la abre con SELECT en su mando).
+    private Equipment _home;
+    private int _openedFrame = -1;
+    public int ClosedFrame { get; private set; } = -1;
+    public Equipment Owner => player;
+
+    public void OpenFor(Equipment who, Tab tab = Tab.Inventory)
+    {
+        if (who == null) return;
+        if (IsOpen) SetOpen(false);
+        Bind(who);
+        Current = tab;
+        SetOpen(true);
+        _openedFrame = Time.frameCount;
+    }
+
+    private void Bind(Equipment who)
+    {
+        if (who == null || who == player) return;
+        if (_stats != null) _stats.StatsChanged -= MarkDirty;
+        if (_inventory != null) _inventory.Changed -= MarkDirty;
+        if (player != null) player.Changed -= MarkDirty;
+        player = who;
+        _stats = who.Stats;
+        _inventory = who.Inventory;
+        _stats.StatsChanged += MarkDirty;
+        _inventory.Changed += MarkDirty;
+        player.Changed += MarkDirty;
+        _dirty = true;
+    }
+
+    private Gamepad OwnerPad
+    {
+        get
+        {
+            PlayerController pc = player != null ? player.GetComponent<PlayerController>() : null;
+            return pc != null && pc.playerIndex > 0 ? pc.pad : PlayerController.PadOf(_home != null ? _home : player);
+        }
     }
 
     void OnDestroy()
@@ -105,7 +146,7 @@ public class InventoryScreen : MonoBehaviour
     void Update()
     {
         Keyboard kb = Keyboard.current;
-        Gamepad pad = Gamepad.current;
+        Gamepad pad = IsOpen ? OwnerPad : PlayerController.PadOf(_home != null ? _home : player);
         bool blocked = PauseMenu.IsPaused || LoadingScreen.Active
             || (IsOpen && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null
                 && EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null);
@@ -119,11 +160,11 @@ public class InventoryScreen : MonoBehaviour
                 else SetOpen(true);
             }
             else if (IsOpen && pad != null && pad.leftShoulder.wasPressedThisFrame) SetTab((Tab)(((int)Current + 2) % 3));
-            else if (pad != null && pad.selectButton.wasPressedThisFrame) SetOpen(!IsOpen);
+            else if (pad != null && pad.selectButton.wasPressedThisFrame && Time.frameCount != _openedFrame) SetOpen(!IsOpen);
             else if (IsOpen && UICancel.Pressed()) SetOpen(false);
         }
 
-        if (IsOpen && Gamepad.current != null && Gamepad.current.buttonWest.wasPressedThisFrame && _selected != null) DoAction(_selected);
+        if (IsOpen && pad != null && pad.buttonWest.wasPressedThisFrame && _selected != null) DoAction(_selected);
     }
 
     void LateUpdate()
@@ -163,7 +204,8 @@ public class InventoryScreen : MonoBehaviour
             b.button.selectedLook = b.tab == tab;
             b.button.Refresh();
         }
-        _kicker.text = (tab == Tab.Character ? "Personaje · C" : tab == Tab.Equipment ? "Equipo · Tab" : "Inventario · I").ToUpperInvariant();
+        _kicker.text = (tab == Tab.Character ? "Personaje · C" : tab == Tab.Equipment ? "Equipo · Tab" : "Inventario · I").ToUpperInvariant()
+            + (_home != null && player != _home ? "  ·  JUGADOR 2" : "");
         _hovered = null;
         Select(null);
         _dirty = true;
@@ -199,6 +241,8 @@ public class InventoryScreen : MonoBehaviour
             _hovered = null;
             _confirmDiscard = false;
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+            if (_home != null && player != _home) Bind(_home);
+            ClosedFrame = Time.frameCount;
         }
     }
 

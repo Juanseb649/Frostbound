@@ -53,7 +53,13 @@ public class PauseMenu : MonoBehaviour
     {
         if (_leaving) return;
         bool cancel = UICancel.Pressed();
-        bool start = UnityEngine.InputSystem.Gamepad.current != null && UnityEngine.InputSystem.Gamepad.current.startButton.wasPressedThisFrame;
+        // START pausa desde el mando del jugador 1 o del jugador 2 (un mando libre con START une al jugador 2).
+        bool start = false;
+        GameObject p1 = Players.PrimaryObject;
+        UnityEngine.InputSystem.Gamepad mine = p1 != null ? PlayerController.PadOf(p1.transform) : UnityEngine.InputSystem.Gamepad.current;
+        if (mine != null && mine.startButton.wasPressedThisFrame && !CoopManager.IsJoinPad(mine)) start = true;
+        foreach (PlayerController pc in Players.All)
+            if (pc != null && pc.playerIndex > 0 && pc.pad != null && pc.pad.startButton.wasPressedThisFrame) start = true;
         if (IsPaused)
         {
             if (cancel || start)
