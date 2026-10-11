@@ -5,13 +5,13 @@ using UnityEngine.InputSystem;
 
 // Habilidad de clase (tecla F o RB en el mando): gasta maná y tiene enfriamiento. El daño crece con el atributo Maná.
 //   Caballero · Carga de escudo: embiste hacia el cursor, golpea y derriba a los que atraviesa.
-//   Mago      · Nova de escarcha: estalla alrededor, congela y hiela a los cercanos.
+//   Mago      · Gólem de nieve: levanta un muñeco de nieve que lanza bolas heladas (máx. 2, 45 s).
 //   Shinobi   · Abanico de kunais: lanza cinco kunais en abanico que envenenan.
 //   Bárbaro   · Grito de guerra: aturde y ralentiza alrededor y recupera vida.
 [RequireComponent(typeof(CharacterStats))]
 public class PlayerAbility : MonoBehaviour
 {
-    public enum Kind { ShieldCharge, FrostNova, KunaiFan, WarCry }
+    public enum Kind { ShieldCharge, SnowGolem, KunaiFan, WarCry }
 
     public struct Info
     {
@@ -43,7 +43,7 @@ public class PlayerAbility : MonoBehaviour
     {
         switch (k)
         {
-            case Kind.FrostNova: return new Info { name = "Nova de escarcha", icon = "Mage", cost = 22f, cooldown = 7f, description = "Estalla a tu alrededor: congela y hiela a los enemigos cercanos." };
+            case Kind.SnowGolem: return new Info { name = "Gólem de nieve", icon = "Golem", cost = 30f, cooldown = 10f, description = "Levanta un gólem de nieve que te sigue y lanza bolas heladas a los corruptos. Los atrae hacia él. Hasta 2 a la vez durante 45 s." };
             case Kind.KunaiFan: return new Info { name = "Abanico de kunais", icon = "Ninja", cost = 15f, cooldown = 4f, description = "Lanza cinco kunais en abanico hacia el cursor. Envenenan." };
             case Kind.WarCry: return new Info { name = "Grito de guerra", icon = "Viking", cost = 20f, cooldown = 9f, description = "Aturde y ralentiza a los que te rodean y recupera vida." };
             default: return new Info { name = "Carga de escudo", icon = "Knight", cost = 18f, cooldown = 6f, description = "Embiste hacia el cursor: golpea y derriba a los que atraviesas." };
@@ -55,7 +55,7 @@ public class PlayerAbility : MonoBehaviour
         string id = cls != null ? cls.className : "";
         switch (id)
         {
-            case "Mage": return Kind.FrostNova;
+            case "Mage": return Kind.SnowGolem;
             case "Ninja": return Kind.KunaiFan;
             case "Viking": return Kind.WarCry;
             default: return Kind.ShieldCharge;
@@ -108,7 +108,7 @@ public class PlayerAbility : MonoBehaviour
         Vector3 aim = AimDirection();
         switch (Current)
         {
-            case Kind.FrostNova: StartCoroutine(FrostNova()); break;
+            case Kind.SnowGolem: StartCoroutine(SummonGolem(aim)); break;
             case Kind.KunaiFan: KunaiFan(aim); break;
             case Kind.WarCry: StartCoroutine(WarCry()); break;
             default: StartCoroutine(ShieldCharge(aim)); break;
@@ -181,21 +181,24 @@ public class PlayerAbility : MonoBehaviour
 
     // ---------- Mago ----------
 
-    private IEnumerator FrostNova()
+    public int GolemsAlive
     {
-        if (_pc != null) _pc.FaceAndHold(transform.forward, 0.45f);
-        if (_rig != null) _rig.PlayAttack(0.45f);
-        yield return new WaitForSeconds(0.18f);
-        GroundImpact.Spawn(transform.position, 5f, 1.6f);
-        CameraFollow.Shake(0.22f, 0.3f);
-        Color c = WeaponCatalog.DamageColor(DamageType.Frost);
-        foreach (Damageable d in Around(transform.position + Vector3.up * 0.6f, 5.2f))
+        get
         {
-            Hit(d, 1.3f, DamageType.Frost);
-            d.ApplySlow(0.5f, 4f);
-            d.Freeze(1.8f);
-            LightningArc.Spawn(transform.position + Vector3.up * 0.8f, d.PopupPoint - Vector3.up * 0.4f, c, 0.25f);
+            int n = 0;
+            foreach (SnowGolem g in SnowGolem.Instances) if (g != null && g.Alive) n++;
+            return n;
         }
+    }
+
+    private IEnumerator SummonGolem(Vector3 dir)
+    {
+        if (_pc != null) _pc.FaceAndHold(dir, 0.55f);
+        if (_rig != null) _rig.PlayAttack(0.55f);
+        yield return new WaitForSeconds(0.3f);
+        float health = 60f + _stats.level * 14f + _stats.Mana * 4f;
+        SnowGolem.Summon(gameObject, transform.position + dir * 2.2f, health, Power * 0.32f);
+        CameraFollow.Shake(0.12f, 0.2f);
     }
 
     // ---------- Shinobi ----------

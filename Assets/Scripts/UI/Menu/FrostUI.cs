@@ -309,6 +309,17 @@ public static class FrostUI
                     return Mathf.Min(Mathf.Max(ring, -gap), arrow);
                 };
                 break;
+            case "Golem":
+                f = (u, v) =>
+                {
+                    // Muñeco de nieve: tres bloques apilados (contorno) con brazos de rama.
+                    float b1 = Mathf.Abs(Mathf.Max(Mathf.Abs(u) - 0.42f, Mathf.Abs(v + 0.55f) - 0.3f)) - t;
+                    float b2 = Mathf.Abs(Mathf.Max(Mathf.Abs(u) - 0.32f, Mathf.Abs(v + 0.02f) - 0.23f)) - t;
+                    float b3 = Mathf.Abs(Mathf.Max(Mathf.Abs(u) - 0.25f, Mathf.Abs(v - 0.47f) - 0.2f)) - t;
+                    float arms = Mathf.Max(Mathf.Abs(Mathf.Abs(u) - 0.55f + (v - 0.05f) * 0.6f) - t * 0.8f, Mathf.Abs(Mathf.Abs(u) - 0.55f) - 0.22f);
+                    return Mathf.Min(Mathf.Min(b1, b2), Mathf.Min(b3, arms));
+                };
+                break;
             case "Plus":
                 f = (u, v) => Mathf.Min(Mathf.Max(Mathf.Abs(u) - t * 1.2f, Mathf.Abs(v) - 0.6f), Mathf.Max(Mathf.Abs(v) - t * 1.2f, Mathf.Abs(u) - 0.6f));
                 break;

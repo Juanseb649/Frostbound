@@ -60,6 +60,13 @@ public class EnemyProjectile : MonoBehaviour
                     transform.position = hit.point + _dir * 0.3f;
                     return;
                 }
+                Damageable ally = hit.collider.GetComponentInParent<Damageable>();
+                if (ally != null && ally.friendly)
+                {
+                    ally.TakeHit(new DamageInfo { amount = _damage, type = DamageType.Physical, source = _owner, direction = _dir });
+                    Destroy(gameObject);
+                    return;
+                }
                 CharacterStats stats = hit.collider.GetComponentInParent<CharacterStats>();
                 if (stats != null)
                 {

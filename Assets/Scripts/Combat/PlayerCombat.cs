@@ -64,6 +64,7 @@ public class PlayerCombat : MonoBehaviour
     private bool _pending;
     private float _hitAt;
     private Vector3 _aimDir = Vector3.forward;
+    private Vector3 _aimPoint;
     private bool _lowWarned;
     private int _comboStep;
     private float _comboDeadline;
@@ -75,6 +76,36 @@ public class PlayerCombat : MonoBehaviour
     private readonly Collider[] _overlap = new Collider[48];
 
     public bool IsAttacking => _pending || Time.time < _readyAt;
+
+    // Cómo se lleva el arma entre golpes (en la mano, o en la vaina de la espalda para las espadas del shinobi).
+    private WeaponCarry _carry;
+    private ItemDefinition _carryItem;
+    private GameObject _carryModel;
+    private bool _queued;
+    private Vector3 _queuedPoint;
+
+    public WeaponCarry Carry => _carry;
+
+    private void UpdateCarry()
+    {
+        if (_holder == null) return;
+        ItemDefinition item = Weapon != null ? Weapon.item : null;
+        if (_carry == null || item != _carryItem || _holder.MainModel != _carryModel)
+        {
+            if (_carry != null) _carry.Release();
+            CharacterClass cls = _stats.characterClass;
+            if (cls == null && GameSession.Instance != null) cls = GameSession.Instance.SelectedClass;
+            _carryItem = item;
+            _carryModel = _holder.MainModel;
+            _carry = WeaponCarry.For(cls, item, _holder, _rig);
+        }
+        _carry.Tick(IsAttacking || _queued, Time.deltaTime);
+        if (_queued && _carry.Ready)
+        {
+            _queued = false;
+            TryAttack(_queuedPoint);
+        }
+    }
 
     void Awake()
     {
@@ -103,9 +134,11 @@ public class PlayerCombat : MonoBehaviour
         if (_holder == null) _holder = GetComponentInChildren<WeaponHolder>();
         if (_cam == null) _cam = Camera.main;
 
+        UpdateCarry();
         if (_holder != null) _holder.SetTrail(Time.time >= _trailOn && Time.time < _trailOff);
         if (_comboStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + comboWindow) _comboStep = 0;
         if (_heavyStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + heavyComboWindow) _heavyStep = 0;
+        if (_poleStep > 0 && Time.time > _comboDeadline && Time.time > _readyAt + poleComboWindow) _poleStep = 0;
 
         if (_pending && Time.time >= _hitAt)
         {
@@ -130,6 +163,7 @@ public class PlayerCombat : MonoBehaviour
         get
         {
             if (!HasWeapon) return unarmedRange;
+            if (UsesMagic) return magicRange;
             return Weapon.item.WeaponInfo.range;
         }
     }
@@ -159,6 +193,22 @@ public class PlayerCombat : MonoBehaviour
     public bool UsesHeavyCombo => HasWeapon && !Weapon.item.IsRanged && Weapon.item.Handling == WeaponHandling.TwoHanded
                                   && Weapon.item.WeaponInfo.grip == WeaponGrip.TwoHand;
 
+    // Lanzas y báculos: estocada, barrido y molinete.
+    public bool UsesPolearmCombo => HasWeapon && !Weapon.item.IsRanged && Weapon.item.WeaponInfo.grip == WeaponGrip.Polearm && !UsesMagic;
+
+    // El mago es el único que ataca con magia: el báculo dispara orbes amarillos.
+    public bool UsesMagic => HasWeapon && Weapon.item.weaponType == WeaponType.Staff;
+
+    [Header("Magia (báculo)")]
+    public float magicRange = 11f;
+    public float orbSpeed = 17f;
+
+    [Header("Combo de lanza y báculo")]
+    public float[] poleDamage = { 1.05f, 1.1f, 1.6f };
+    public float[] poleTiming = { 0.9f, 0.95f, 1.3f };
+    public float poleComboWindow = 0.5f;
+    private int _poleStep;
+
     public bool UsesBow => HasWeapon && Weapon.item.WeaponInfo.grip == WeaponGrip.Bow;
 
     public float AttacksPerSecond
@@ -176,17 +226,34 @@ public class PlayerCombat : MonoBehaviour
     public bool TryAttack(Vector3 targetPoint)
     {
         if (Time.time < _readyAt || _pending) return false;
+        if (_carry != null && !_carry.Ready)
+        {
+            // Primero desenfunda; el golpe sale en cuanto la espada está en la mano.
+            _carry.RequestDraw();
+            _queued = true;
+            _queuedPoint = targetPoint;
+            if (_pc != null)
+            {
+                Vector3 face = targetPoint - transform.position;
+                _pc.FaceAndHold(face, BackSheathCarry.DrawTime);
+            }
+            return true;
+        }
         Vector3 dir = targetPoint - transform.position;
         dir.y = 0f;
         if (dir.sqrMagnitude < 0.001f) dir = transform.forward;
         _aimDir = dir.normalized;
+        _aimPoint = targetPoint;
 
         float duration = 1f / Mathf.Max(0.2f, AttacksPerSecond);
         if (UsesSwordCombo) return StartComboStep(duration);
         if (UsesHeavyCombo) return StartHeavyStep(duration);
+        if (UsesMagic) return StartCast(duration);
+        if (UsesPolearmCombo) return StartPolearmStep(duration);
 
         _comboStep = 0;
         _heavyStep = 0;
+        _poleStep = 0;
         if (UsesBow)
         {
             // Coger flecha, colocarla, tensar y soltar: la flecha sale cuando la aleta suelta la cuerda.
@@ -272,6 +339,116 @@ public class PlayerCombat : MonoBehaviour
         return true;
     }
 
+    // Tres golpes de lanza: 1) estocada larga, 2) barrido bajo, 3) molinete y golpe contra el suelo.
+    private bool StartPolearmStep(float baseDuration)
+    {
+        int step = Time.time <= _comboDeadline && _poleStep > 0 && _poleStep < 3 ? _poleStep + 1 : 1;
+        _poleStep = step;
+        _comboStep = 0;
+        _heavyStep = 0;
+        int i = step - 1;
+        float[] minimum = { 0.5f, 0.55f, 0.95f };
+        float duration = Mathf.Max(minimum[i], baseDuration * poleTiming[i]);
+        float[] hit = { 0.52f, 0.5f, 0.72f };
+        float[] meters = { 0.75f, 0.25f, 0.55f };
+        float[] delay = { 0.4f, 0.3f, 0.6f };
+
+        _attackMultiplier = poleDamage[i];
+        _spinAttack = false;
+        _pending = true;
+        _hitAt = Time.time + duration * hit[i];
+        _readyAt = Time.time + duration * (step == 3 ? 1f : 0.9f);
+        _comboDeadline = step == 3 ? 0f : Time.time + duration + poleComboWindow;
+        _trailOn = Time.time + duration * (step == 3 ? 0.12f : 0.4f);
+        _trailOff = Time.time + duration * (step == 3 ? 0.78f : 0.66f);
+
+        if (_pc != null)
+        {
+            _pc.FaceAndHold(_aimDir, duration * 0.92f);
+            _pc.Lunge(_aimDir, meters[i], duration * delay[i], duration * 0.18f);
+        }
+        if (_rig != null) _rig.PlayPolearmCombo(step, duration);
+        return true;
+    }
+
+    // Conjuro: el mago apunta el báculo al frente y suelta el orbe desde la punta.
+    private bool StartCast(float baseDuration)
+    {
+        _comboStep = 0;
+        _heavyStep = 0;
+        _poleStep = 0;
+        float duration = Mathf.Max(0.45f, baseDuration);
+        _attackMultiplier = 1f;
+        _spinAttack = false;
+        _pending = true;
+        _hitAt = Time.time + duration * 0.5f;
+        _readyAt = Time.time + duration;
+        if (_pc != null) _pc.FaceAndHold(_aimDir, duration * 0.9f);
+        if (_rig != null) _rig.PlayPolearmCombo(1, duration);
+        return true;
+    }
+
+    private void CastOrb()
+    {
+        Vector3 origin = transform.position + Vector3.up * 1.1f + _aimDir * 0.5f;
+        if (_holder != null && _holder.MainModel != null)
+        {
+            Transform staff = _holder.MainModel.transform;
+            origin = staff.position + staff.up * Mathf.Max(0.3f, _holder.BladeLength);
+        }
+        origin.y = Mathf.Max(origin.y, transform.position.y + 0.7f);
+        Vector3 flat = new Vector3(_aimPoint.x - transform.position.x, 0f, _aimPoint.z - transform.position.z);
+        Vector3 dir = _aimDir;
+        if (flat.magnitude > 1.5f)
+        {
+            Vector3 target = new Vector3(_aimPoint.x, transform.position.y + 0.75f, _aimPoint.z);
+            dir = (target - origin).normalized;
+            if (Vector3.Dot(new Vector3(dir.x, 0f, dir.z).normalized, _aimDir) < 0.7f) dir = _aimDir;
+        }
+        MagicOrb.Launch(origin, dir, orbSpeed, magicRange + 2f, gameObject, (target, point) => Strike(target, _attackMultiplier, true));
+        _eq.WearWeapon(wearPerShot);
+    }
+
+    private void PolearmMelee()
+    {
+        float range = Range;
+        int step = Mathf.Clamp(_poleStep, 1, 3);
+        float maxDist = step == 1 ? range + 0.8f : range + 0.3f;
+        int n = Physics.OverlapSphereNonAlloc(transform.position + Vector3.up * 0.6f, maxDist + 0.4f, _overlap, ~0, QueryTriggerInteraction.Ignore);
+        _scratch.Clear();
+        for (int i = 0; i < n; i++)
+        {
+            Damageable d = _overlap[i].GetComponentInParent<Damageable>();
+            if (d == null || d.IsDead || d.friendly || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
+            Vector3 to = d.transform.position - transform.position;
+            to.y = 0f;
+            if (to.magnitude > maxDist + 0.4f) continue;
+            if (step == 1)
+            {
+                float along = Vector3.Dot(to, _aimDir), side = Vector3.Cross(_aimDir, to).magnitude;
+                if (along < -0.3f || side > 0.85f) continue;
+            }
+            else if (step == 2 && to.sqrMagnitude > 0.04f && Vector3.Angle(_aimDir, to) > 105f) continue;
+            _scratch.Add(d);
+        }
+        foreach (Damageable d in _scratch)
+        {
+            Strike(d, _attackMultiplier, true);
+            if (step == 1) d.Knockback(d.transform.position - transform.position, 0.8f);
+            if (step == 2) d.ApplySlow(0.35f, 1.2f);
+        }
+        if (step == 3)
+        {
+            GroundImpact.Spawn(transform.position + _aimDir * (range * 0.8f), 1.8f, 1.2f);
+            CameraFollow.Shake(0.24f + (_scratch.Count > 0 ? 0.06f : 0f), 0.32f);
+        }
+        if (_scratch.Count > 0)
+        {
+            if (step != 2) StartCoroutine(HitStop(step == 3 ? 0.09f : 0.05f));
+            _eq.WearWeapon(wearPerMeleeHit);
+        }
+    }
+
     private float _brokenNoticeAt;
 
     private void ResolveAttack()
@@ -287,7 +464,8 @@ public class PlayerCombat : MonoBehaviour
             }
             return;
         }
-        if (IsRanged) Shoot(weapon);
+        if (UsesMagic) CastOrb();
+        else if (IsRanged) Shoot(weapon);
         else Melee(weapon);
     }
 
@@ -296,6 +474,11 @@ public class PlayerCombat : MonoBehaviour
         if (_heavyStep > 0 && UsesHeavyCombo)
         {
             HeavyMelee();
+            return;
+        }
+        if (_poleStep > 0 && UsesPolearmCombo)
+        {
+            PolearmMelee();
             return;
         }
         float range = Range;
@@ -309,7 +492,7 @@ public class PlayerCombat : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
-            if (d == null || d.IsDead || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
+            if (d == null || d.IsDead || d.friendly || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
             Vector3 to = d.transform.position - transform.position;
             to.y = 0f;
             if (to.magnitude > range + 0.6f) continue;
@@ -339,7 +522,7 @@ public class PlayerCombat : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
-            if (d == null || d.IsDead || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
+            if (d == null || d.IsDead || d.friendly || _scratch.Contains(d) || d.transform.IsChildOf(transform)) continue;
             Vector3 to = d.transform.position - transform.position;
             to.y = 0f;
             if (to.magnitude > maxDist + 0.4f) continue;
@@ -442,7 +625,7 @@ public class PlayerCombat : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
-            if (d == null || d == from || d.IsDead || targets.Contains(d)) continue;
+            if (d == null || d == from || d.IsDead || d.friendly || targets.Contains(d)) continue;
             targets.Add(d);
         }
         targets.Sort((a, b) => (a.transform.position - from.transform.position).sqrMagnitude

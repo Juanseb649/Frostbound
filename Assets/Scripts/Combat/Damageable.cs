@@ -31,6 +31,16 @@ public class Damageable : MonoBehaviour
     // Jefes: la vida no baja de este valor (para su discurso final) y no recibe daño mientras invulnerable.
     [NonSerialized] public float healthFloor;
     [NonSerialized] public bool invulnerable;
+    // Aliados del héroe (gólems de nieve): no reciben daño del héroe ni de otros aliados.
+    [NonSerialized] public bool friendly;
+
+    public static bool IsAlly(GameObject source)
+    {
+        if (source == null) return false;
+        if (source.GetComponentInParent<PlayerController>() != null) return true;
+        Damageable d = source.GetComponentInParent<Damageable>();
+        return d != null && d.friendly;
+    }
     public bool IsDead { get; private set; }
     public bool IsFrozen => Time.time < _frozenUntil;
     public bool IsBurning => Time.time < _burnUntil;
@@ -111,6 +121,7 @@ public class Damageable : MonoBehaviour
     public void TakeHit(DamageInfo info)
     {
         if (IsDead || info.amount <= 0f || invulnerable) return;
+        if (friendly && IsAlly(info.source)) return;
         Health -= info.amount;
         if (healthFloor > 0f && Health < healthFloor) Health = healthFloor;
         _lastHit = Time.time;

@@ -16,10 +16,10 @@ MonoBehaviour:
   slot: 0
   alsoOccupies: 
   attachMode: 0
-  prefab: {fileID: 919132149155446097, guid: b4989170d464a1f418b77e8af397ab3e, type: 3}
+  prefab: {fileID: 3084495851048370159, guid: d72f97afde5d5e245bb843539f03b50f, type: 3}
   materialOverride: {fileID: 0}
   onlyParts:
-  - Hood
+  - HoodFull
   fitBones: []
   positionOffset: {x: 0, y: 0, z: 0}
   rotationOffset: {x: 0, y: 0, z: 0}

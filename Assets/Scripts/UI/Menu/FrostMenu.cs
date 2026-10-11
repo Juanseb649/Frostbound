@@ -906,12 +906,44 @@ public class FrostMenu : MonoBehaviour
         {
             outfit.useClassOutfit = false;
             outfit.UnequipAll();
-            if (cls != null && cls.startingOutfit != null)
+            // Igual que en el juego: cada pieza inicial de armadura pone su prenda; si no hay, el traje de la clase.
+            bool any = false;
+            if (cls != null && cls.startingItems != null)
+                foreach (ItemDefinition item in cls.startingItems)
+                    if (item != null && item.IsEquippable && item.weaponModel == null && item.outfit != null) { outfit.Equip(item.outfit); any = true; }
+            if (!any && cls != null && cls.startingOutfit != null)
                 foreach (OutfitItem item in cls.startingOutfit) outfit.Equip(item);
         }
         var look = _actor.GetComponent<PenguinAppearance>();
         if (look != null) look.SetPlumage(plumage);
+        ArmActor(cls);
     }
+
+    // Las armas de la clase van en las aletas igual que en el juego (WeaponHolder), no las piezas fijas del traje.
+    private void ArmActor(CharacterClass cls)
+    {
+        foreach (SkinnedMeshRenderer r in _actor.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            if (r.name.Contains("_Weapon_") || r.name.Contains("_Offhand_")) r.enabled = false;
+        PenguinRigAnimator rig = _actor.GetComponentInChildren<PenguinRigAnimator>();
+        if (rig == null) return;
+        WeaponHolder holder = rig.GetComponent<WeaponHolder>();
+        if (holder == null) holder = rig.gameObject.AddComponent<WeaponHolder>();
+        if (_carry != null) _carry.Release();
+        _carry = null;
+        ItemDefinition main = null, off = null;
+        if (cls != null && cls.startingItems != null)
+            foreach (ItemDefinition item in cls.startingItems)
+            {
+                if (item == null || !item.IsEquippable) continue;
+                if (item.equipSlot == EquipSlot.Weapon && main == null) main = item;
+                else if (item.equipSlot == EquipSlot.Offhand && off == null && item.weaponModel != null) off = item;
+            }
+        holder.Show(main, off);
+        // El shinobi lleva la katana envainada a la espalda, como en el juego.
+        _carry = WeaponCarry.For(cls, main, holder, rig);
+    }
+
+    private WeaponCarry _carry;
 
     // Zona central invisible: arrastrar gira al héroe.
     private void DragArea(RectTransform root)
