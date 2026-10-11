@@ -96,7 +96,7 @@ public static class ControlsChecks
     {
         int n = 0;
         foreach (var d in InputSystem.devices.ToArray())
-            if (d.name.StartsWith("PruebaCoop") || d.name.StartsWith("PruebaTeclado")) { InputSystem.RemoveDevice(d); n++; }
+            if (d.name.StartsWith("PruebaCoop") || d.name.StartsWith("PruebaTeclado") || d.name.StartsWith("PruebaRaton")) { InputSystem.RemoveDevice(d); n++; }
         return "quitados=" + n;
     }
 
@@ -119,4 +119,45 @@ public static class ControlsChecks
 
     public static string GivePoints() { var st = Players.Get(0).Stats; st.pointsAvailable += 5; return "puntos=" + st.pointsAvailable; }
     public static string PressA() { InputSystem.QueueStateEvent(Pad, new GamepadState().WithButton(GamepadButton.South)); return "A"; }
+
+    public static string Debug2()
+    {
+        var sb = new System.Text.StringBuilder("bloqueado=" + GameplayInput.Blocked + " pausa=" + PauseMenu.IsPaused + " opciones=" + OptionsPanel.IsOpen + " ts=" + Time.timeScale);
+        foreach (var p in Players.All)
+        {
+            var rb = p.GetComponent<Rigidbody>();
+            var g = PlayerController.PadOf(p);
+            sb.Append(" | ").Append(p.name).Append(" activo=").Append(p.enabled).Append(" cinem=").Append(rb.isKinematic)
+              .Append(" mando=").Append(g != null ? g.name : "-").Append(" stick=").Append(g != null ? g.leftStick.ReadValue().ToString("F1") : "-")
+              .Append(" vel=").Append(rb.linearVelocity.ToString("F1")).Append(" velMax=").Append(p.Stats.MoveSpeed.ToString("F1"));
+        }
+        return sb.ToString();
+    }
+
+    public static string OpenPauseOptions()
+    {
+        var pm = Object.FindAnyObjectByType<PauseMenu>();
+        pm.Pause();
+        OptionsPanel.Open();
+        return "pausa+opciones";
+    }
+
+    public static string ClosePauseOptions()
+    {
+        var p = Object.FindAnyObjectByType<OptionsPanel>(); if (p != null) p.Close();
+        Object.FindAnyObjectByType<PauseMenu>().Resume();
+        return "cerrado";
+    }
+
+    private static Mouse TestMouse { get { foreach (var d in InputSystem.devices) if (d is Mouse m && d.name.StartsWith("PruebaRaton")) return m; return InputSystem.AddDevice<Mouse>("PruebaRaton"); } }
+    public static string HoldRightMouse() { InputSystem.QueueStateEvent(TestMouse, new MouseState().WithButton(MouseButton.Right)); return "clic derecho pegado"; }
+    public static string ReleaseMouse() { InputSystem.QueueStateEvent(TestMouse, new MouseState()); return "suelto"; }
+    public static string PressI() { InputSystem.QueueStateEvent(Kb, new KeyboardState(Key.I)); return "I"; }
+    public static string PressB() { InputSystem.QueueStateEvent(Pad, new GamepadState().WithButton(GamepadButton.East)); return "B"; }
+    public static string UIDevices()
+    {
+        var m = UnityEngine.EventSystems.EventSystem.current.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        var devs = m.actionsAsset.devices;
+        return devs.HasValue ? "ui=" + string.Join(",", devs.Value.Select(d => d.name)) : "ui=todos";
+    }
 }

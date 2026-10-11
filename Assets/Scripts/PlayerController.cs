@@ -63,7 +63,8 @@ public class PlayerController : MonoBehaviour
     {
         PlayerController pc = c != null ? c.GetComponent<PlayerController>() : null;
         if (pc == null) return !KeyboardTakenBySecond;
-        return pc.playerIndex == 0 ? !KeyboardTakenBySecond : pc.keyboardPlayer;
+        // El jugador 1 con mando no lee teclado ni ratón (un botón del ratón "pegado" lo dejaba atacando sin moverse).
+        return pc.playerIndex == 0 ? !KeyboardTakenBySecond && P1Pad == null : pc.keyboardPlayer;
     }
 
     public static Vector2 Stick(Gamepad g)
