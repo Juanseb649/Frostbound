@@ -103,7 +103,7 @@ public class CoopManager : MonoBehaviour
             TryAutoRejoin();
             if (!PauseMenu.IsPaused && !LoadingScreen.Active)
                 foreach (Gamepad g in Gamepad.all)
-                    if (g.startButton.wasPressedThisFrame && IsJoinPad(g)) { OpenPicker(g); break; }
+                    if (InputMap.PadPressed(g, GameAction.Pause) && IsJoinPad(g)) { OpenPicker(g); break; }
         }
         else
         {
@@ -172,7 +172,7 @@ public class CoopManager : MonoBehaviour
             Leave();
             return;
         }
-        if (g.selectButton.isPressed)
+        if (InputMap.PadHeld(g, GameAction.Inventory))
         {
             _selectHeld += Time.unscaledDeltaTime;
             if (_selectHeld >= LeaveHoldSeconds)
@@ -186,7 +186,7 @@ public class CoopManager : MonoBehaviour
         }
         else _selectHeld = 0f;
 
-        if (g.selectButton.wasPressedThisFrame && !PauseMenu.IsPaused)
+        if (InputMap.PadPressed(g, GameAction.Inventory) && !PauseMenu.IsPaused)
         {
             InventoryScreen inv = FindAnyObjectByType<InventoryScreen>();
             Equipment eq = _p2.GetComponent<Equipment>();
@@ -726,6 +726,8 @@ public class CoopManager : MonoBehaviour
     {
         bool hint = _p2 == null && Gamepad.all.Count > 0 && Time.unscaledTime - _sceneStart < 14f && !LoadingScreen.Active;
         if (_hint.gameObject.activeSelf != hint) _hint.gameObject.SetActive(hint);
+        if (hint) _hint.text = "Mando: pulsa " + InputMap.PadName(InputMap.PadOf(GameAction.Pause)) + " para que entre el JUGADOR 2"
+            + (InputMap.Preferred == InputMap.Device.Gamepad ? " (con un segundo mando)" : "");
     }
 
     // ---------- Enemigos ----------

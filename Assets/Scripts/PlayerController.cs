@@ -13,17 +13,7 @@ public class PlayerController : MonoBehaviour
 
     // Mando del jugador 2 (el jugador 1 usa teclado y ratón, o un mando que no esté reclamado).
     [System.NonSerialized] public Gamepad pad;
-    public bool IsPadPlayer => playerIndex > 0;
-
-    private static Gamepad _p1Pad;
-    private static float _p1PadAt = -100f;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetPads()
-    {
-        _p1Pad = null;
-        _p1PadAt = -100f;
-    }
+    public bool IsPadPlayer => playerIndex > 0 || PadOf(this) != null;
 
     public static bool Claimed(Gamepad g)
     {
@@ -32,27 +22,30 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
+    // Mando del jugador 1: solo si su periférico preferido es el mando (Configuración → Control).
+    public static Gamepad P1Pad
+    {
+        get
+        {
+            if (InputMap.Preferred != InputMap.Device.Gamepad) return null;
+            Gamepad g = Gamepad.current;
+            if (g != null && !Claimed(g)) return g;
+            foreach (Gamepad other in Gamepad.all) if (!Claimed(other)) return other;
+            return null;
+        }
+    }
+
     // Mando que maneja a este héroe (null = ninguno).
     public static Gamepad PadOf(Component c)
     {
         PlayerController pc = c != null ? c.GetComponent<PlayerController>() : null;
         if (pc != null && pc.playerIndex > 0) return pc.pad;
-        if (_p1Pad != null && _p1Pad.added && !Claimed(_p1Pad)) return _p1Pad;
-        Gamepad g = Gamepad.current;
-        if (g != null && !Claimed(g)) return g;
-        foreach (Gamepad other in Gamepad.all) if (!Claimed(other)) return other;
-        return null;
+        return P1Pad;
     }
 
-    // El mando que el jugador 1 tocó hace poco (para no confundirlo con el que pulsa START para unirse).
-    public static Gamepad RecentP1Pad => Time.unscaledTime - _p1PadAt < 10f ? _p1Pad : null;
-
-    public static void NoteP1Pad(Gamepad g)
-    {
-        if (g == null || Claimed(g)) return;
-        _p1Pad = g;
-        _p1PadAt = Time.unscaledTime;
-    }
+    // Compatibilidad: el mando que usa el jugador 1 (para no confundirlo con el que pulsa START para unirse).
+    public static Gamepad RecentP1Pad => P1Pad;
+    public static void NoteP1Pad(Gamepad g) { }
 
     public static bool UsesKeyboard(Component c)
     {
@@ -164,19 +157,11 @@ public class PlayerController : MonoBehaviour
         UpdateHover();
 
         Vector2 input = Vector2.ClampMagnitude(ReadKeyboardInput(), 1f);
-        if (input.sqrMagnitude < 0.01f)
-        {
-            Gamepad g = PadOf(this);
-            Vector2 stick = Stick(g);
-            if (stick.sqrMagnitude > 0f) { input = stick; NoteP1Pad(g); }
-            if (g != null && g.buttonNorth.wasPressedThisFrame && !GameplayInput.Blocked) { NoteP1Pad(g); if (!PickUpNearest()) TalkToNearest(); }
-        }
 
         if (_clickTarget.HasValue && FlatOffset(_clickTarget.Value).sqrMagnitude < stopDistance * stopDistance)
             _clickTarget = null;
 
-        Keyboard kb = Keyboard.current;
-        if (kb != null && kb[interactKey].wasPressedThisFrame && !PickUpNearest()) TalkToNearest();
+        if (InputMap.KeyPressed(GameAction.Interact) && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
 
         if (Time.time < _holdUntil)
         {
@@ -244,9 +229,10 @@ public class PlayerController : MonoBehaviour
     // Jugador 2: se mueve con el stick izquierdo; Y recoge o habla. Ataque, habilidad y esquiva los leen sus componentes.
     private void PadUpdate()
     {
-        Gamepad g = pad;
+        Gamepad g = PadOf(this);
         Vector2 input = GameplayInput.Blocked || (Stats != null && Stats.IsDead) ? Vector2.zero : Stick(g);
-        if (g != null && g.buttonNorth.wasPressedThisFrame && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
+        bool interact = InputMap.PadPressed(g, GameAction.Interact) || (playerIndex == 0 && InputMap.KeyPressed(GameAction.Interact));
+        if (interact && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
 
         if (Time.time < _holdUntil)
         {
@@ -567,18 +553,7 @@ public class PlayerController : MonoBehaviour
         return offset;
     }
 
-    private Vector2 ReadKeyboardInput()
-    {
-        Vector2 input = Vector2.zero;
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return input;
-
-        if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) input.y += 1f;
-        if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) input.y -= 1f;
-        if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) input.x -= 1f;
-        if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) input.x += 1f;
-        return input;
-    }
+    private Vector2 ReadKeyboardInput() => InputMap.KeyboardMove();
 
     // Devuelve true si hay un punto del suelo al que caminar.
     private bool ReadClick()
