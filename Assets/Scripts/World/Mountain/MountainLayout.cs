@@ -59,11 +59,15 @@ public static class MountainLayout
 
         public float HalfWidthAt(float z) => 6.2f + 2.6f * Mathf.PerlinNoise(nx + z * 0.03f, nz);
 
-        // Altura del sendero (sube hacia el norte con pequeñas ondulaciones).
+        // Perfil del sendero (una altura por metro): tramos llanos (los claros y algunas mesetas) y subidas entre ellos.
+        public float[] profile;
+
         public float PathHeight(float z)
         {
             z = Mathf.Clamp(z, 0f, Length);
-            return z * Rise + 1.4f * Mathf.Sin(z * 0.035f + p3) - 1.4f * Mathf.Sin(p3);
+            if (profile == null) return z * Rise;
+            int i = Mathf.Min(profile.Length - 2, Mathf.FloorToInt(z));
+            return Mathf.Lerp(profile[i], profile[i + 1], z - i);
         }
 
         // Distancia (con signo) al borde de la zona transitable: negativa dentro del sendero o de un claro.
@@ -130,23 +134,27 @@ public static class MountainLayout
             nz = rng.Range(0f, 900f)
         };
 
-        AddClearing(r, ClearingKind.Entry, 15f, 0f, 12f, 0);
-        // Recorrido: campamento, hoguera, campamento, ruinas, campamento, hoguera, campamento y la cima.
+        // Recorrido: seis campamentos (más hordas), dos hogueras, las ruinas y la cima con sus guardianes.
         var plan = new[]
         {
-            (ClearingKind.Camp, 58f), (ClearingKind.Bonfire, 88f), (ClearingKind.Camp, 118f), (ClearingKind.Ruins, 146f),
-            (ClearingKind.Camp, 176f), (ClearingKind.Bonfire, 205f), (ClearingKind.Camp, 236f)
+            (ClearingKind.Camp, 44f), (ClearingKind.Camp, 70f), (ClearingKind.Bonfire, 94f), (ClearingKind.Camp, 118f), (ClearingKind.Ruins, 144f),
+            (ClearingKind.Camp, 168f), (ClearingKind.Camp, 192f), (ClearingKind.Bonfire, 214f), (ClearingKind.Camp, 240f)
         };
-        int camps = 0, bonfires = 0;
+        var spots = new List<(ClearingKind kind, float z, float offset, float radius)> { (ClearingKind.Entry, 15f, 0f, 12f) };
         foreach (var (kind, z) in plan)
         {
-            float zz = z + rng.Range(-7f, 7f);
+            float zz = z + rng.Range(-5f, 5f);
             float side = rng.Chance(0.5f) ? 1f : -1f;
-            float radius = kind == ClearingKind.Camp ? rng.Range(13f, 16f) : kind == ClearingKind.Bonfire ? rng.Range(9f, 11f) : rng.Range(11f, 13f);
-            float offset = side * rng.Range(3f, kind == ClearingKind.Camp ? 9f : 6f);
-            AddClearing(r, kind, zz, offset, radius, kind == ClearingKind.Camp ? camps++ : kind == ClearingKind.Bonfire ? bonfires++ : 0);
+            float radius = kind == ClearingKind.Camp ? rng.Range(11.5f, 14f) : kind == ClearingKind.Bonfire ? rng.Range(9f, 11f) : rng.Range(11f, 13f);
+            float offset = side * rng.Range(2f, kind == ClearingKind.Camp ? 7f : 5f);
+            spots.Add((kind, zz, offset, radius));
         }
-        AddClearing(r, ClearingKind.Summit, Length - 18f, 0f, 16f, 0);
+        spots.Add((ClearingKind.Summit, Length - 18f, 0f, 16f));
+        r.profile = Profile(spots, rng);
+
+        int camps = 0, bonfires = 0;
+        foreach (var sp in spots)
+            AddClearing(r, sp.kind, sp.z, sp.offset, sp.radius, sp.kind == ClearingKind.Camp ? camps++ : sp.kind == ClearingKind.Bonfire ? bonfires++ : 0);
 
         r.entry = r.Ground(r.CenterX(14f), 14f);
         r.bottomGate = r.Ground(r.CenterX(3.5f), 3.5f);
@@ -154,6 +162,46 @@ public static class MountainLayout
 
         Decorate(r, new DeterministicRng(SeedUtil.Combine(seed, SeedUtil.FromString("faldas_decorado"))));
         return r;
+    }
+
+    // Llanos en cada claro (y alguna meseta a medio camino) y rampas entre ellos; algunos tramos son casi planos.
+    private static float[] Profile(List<(ClearingKind kind, float z, float offset, float radius)> spots, DeterministicRng rng)
+    {
+        int n = Mathf.CeilToInt(Length) + 2;
+        var flat = new bool[n];
+        foreach (var sp in spots)
+            for (int z = Mathf.Max(0, Mathf.FloorToInt(sp.z - sp.radius * 0.55f)); z <= Mathf.Min(n - 1, Mathf.CeilToInt(sp.z + sp.radius * 0.55f)); z++) flat[z] = true;
+        // Mesetas extra en los tramos largos sin claro.
+        for (int z = 0; z < n; z++)
+        {
+            int run = 0;
+            while (z + run < n && !flat[z + run]) run++;
+            if (run > 30)
+            {
+                int mid = z + run / 2;
+                for (int k = mid - 4; k <= mid + 4; k++) flat[k] = true;
+            }
+            z += run;
+        }
+        var h = new float[n];
+        float y = 0f, rate = rng.Range(0.14f, 0.24f);
+        bool wasFlat = true;
+        for (int z = 1; z < n; z++)
+        {
+            if (!flat[z] && wasFlat) rate = rng.Chance(0.2f) ? rng.Range(0.04f, 0.08f) : rng.Range(0.2f, 0.3f);
+            wasFlat = flat[z];
+            y += flat[z] ? 0f : rate;
+            h[z] = y;
+        }
+        // Suaviza las esquinas entre llano y rampa.
+        var smooth = new float[n];
+        for (int z = 0; z < n; z++)
+        {
+            float sum = 0f; int c = 0;
+            for (int k = -3; k <= 3; k++) { int i = Mathf.Clamp(z + k, 0, n - 1); sum += h[i]; c++; }
+            smooth[z] = sum / c;
+        }
+        return smooth;
     }
 
     private static void AddClearing(Result r, ClearingKind kind, float z, float offset, float radius, int index)

@@ -146,7 +146,8 @@ public class PlayerAbility : MonoBehaviour
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
             if (d == null || d.IsDead || _hit.Contains(d) || d.transform.IsChildOf(transform)) continue;
-            if (d.GetComponent<EnemyBrain>() == null && !d.trainingDummy) continue;
+            SnowGolem golem = d.GetComponent<SnowGolem>();
+            if (d.GetComponent<EnemyBrain>() == null && !d.trainingDummy && (golem == null || !golem.Hostile)) continue;
             _hit.Add(d);
         }
         return _hit;

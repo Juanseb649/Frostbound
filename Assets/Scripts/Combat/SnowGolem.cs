@@ -15,6 +15,7 @@ public class SnowGolem : MonoBehaviour
     private static Material _snow, _coal, _ice, _wood, _wool, _scarf;
 
     public Damageable Health { get; private set; }
+    public bool Hostile { get; private set; }
     public bool Alive => Health != null && !Health.IsDead && !_melting;
 
     private Transform _owner;
@@ -37,6 +38,8 @@ public class SnowGolem : MonoBehaviour
     {
         All.Clear();
         _snow = null;
+        _csnow = null;
+        _projCorrupt = null;
     }
 
     // Gólem vivo que un corrupto prefiere atacar: el más cercano dentro de su vista, si está más cerca que el héroe.
@@ -47,7 +50,7 @@ public class SnowGolem : MonoBehaviour
         float toPlayer = (player - enemy).sqrMagnitude;
         foreach (SnowGolem g in All)
         {
-            if (g == null || !g.Alive) continue;
+            if (g == null || !g.Alive || g.Hostile) continue;
             float d = (g.transform.position - enemy).sqrMagnitude;
             if (d > sight * sight) continue;
             float bias = g == current ? 0.6f : 1f;
@@ -57,17 +60,19 @@ public class SnowGolem : MonoBehaviour
         return bestD <= toPlayer * (best == current ? 1.4f : 0.85f) ? best : null;
     }
 
-    public static SnowGolem Summon(GameObject owner, Vector3 position, float health, float damage)
+    // hostile = gólem corrupto (lo invocan Rocco Vendaval y los chamanes): ataca al héroe y a sus gólems.
+    public static SnowGolem Summon(GameObject owner, Vector3 position, float health, float damage, bool hostile = false, int maxAlive = MaxAlive)
     {
         int alive = 0;
         SnowGolem oldest = null;
         foreach (SnowGolem g in All)
         {
-            if (g == null || !g.Alive) continue;
+            if (g == null || !g.Alive || g.Hostile != hostile) continue;
+            if (hostile && (g._owner == null || owner == null || g._owner != owner.transform)) continue;
             alive++;
             if (oldest == null || g._bornAt < oldest._bornAt) oldest = g;
         }
-        if (alive >= MaxAlive && oldest != null) oldest.Melt();
+        if (alive >= maxAlive && oldest != null) oldest.Melt();
 
         if (NavMesh.SamplePosition(position, out NavMeshHit hit, 3f, NavMesh.AllAreas)) position = hit.position;
         // Se monta desactivado: así la vida (Damageable) arranca ya con el modelo como parte visual.
@@ -76,6 +81,7 @@ public class SnowGolem : MonoBehaviour
         go.transform.position = position;
         go.transform.rotation = owner != null ? Quaternion.Euler(0f, owner.transform.eulerAngles.y, 0f) : Quaternion.identity;
         SnowGolem golem = go.AddComponent<SnowGolem>();
+        golem.Hostile = hostile;
         golem.Setup(owner != null ? owner.transform : null, health, damage);
         go.SetActive(true);
         golem.Health.ResetHealth();
@@ -109,7 +115,8 @@ public class SnowGolem : MonoBehaviour
         Health.maxHealth = health;
         Health.popupHeight = 2.1f * Size;
         Health.visual = _model;
-        Health.friendly = true;
+        Health.friendly = !Hostile;
+        if (Hostile) { Health.displayName = "Gólem corrupto"; Corrupt(); }
         Health.Died += OnDied;
     }
 
@@ -272,7 +279,7 @@ public class SnowGolem : MonoBehaviour
     {
         if (!Alive) return;
         if (Time.time - _bornAt > Lifetime) { Melt(); return; }
-        if (_owner == null)
+        if (_owner == null && !Hostile)
         {
             GameObject p = GameObject.Find("Player");
             if (p != null) _owner = p.transform;
@@ -281,6 +288,7 @@ public class SnowGolem : MonoBehaviour
         if (_agent == null || !_agent.isOnNavMesh) return;
         _agent.speed = 4.2f * Health.SpeedMultiplier;
         _agent.isStopped = Health.IsFrozen;
+        if (Hostile) { HostileUpdate(); return; }
 
         if (_target == null || _target.IsDead || (_target.transform.position - transform.position).sqrMagnitude > 16f * 16f) _target = FindTarget(14f);
         if (_target != null)
@@ -318,12 +326,87 @@ public class SnowGolem : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Damageable d = _overlap[i].GetComponentInParent<Damageable>();
-            if (d == null || d.IsDead || d.friendly || d.GetComponent<EnemyBrain>() == null) continue;
+            if (d == null || d.IsDead || d.friendly) continue;
+            SnowGolem g = d.GetComponent<SnowGolem>();
+            if (d.GetComponent<EnemyBrain>() == null && (g == null || !g.Hostile)) continue;
             float dist = (d.transform.position - transform.position).sqrMagnitude;
             if (dist < bestD) { bestD = dist; best = d; }
         }
         return best;
     }
+
+    // ---------- Gólem corrupto ----------
+
+    private Transform _foe;
+    private static Material _projCorrupt;
+
+    private void HostileUpdate()
+    {
+        Transform player = EnemyBrain.Player;
+        CharacterStats ps = player != null ? player.GetComponent<CharacterStats>() : null;
+        // Objetivo: el gólem aliado más cercano si está más cerca que el héroe; si no, el héroe.
+        _foe = null;
+        float best = float.MaxValue;
+        if (player != null && ps != null && !ps.IsDead && !SafeZone.Contains(player.position, 1.5f))
+        {
+            best = (player.position - transform.position).sqrMagnitude;
+            _foe = player;
+        }
+        foreach (SnowGolem g in All)
+        {
+            if (g == null || g == this || !g.Alive || g.Hostile) continue;
+            float d = (g.transform.position - transform.position).sqrMagnitude;
+            if (d < best * 0.8f) { best = d; _foe = g.transform; }
+        }
+        if (_foe == null || best > 22f * 22f)
+        {
+            if (_owner != null && (transform.position - _owner.position).sqrMagnitude > 4f * 4f && Time.time >= _repathAt) Move(_owner.position + _owner.right * 1.8f * _followSide);
+            return;
+        }
+        Vector3 to = _foe.position - transform.position;
+        to.y = 0f;
+        float dist = to.magnitude;
+        if (dist > 10f) { if (Time.time >= _repathAt) Move(_foe.position); return; }
+        _agent.ResetPath();
+        if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), 400f * Time.deltaTime);
+        if (Time.time >= _readyAt && Vector3.Angle(transform.forward, to) < 25f) StartCoroutine(ThrowCorrupt(_foe));
+    }
+
+    private IEnumerator ThrowCorrupt(Transform target)
+    {
+        _readyAt = Time.time + 1.4f;
+        _throwT = 0f;
+        yield return new WaitForSeconds(0.22f);
+        if (!Alive || target == null) yield break;
+        if (_projCorrupt == null) _projCorrupt = MenuRuins.Lit("Nieve corrupta", new Color(0.16f, 0.2f, 0.32f), 0.4f, 0f, new Color(0.15f, 0.5f, 1.2f));
+        Vector3 origin = _armR.position + _armR.up * 0.6f * Size;
+        Vector3 aim = target.position + Vector3.up * 0.6f;
+        EnemyProjectile.Launch(origin, aim - origin, 15f, 16f, _damage * Random.Range(0.9f, 1.1f), _projCorrupt, gameObject);
+    }
+
+    // Nieve sucia y azulada, cristales del Frost por botones y ojos que brillan.
+    private void Corrupt()
+    {
+        EnsureMaterials();
+        if (_csnow == null)
+        {
+            _csnow = Mat("Nieve corrupta gólem", SnowTexture(), new Color(0.42f, 0.48f, 0.62f), 0.2f);
+            _csnow.SetTextureScale("_BaseMap", new Vector2(4f, 2f));
+            _cice = MenuRuins.Lit("Cristal corrupto gólem", new Color(0.3f, 0.5f, 0.95f), 0.9f, 0f, new Color(0.3f, 0.9f, 2.4f));
+            _ceye = MenuRuins.Lit("Ojos corruptos", new Color(0.4f, 0.9f, 1f), 0.5f, 0f, new Color(0.6f, 2.2f, 3f));
+            _cwool = Mat("Lana corrupta", WoolTexture(new Color(0.12f, 0.12f, 0.18f), new Color(0.25f, 0.3f, 0.45f)), Color.white, 0.05f);
+        }
+        foreach (Renderer r in _model.GetComponentsInChildren<Renderer>(true))
+        {
+            Material m = r.sharedMaterial;
+            if (m == _snow) r.sharedMaterial = _csnow;
+            else if (m == _ice) r.sharedMaterial = _cice;
+            else if (m == _coal) r.sharedMaterial = r.name == "Ojo" ? _ceye : _coal;
+            else if (m == _wool || m == _scarf) r.sharedMaterial = _cwool;
+        }
+    }
+
+    private static Material _csnow, _cice, _ceye, _cwool;
 
     private IEnumerator Throw(Damageable target)
     {

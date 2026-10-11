@@ -211,6 +211,102 @@ public static class SmokeTest
         return "ataque=" + c.TryAttack(p.transform.position + p.transform.forward * 3f);
     }
 
+    public static string StairsState()
+    {
+        var sb = new System.Text.StringBuilder();
+        var sg = StairsGenerator.Instance;
+        sb.Append("escalinata=").Append(sg != null && sg.Built);
+        GameObject p = GameObject.Find("Player");
+        if (p != null) sb.Append(" héroe=").Append(p.transform.position.ToString("F1"));
+        var path = new UnityEngine.AI.NavMeshPath();
+        bool a = UnityEngine.AI.NavMesh.SamplePosition(StairsLayout.Entry, out var from, 2f, UnityEngine.AI.NavMesh.AllAreas);
+        bool b = UnityEngine.AI.NavMesh.SamplePosition(StairsLayout.ArenaCenter, out var to, 3f, UnityEngine.AI.NavMesh.AllAreas);
+        if (a && b) { UnityEngine.AI.NavMesh.CalculatePath(from.position, to.position, UnityEngine.AI.NavMesh.AllAreas, path); sb.Append(" camino_a_la_cima=").Append(path.status).Append(" esquinas=").Append(path.corners.Length); }
+        else sb.Append(" navmesh entrada=").Append(a).Append(" cima=").Append(b);
+        for (int i = 1; i < StairsLayout.Terraces; i++)
+        {
+            bool t = UnityEngine.AI.NavMesh.SamplePosition(StairsLayout.TerraceCenter(i), out var h, 1.5f, UnityEngine.AI.NavMesh.AllAreas);
+            if (!t) sb.Append(" sin_navmesh_terraza_").Append(i);
+        }
+        var boss = sg != null && sg.Encounter != null ? sg.Encounter.Boss : null;
+        sb.Append(" rocco=").Append(boss != null ? boss.title + " vida=" + Mathf.RoundToInt(boss.Health.Health) : "no");
+        sb.Append(" campamentos=").Append(Object.FindObjectsByType<EnemyCamp>().Length).Append(" hogueras=").Append(Bonfire.Instances.Count);
+        return sb.ToString();
+    }
+
+    public static string WalkPlayerToArena()
+    {
+        GameObject p = GameObject.Find("Player");
+        p.GetComponent<PlayerController>().MoveTo(StairsLayout.ArenaCenter);
+        return "en marcha";
+    }
+
+    public static string RoccoHit(float fraction)
+    {
+        var boss = StairsGenerator.Instance.Encounter.Boss;
+        boss.Health.TakeHit(new DamageInfo { amount = boss.Health.maxHealth * fraction, source = GameObject.Find("Player") });
+        return "vida=" + Mathf.RoundToInt(boss.Health.Health) + "/" + Mathf.RoundToInt(boss.Health.maxHealth) + " golems_corruptos=" + CountHostile();
+    }
+
+    public static string RoccoHit35() => RoccoHit(0.35f);
+
+    private static int CountHostile()
+    {
+        int n = 0;
+        foreach (var g in SnowGolem.Instances) if (g != null && g.Hostile && g.Alive) n++;
+        return n;
+    }
+
+    public static string ShamanTest()
+    {
+        QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentRocco);
+        int shamans = 0, knights = 0, total = 0;
+        foreach (var camp in Object.FindObjectsByType<EnemyCamp>())
+        {
+            if (camp.Members.Count == 0) camp.Spawn();
+            foreach (var b in camp.Members)
+            {
+                total++;
+                if (b.GetComponent<ShamanCaster>() != null) shamans++;
+                if (b.definition != null && b.definition.id == "Corrupt_Knight") knights++;
+            }
+        }
+        return "enemigos=" + total + " chamanes=" + shamans + " caballeros=" + knights;
+    }
+
+    public static string ProfileInfo()
+    {
+        var r = MountainLayout.Generate(12345);
+        int flat = 0;
+        for (int z = 1; z < r.profile.Length; z++) if (Mathf.Abs(r.profile[z] - r.profile[z - 1]) < 0.02f) flat++;
+        return "metros llanos=" + flat + "/" + r.profile.Length + " altura final=" + r.profile[r.profile.Length - 1].ToString("F1");
+    }
+
+    public static string SteerTest()
+    {
+        GameObject p = GameObject.Find("Player");
+        var pc = p.GetComponent<PlayerController>();
+        var mg = MountainGenerator.Instance;
+        Vector3 goal = mg != null ? mg.Layout.Ground(mg.Layout.CenterX(48f), 48f) : p.transform.position + new Vector3(0f, 0f, 25f);
+        pc.MoveTo(goal);
+        return "moviendo";
+    }
+
+    public static string SteerState()
+    {
+        GameObject p = GameObject.Find("Player");
+        return "navmesh=" + p.GetComponent<PlayerController>().UsingNavMesh + " pos=" + p.transform.position.ToString("F1");
+    }
+
+    public static string HordeInfo()
+    {
+        var mg = MountainGenerator.Instance;
+        var t = typeof(MountainGenerator);
+        var f = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        return "t=" + Time.timeSinceLevelLoad.ToString("F0") + " siguiente=" + ((float)t.GetField("_nextHorde", f).GetValue(mg)).ToString("F0")
+            + " hordas=" + t.GetField("_hordeCount", f).GetValue(mg) + " jugador=" + (t.GetField("_player", f).GetValue(mg) != null);
+    }
+
     public static string InventoryTabs()
     {
         var inv = Object.FindAnyObjectByType<InventoryScreen>();

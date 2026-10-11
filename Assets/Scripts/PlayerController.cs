@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.AI;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(CapsuleCollider))]
@@ -125,7 +126,7 @@ public class PlayerController : MonoBehaviour
         }
         else if (ReadClick())
         {
-            _moveDirection = FlatOffset(_clickTarget.Value).normalized;
+            _moveDirection = Steer(_clickTarget.Value);
         }
         else if (_attackTarget != null)
         {
@@ -191,6 +192,40 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ---------- Navegación ----------
+
+    // Dirección hacia un destino siguiendo el NavMesh: rodea casas, rocas y paredes en lugar de chocar contra ellas.
+    // Sin NavMesh en la zona (o destino fuera de él) va en línea recta como antes.
+    private NavMeshPath _path;
+    private Vector3 _pathGoal = new Vector3(float.MaxValue, 0f, 0f);
+    private float _pathAt;
+    private int _corner;
+    public bool UsingNavMesh { get; private set; }
+
+    private Vector3 Steer(Vector3 goal)
+    {
+        Vector3 straight = FlatOffset(goal).normalized;
+        if (_path == null) _path = new NavMeshPath();
+        if ((goal - _pathGoal).sqrMagnitude > 0.36f || Time.time - _pathAt > 0.35f)
+        {
+            _pathAt = Time.time;
+            _pathGoal = goal;
+            _corner = 1;
+            UsingNavMesh = false;
+            if (NavMesh.SamplePosition(transform.position, out NavMeshHit from, 1.5f, NavMesh.AllAreas)
+                && NavMesh.SamplePosition(goal, out NavMeshHit to, 2.5f, NavMesh.AllAreas)
+                && NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, _path)
+                && _path.status != NavMeshPathStatus.PathInvalid && _path.corners.Length >= 2)
+                UsingNavMesh = true;
+        }
+        if (!UsingNavMesh) return straight;
+        Vector3[] corners = _path.corners;
+        while (_corner < corners.Length - 1 && FlatOffset(corners[_corner]).sqrMagnitude < 0.36f) _corner++;
+        if (_corner >= corners.Length) return straight;
+        Vector3 dir = FlatOffset(corners[_corner]);
+        return dir.sqrMagnitude > 0.0001f ? dir.normalized : straight;
+    }
+
     // ---------- Interacción con NPC ----------
 
     public void MoveTo(Vector3 point)
@@ -220,7 +255,7 @@ public class PlayerController : MonoBehaviour
             _interactTarget = null;
             return Vector3.zero;
         }
-        return offset.normalized;
+        return Steer(_interactTarget.transform.position);
     }
 
     private Vector3 ApproachPickupTarget()
@@ -233,7 +268,7 @@ public class PlayerController : MonoBehaviour
             _pickupTarget = null;
             return Vector3.zero;
         }
-        return offset.normalized;
+        return Steer(_pickupTarget.transform.position);
     }
 
     private void TryPickUp(WorldItem item)
@@ -281,7 +316,7 @@ public class PlayerController : MonoBehaviour
             _combat.TryAttack(_attackTarget.transform.position);
             return Vector3.zero;
         }
-        return offset.normalized;
+        return Steer(_attackTarget.transform.position);
     }
 
     private void TalkToNearest()

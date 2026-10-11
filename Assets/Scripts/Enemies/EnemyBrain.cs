@@ -38,6 +38,20 @@ public class EnemyBrain : MonoBehaviour
 
     private static readonly List<EnemyBrain> Active = new List<EnemyBrain>();
     private static int _meleeAttackers;
+    // Caídos recientes: los chamanes corruptos pueden devolverlos a la vida.
+    public class Corpse
+    {
+        public EnemyDefinition def;
+        public int level;
+        public Vector3 position;
+        public Color plumage;
+        public EnemyCamp camp;
+        public float time;
+        public GameObject body;
+    }
+
+    public static readonly List<Corpse> Corpses = new List<Corpse>();
+
     private static Transform _player;
     private SnowGolem _golem;
     private Transform TargetT => _golem != null ? _golem.transform : _player;
@@ -101,6 +115,7 @@ public class EnemyBrain : MonoBehaviour
         _agent.angularSpeed = 720f;
         _agent.acceleration = 24f;
 
+        if (def.id == EnemyCamp.ShamanId && GetComponent<ShamanCaster>() == null) gameObject.AddComponent<ShamanCaster>();
         PenguinOutfit outfit = GetComponentInChildren<PenguinOutfit>();
         if (outfit != null && def.gear != null)
         {
@@ -131,9 +146,27 @@ public class EnemyBrain : MonoBehaviour
 
     private void EquipBow()
     {
-        if (_rig == null) return;
         ItemDefinition bow = GameDatabase.Instance != null && GameDatabase.Instance.items != null ? GameDatabase.Instance.items.Find("bow") : null;
-        if (bow == null || bow.weaponModel == null) return;
+        EquipWeapon(bow);
+    }
+
+    // Pone un arma de verdad en la aleta (arco con cuerda y flecha, espada, báculo...). La usan los jefes que cambian de arma.
+    public void EquipWeapon(ItemDefinition item)
+    {
+        if (_rig == null || item == null || item.weaponModel == null) return;
+        bool isBow = item.WeaponInfo.grip == WeaponGrip.Bow;
+        if (!isBow)
+        {
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+                if (r.name.Contains("Weapon_L") || r.name.Contains("Weapon_R")) r.enabled = false;
+            WeaponHolder h = _rig.GetComponent<WeaponHolder>();
+            if (h == null) h = _rig.gameObject.AddComponent<WeaponHolder>();
+            h.Show(item, null);
+            _archery = null;
+            _arrowModel = null;
+            return;
+        }
+        ItemDefinition bow = item;
         foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
             if (r.name.Contains("Weapon_L") || r.name.Contains("Weapon_R")) r.enabled = false;
         WeaponHolder holder = _rig.GetComponent<WeaponHolder>();
@@ -185,6 +218,7 @@ public class EnemyBrain : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        Corpses.Clear();
         Active.Clear();
         _meleeAttackers = 0;
         _player = null;
@@ -536,6 +570,7 @@ public class EnemyBrain : MonoBehaviour
                 if (b != this && (b.transform.position - transform.position).sqrMagnitude < 36f) b.Frenzy();
 
         Killed?.Invoke(this);
+        if (GetComponent<BossController>() == null) Corpses.Add(new Corpse { def = definition, level = Level, position = transform.position, plumage = _plumage, camp = Camp, time = Time.time, body = gameObject });
         Vector3 center = transform.position + Vector3.up * 0.6f;
         EnemyLoot.Drop(this, center);
         // Estallido de hielo solo si lo mató un arma con runa de hielo; si no, el cuerpo cae con física.

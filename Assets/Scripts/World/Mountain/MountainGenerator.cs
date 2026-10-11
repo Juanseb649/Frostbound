@@ -64,12 +64,42 @@ public class MountainGenerator : MonoBehaviour
         foreach (var p in _pulses)
             if (p.light != null) p.light.intensity = p.baseIntensity * (0.75f + 0.5f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(t * 2.1f + p.phase)), 10f));
 
+        UpdateHordes();
         if (SummitCamp != null && SummitCamp.Cleared && QuestLog.Stage(QuestLog.Ascent) == QuestLog.AscentFoothills)
         {
             QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentFoothillsDone);
             BonfireBanner.Show("LAS FALDAS, SUPERADAS", BonfireBanner.Victory);
-            Notifications.Show("Los guardianes del paso cayeron. Más arriba aguarda el Bosque Corrupto.", FrostboundUI.Gold);
+            Notifications.Show("Los guardianes del paso cayeron. El paso helado lleva a la Escalinata.", FrostboundUI.Gold);
         }
+    }
+
+    // ---------- Hordas ----------
+
+    // Cada cierto tiempo baja por el sendero una horda que va directa a por el héroe.
+    private float _nextHorde = 45f;
+    private int _hordeCount;
+    private readonly List<EnemyCamp> _hordes = new List<EnemyCamp>();
+
+    private void UpdateHordes()
+    {
+        if (_player == null || Time.timeSinceLevelLoad < _nextHorde) return;
+        _hordes.RemoveAll(h => h == null || h.Cleared);
+        _nextHorde = Time.timeSinceLevelLoad + Random.Range(70f, 100f);
+        if (_hordes.Count >= 2 || (_playerStats != null && _playerStats.IsDead)) return;
+        float z = Mathf.Clamp(_player.position.z + 32f, 30f, MountainLayout.Length - 30f);
+        if (Mathf.Abs(z - _player.position.z) < 15f) z = Mathf.Clamp(_player.position.z - 30f, 20f, MountainLayout.Length - 30f);
+        Vector3 at = Layout.Ground(Layout.CenterX(z), z);
+        EnemyCamp horde = Camp(transform, GameDatabase.Instance, "faldas_horda_" + (++_hordeCount), at, 4f, Mathf.Clamp01(z / MountainLayout.Length));
+        if (horde == null) return;
+        horde.groupSize = new Vector2Int(4, 7);
+        horde.variantChance = 0.5f;
+        horde.respawnSeconds = 99999f;
+        horde.activateDistance = 999f;
+        horde.Spawn();
+        foreach (EnemyBrain b in horde.Members) b.leashOverride = 90f;
+        horde.AlertAll(null);
+        _hordes.Add(horde);
+        BonfireBanner.Show("¡SE ACERCA UNA HORDA!", new Color(0.9f, 0.4f, 0.35f));
     }
 
     // El héroe no puede salir del sendero ni de los claros: si cruza el borde vuelve al último punto válido.
@@ -327,7 +357,9 @@ public class MountainGenerator : MonoBehaviour
         camp.elites = elites.ToArray();
         camp.eliteMinPlayerLevel = 1;
         camp.palette = db.palette;
-        camp.groupSize = new Vector2Int(4, 6);
+        camp.groupSize = new Vector2Int(5, 8);
+        EnemyDefinition knight = db.FindEnemy("Corrupt_Knight");
+        if (knight != null) { camp.meleeVariants = new[] { knight }; camp.variantChance = 0.4f; }
         camp.rangedFraction = 0.3f;
         int lvl = 3 + Mathf.RoundToInt(progress * 3f);
         camp.monsterLevel = new Vector2Int(lvl, lvl + 1);
@@ -416,9 +448,12 @@ public class MountainGenerator : MonoBehaviour
         down.label = "Bajar al poblado";
 
         ZoneGate up = ZoneGate.Build(gates, "Paso_Helado", Layout.summitGate, Layout.PathYaw(MountainLayout.Length - 3.5f), 8f, _stone, _clothBlue);
-        up.targetScene = "";
+        up.targetScene = SceneIds.Stairs;
+        up.arrival = StairsLayout.ArrivalFromFoothills;
         up.label = "Paso helado";
-        up.blockedMessage = "Más allá del paso helado empieza el Bosque Corrupto. La ventisca aún no deja pasar (Capítulo II, próximamente).";
+        up.canPass = () => QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentFoothillsDone;
+        up.blockedMessage = "Los guardianes del paso helado no te dejan pasar. Derrótalos primero.";
+        ZoneArrival.Create(gates, StairsLayout.ArrivalFromStairs, Layout.summitGate + Vector3.back * 6f + Vector3.up * 0.1f, 180f);
 
         float yaw = Layout.PathYaw(14f);
         ZoneArrival.Create(gates, MountainLayout.ArrivalFromVillage, Layout.entry + Vector3.up * 0.1f, yaw);
