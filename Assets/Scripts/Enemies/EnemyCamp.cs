@@ -71,7 +71,8 @@ public class EnemyCamp : MonoBehaviour
         int seed = SeedUtil.Combine(GameSession.Instance != null ? GameSession.Instance.worldSeed : 12345, SeedUtil.FromString(campId), _wave);
         var rng = new DeterministicRng(seed);
 
-        int count = rng.NextInt(groupSize.x, groupSize.y + 1);
+        // Con dos héroes, el doble de corruptos.
+        int count = rng.NextInt(groupSize.x, groupSize.y + 1) * Players.PartyScale;
         int rangedCount = ranged != null ? Mathf.RoundToInt(count * rangedFraction) : 0;
         CharacterStats heroStats = _player != null ? _player.GetComponent<CharacterStats>() : null;
         bool eliteUnlocked = heroStats != null && heroStats.level >= eliteMinPlayerLevel;
