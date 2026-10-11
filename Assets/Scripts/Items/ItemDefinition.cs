@@ -80,6 +80,8 @@ public class ItemDefinition : ScriptableObject
     [Header("Consumible")]
     [Min(0)] public float heal;
     [Min(0)] public float restoreMana;
+    [Tooltip("Pergamino de regreso: lleva al héroe al poblado.")]
+    public bool townPortal;
 
     public bool IsEquippable => equipSlot != EquipSlot.None;
     public bool IsStackable => maxStack > 1;

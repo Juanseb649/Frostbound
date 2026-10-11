@@ -563,7 +563,7 @@ public class EnemyBrain : MonoBehaviour
         foreach (Collider c in GetComponentsInChildren<Collider>()) c.enabled = false;
 
         if (FindPlayer() && _playerStats != null)
-            _playerStats.AddExperience(Mathf.RoundToInt(definition.ExperienceAt(Level) * (Champion ? 2.5f : 1f)));
+            _playerStats.AddExperience(Mathf.RoundToInt(definition.ExperienceAt(Level) * (Champion ? 2.5f : 1f) * EnemyDefinition.LevelGapFactor(Level, _playerStats.level)));
         if (Camp != null) Camp.OnMemberDied(this);
         else
             foreach (EnemyBrain b in Active)

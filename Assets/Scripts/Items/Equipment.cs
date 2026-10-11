@@ -183,6 +183,13 @@ public class Equipment : MonoBehaviour
         ItemStack s = _inventory.Get(inventoryIndex);
         message = "";
         if (s == null || !s.item.IsConsumable) return false;
+        if (s.item.townPortal)
+        {
+            ItemDefinition scroll = s.item;
+            if (!TownPortal.TryRead(this, inventoryIndex, out message)) return false;
+            ItemUsed?.Invoke(scroll);
+            return true;
+        }
         bool needsHealth = s.item.heal > 0f && _stats.currentHealth < _stats.MaxHealth;
         bool needsMana = s.item.restoreMana > 0f && _stats.currentMana < _stats.MaxMana;
         if (!needsHealth && !needsMana)
@@ -277,14 +284,25 @@ public class Equipment : MonoBehaviour
         bool broke = w.Wear(amount);
         if (broke)
         {
-            // El arma rota se guarda sola en la mochila (o cae al suelo si no cabe).
-            _equipped.Remove(EquipSlot.Weapon);
-            if (_inventory.FreeSlots > 0) _inventory.AddStack(w);
-            else WorldItem.Spawn(w, transform.position + transform.forward * 0.8f + Vector3.up * 0.6f, transform.forward * 1.5f + Vector3.up * 2f, gameObject);
+            // El arma rota se guarda sola en la mochila; si no cabe, sigue en la aleta. Nunca se pierde.
+            if (_inventory.FreeSlots > 0)
+            {
+                _equipped.Remove(EquipSlot.Weapon);
+                _inventory.AddStack(w);
+            }
             Apply();
             WeaponBroke?.Invoke(w);
         }
         else Changed?.Invoke();
+    }
+
+    // Precio de reparar todo lo equipado y lo de la mochila.
+    public int RepairCostAll()
+    {
+        int total = 0;
+        foreach (ItemStack s in _equipped.Values) total += ItemPricing.RepairCost(s);
+        for (int i = 0; i < _inventory.Capacity; i++) total += ItemPricing.RepairCost(_inventory.Get(i));
+        return total;
     }
 
     // Lo que hace el herrero: deja como nuevas las armas equipadas y las de la mochila.

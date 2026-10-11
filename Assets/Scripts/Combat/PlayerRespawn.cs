@@ -12,7 +12,7 @@ public class PlayerRespawn : MonoBehaviour
     public Transform respawnPoint;
     [Tooltip("Segundos de cuerpo en el suelo antes de mostrar la pantalla de muerte.")]
     public float screenDelay = 1.2f;
-    [Range(0f, 1f)] public float durabilityLoss = 0.1f;
+    [Range(0f, 1f)] public float durabilityLoss = 0.05f;
 
     private CharacterStats _stats;
     private Rigidbody _rb;
@@ -106,7 +106,11 @@ public class PlayerRespawn : MonoBehaviour
             foreach (EquipSlot slot in Equipment.Slots)
             {
                 ItemStack s = eq.GetStack(slot);
-                if (s != null && s.item != null && s.item.HasDurability) s.Wear(s.item.maxDurability * durabilityLoss);
+                // Morir desgasta el equipo, pero nunca lo rompe ni lo quita: el héroe despierta con todo lo que llevaba.
+                if (s == null || s.item == null || !s.item.HasDurability) continue;
+                s.EnsureInstance();
+                if (s.durability > 1f)
+                    s.durability = Mathf.Max(1f, s.durability - s.item.maxDurability * durabilityLoss);
             }
             eq.Apply();
         }
@@ -126,7 +130,7 @@ public class PlayerRespawn : MonoBehaviour
         GameplayInput.Unblock();
         _dying = false;
         if (GameSession.Instance != null) GameSession.Instance.SaveNow();
-        Notifications.Show(bonfire != null ? "Despiertas junto a la hoguera. Tu equipo se desgastó un poco." : "Despiertas en el poblado. Tu equipo se desgastó un poco.", FrostboundUI.Muted);
+        Notifications.Show(bonfire != null ? "Despiertas junto a la hoguera con todo tu equipo (algo desgastado)." : "Despiertas en el poblado con todo tu equipo (algo desgastado).", FrostboundUI.Muted);
     }
 
     private void ReturnToTitle()

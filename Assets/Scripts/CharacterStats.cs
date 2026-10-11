@@ -75,9 +75,9 @@ public class CharacterStats : MonoBehaviour
     [Min(0)] public int pointsPerLevel = 5;
     [Min(1)] public int maxLevel = 50;
     [Tooltip("XP para pasar del nivel 1 al 2.")]
-    [Min(1)] public int xpBase = 100;
-    [Tooltip("Curva: XP necesaria = xpBase × nivel ^ xpGrowth.")]
-    [Range(1f, 3f)] public float xpGrowth = 1.5f;
+    [Min(1)] public int levelXpBase = 100;
+    [Tooltip("Curva: XP necesaria = levelXpBase × nivel ^ levelXpGrowth.")]
+    [Range(1f, 3f)] public float levelXpGrowth = 1.3f;
 
     [Header("Atributos")]
     [Tooltip("Valores de la clase.")]
@@ -94,8 +94,10 @@ public class CharacterStats : MonoBehaviour
     public float healthPerPoint = 8f;
     [Tooltip("Maná máximo extra por cada punto de Maná.")]
     public float manaPerPoint = 5f;
-    [Tooltip("Velocidad extra (m/s) por cada punto de Agilidad.")]
-    public float agilitySpeedPerPoint = 0.35f;
+    [Tooltip("Velocidad extra máxima (m/s) que puede dar la Agilidad: cada punto da algo menos que el anterior.")]
+    public float agilitySpeedCap = 2f;
+    [Tooltip("Puntos de Agilidad con los que se alcanza ~63 % de la velocidad extra máxima.")]
+    public float agilitySpeedScale = 40f;
     [Tooltip("Daño extra por cada punto de Fuerza.")]
     public float strengthDamagePerPoint = 2f;
     [Tooltip("Vida base de la que parten todas las clases.")]
@@ -160,7 +162,8 @@ public class CharacterStats : MonoBehaviour
 
     public float MaxHealth => baseMaxHealth + Health * healthPerPoint;
     public float MaxMana => baseMaxMana + Mana * manaPerPoint;
-    public float MoveSpeed => (characterClass != null ? characterClass.baseMoveSpeed : 6f) + Agility * agilitySpeedPerPoint;
+    public float MoveSpeed => (characterClass != null ? characterClass.baseMoveSpeed : 6f) + AgilitySpeedBonus(Agility);
+    public float AgilitySpeedBonus(int agility) => agilitySpeedCap * (1f - Mathf.Exp(-Mathf.Max(0, agility) / Mathf.Max(1f, agilitySpeedScale)));
     public float Damage => (characterClass != null ? characterClass.baseDamage : 10f) + WeaponDamage + Strength * strengthDamagePerPoint;
     public float ManaRegenPerSecond => 0.5f + Mana * 0.15f;
     public float DamageReduction => Armor / (Armor + Mathf.Max(1f, armorForHalfDamage));
@@ -171,7 +174,7 @@ public class CharacterStats : MonoBehaviour
         {
             case StatType.Strength: return "+" + strengthDamagePerPoint.ToString("0.#") + " de daño por punto";
             case StatType.Mana: return "+" + manaPerPoint.ToString("0.#") + " de maná y más regeneración";
-            case StatType.Agility: return "+" + agilitySpeedPerPoint.ToString("0.##") + " m/s por punto";
+            case StatType.Agility: return "+" + (AgilitySpeedBonus(Agility + 1) - AgilitySpeedBonus(Agility)).ToString("0.###") + " m/s el próximo punto (cada vez menos)";
             default: return "+" + healthPerPoint.ToString("0.#") + " de vida por punto";
         }
     }
@@ -208,7 +211,7 @@ public class CharacterStats : MonoBehaviour
 
     public bool IsMaxLevel => level >= maxLevel;
 
-    public int ExperienceToNextLevel() => IsMaxLevel ? 0 : Mathf.RoundToInt(xpBase * Mathf.Pow(level, xpGrowth));
+    public int ExperienceToNextLevel() => IsMaxLevel ? 0 : Mathf.RoundToInt(levelXpBase * Mathf.Pow(level, levelXpGrowth));
 
     public float LevelProgress => IsMaxLevel ? 1f : experience / (float)Mathf.Max(1, ExperienceToNextLevel());
 

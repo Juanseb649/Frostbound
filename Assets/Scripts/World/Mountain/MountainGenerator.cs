@@ -328,6 +328,7 @@ public class MountainGenerator : MonoBehaviour
                         {
                             SummitCamp.groupSize = new Vector2Int(6, 8);
                             SummitCamp.eliteChance = 1f;
+                            SummitCamp.ignoreCurseGate = true;
                             SummitCamp.championChance = 0.35f;
                             SummitCamp.respawnSeconds = 600f;
                             CampLight(c.center);

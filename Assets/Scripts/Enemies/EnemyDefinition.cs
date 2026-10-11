@@ -48,7 +48,15 @@ public class EnemyDefinition : ScriptableObject
     // Escalado por nivel de monstruo (spec §4.1).
     public float HealthAt(int level) => maxHealth * (1f + 0.18f * (level - 1));
     public float DamageScaleAt(int level) => 1f + 0.12f * (level - 1);
-    public int ExperienceAt(int level) => Mathf.RoundToInt(experience * (1f + 0.15f * (level - 1)));
+    public int ExperienceAt(int level) => Mathf.RoundToInt(experience * (1f + 0.25f * (level - 1)));
+
+    // Como en Diablo II: matar enemigos de mucho menos nivel apenas da experiencia; los de más nivel dan un plus.
+    public static float LevelGapFactor(int monsterLevel, int heroLevel)
+    {
+        int gap = monsterLevel - heroLevel;
+        if (gap >= 0) return 1f + 0.1f * Mathf.Min(gap, 5);
+        return Mathf.Max(0.1f, 1f + 0.15f * gap);
+    }
 
     void OnValidate()
     {

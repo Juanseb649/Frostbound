@@ -103,6 +103,11 @@ public class VillageWorldGenerator : MonoBehaviour
         {
             if (npc.displayName == "Tabernera Mora") npc.options = new List<NPCOption> { NPCOption.Hablar, NPCOption.Arcon };
             if (npc.displayName == "Mercader Tico") npc.options = new List<NPCOption> { NPCOption.Hablar, NPCOption.Comprar, NPCOption.Vender };
+            if (npc.displayName == "Anciano Pingo")
+            {
+                npc.role = "Mago";
+                npc.options = new List<NPCOption> { NPCOption.Hablar, NPCOption.Comprar };
+            }
         }
 
         GameObject steve = GameObject.Find(MapSystem.SteveName);
@@ -165,6 +170,8 @@ public class VillageWorldGenerator : MonoBehaviour
             if (QuestLog.Stage(QuestLog.Ascent) < QuestLog.AscentFoothills) QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentFoothills);
         };
         ZoneArrival.Create(t, MountainLayout.ArrivalFromFoothills, VillageLayout.Trailhead + new Vector3(0f, 0.1f, -6f), 180f);
+        // Llegada del pergamino de regreso: la plaza, donde empieza la partida.
+        ZoneArrival.Create(root, TownPortal.ArrivalId, new Vector3(0f, 0.1f, -9f), 0f);
 
         var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("sendero_norte")));
         Mesh rock = MountainMeshes.Rock(SeedUtil.Combine(Seed, 77), 0.6f);

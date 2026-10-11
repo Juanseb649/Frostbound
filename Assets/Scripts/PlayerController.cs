@@ -6,6 +6,14 @@ using UnityEngine.AI;
 [RequireComponent(typeof(CapsuleCollider))]
 public class PlayerController : MonoBehaviour
 {
+    [Tooltip("0 = jugador 1 (teclado y ratón), 1 = jugador 2 (mando).")]
+    public int playerIndex;
+
+    public CharacterStats Stats => _stats != null ? _stats : _stats = GetComponent<CharacterStats>();
+
+    void OnEnable() => Players.Register(this);
+    void OnDestroy() => Players.Unregister(this);
+
     [Header("Movement")]
     public float moveSpeed = 6f;
     public float rotationSpeed = 12f;
@@ -167,7 +175,7 @@ public class PlayerController : MonoBehaviour
 
         Vector3 velocity = _moveDirection * speed;
         if (Time.time >= _lungeFrom && Time.time < _lungeUntil) velocity = _lungeVelocity;
-        velocity.y = _rb.linearVelocity.y;
+        velocity.y = SnapVertical(_rb.linearVelocity.y, speed);
         _rb.linearVelocity = velocity;
 
         // La rotación la controla solo el script: los choques no pueden dejarlo girando.
@@ -190,6 +198,27 @@ public class PlayerController : MonoBehaviour
         {
             _stuckTimer = 0f;
         }
+    }
+
+    // Pegado al suelo: al subir una rampa o pasar una loma la física no puede lanzarlo por los aires.
+    private CapsuleCollider _capsule;
+    private float SnapVertical(float vy, float speed)
+    {
+        if (_capsule == null) _capsule = GetComponent<CapsuleCollider>();
+        vy = Mathf.Min(vy, speed * 0.8f);
+        if (vy <= -3f || _moveDirection.sqrMagnitude < 0.01f || _capsule == null) return vy;
+        float feet = _capsule.bounds.min.y;
+        Vector3 origin = new Vector3(_rb.position.x, feet + 0.3f, _rb.position.z);
+        int n = Physics.RaycastNonAlloc(origin, Vector3.down, _hits, 1.1f, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.MaxValue;
+        for (int i = 0; i < n; i++)
+        {
+            if (_hits[i].collider == null || _hits[i].collider.attachedRigidbody == _rb) continue;
+            best = Mathf.Min(best, _hits[i].distance);
+        }
+        float gap = best - 0.3f;
+        if (gap > 0.05f && gap < 0.8f) return -Mathf.Max(4f, speed);
+        return vy;
     }
 
     // ---------- Navegación ----------

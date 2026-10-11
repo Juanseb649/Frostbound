@@ -17,6 +17,8 @@ public class EnemyCamp : MonoBehaviour
     [Tooltip("Otras tropas cuerpo a cuerpo que pueden sustituir a la normal (por ejemplo, caballeros corruptos).")]
     public EnemyDefinition[] meleeVariants = new EnemyDefinition[0];
     [Range(0f, 1f)] public float variantChance = 0.35f;
+    [Tooltip("Las clases malditas (caballeros, magos, ninjas y vikingos corruptos) solo aparecen tras derrotar a un jefe. Marcado = aparecen siempre (guardianes de un paso).")]
+    public bool ignoreCurseGate;
 
     [Header("Grupo")]
     public Vector2Int groupSize = new Vector2Int(4, 7);
@@ -76,7 +78,8 @@ public class EnemyCamp : MonoBehaviour
         int rangedCount = ranged != null ? Mathf.RoundToInt(count * rangedFraction) : 0;
         CharacterStats heroStats = _player != null ? _player.GetComponent<CharacterStats>() : null;
         bool eliteUnlocked = heroStats != null && heroStats.level >= eliteMinPlayerLevel;
-        bool withElite = eliteUnlocked && elites != null && elites.Length > 0 && rng.Chance(eliteChance);
+        bool cursed = ignoreCurseGate || CursedAwake;
+        bool withElite = cursed && eliteUnlocked && elites != null && elites.Length > 0 && rng.Chance(eliteChance);
         int slot = 0;
         // Tras la caída de Rocco Vendaval, los chamanes corruptos se unen a las hordas (invocan gólems y reviven a los caídos).
         EnemyDefinition shaman = ShamansAwake && GameDatabase.Instance != null ? GameDatabase.Instance.FindEnemy(ShamanId) : null;
@@ -85,7 +88,7 @@ public class EnemyCamp : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             EnemyDefinition def = i < rangedCount ? ranged : melee;
-            if (def == melee && meleeVariants != null && meleeVariants.Length > 0 && rng.Chance(variantChance))
+            if (cursed && def == melee && meleeVariants != null && meleeVariants.Length > 0 && rng.Chance(variantChance))
                 def = meleeVariants[rng.NextInt(0, meleeVariants.Length)] ?? melee;
             if (withElite && i == count - 1) def = elites[rng.NextInt(0, elites.Length)];
             if (withShaman && i == count - (withElite ? 2 : 1)) def = shaman;
@@ -103,6 +106,10 @@ public class EnemyCamp : MonoBehaviour
             _members.Add(brain);
         }
     }
+
+    // Al principio solo hay esbirros corruptos; las clases malditas despiertan cuando cae el primer jefe.
+    public static bool CursedAwake => QuestLog.Stage(QuestLog.Citadel) >= QuestLog.CitadelBarbarian
+                                      || QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentFoothillsDone;
 
     public const string ShamanId = "Corrupt_Shaman";
     public static bool ShamansAwake => QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentRocco;
