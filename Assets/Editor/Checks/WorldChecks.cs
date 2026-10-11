@@ -13,52 +13,38 @@ public static class WorldChecks
 
     public static string NewGameInTestSlot()
     {
-        var select = Object.FindAnyObjectByType<ClassSelectController>();
-        if (select == null) return "sin selección de clase";
-        select.StartAdventure();
-        return ClickSlot();
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin menú";
+        bool occupied = SaveSystem.Exists(TestSlot);
+        if (occupied) SaveSystem.Delete(TestSlot);
+        menu.ShowCreate(TestSlot);
+        menu.StartAdventure();
+        return "ranura " + (TestSlot + 1) + (occupied ? " (sobrescrita)" : "");
     }
 
     public static string ContinueTestSlot()
     {
-        var menu = Object.FindAnyObjectByType<MainMenuController>();
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
         if (menu == null) return "sin menú";
-        if (!menu.continueButton.interactable) return "Continuar deshabilitado";
-        menu.continueButton.onClick.Invoke();
-        return ClickSlot();
+        if (!SaveSystem.Exists(TestSlot)) return "no hay partida en la ranura " + (TestSlot + 1);
+        menu.LoadSlot(TestSlot);
+        return "ranura " + (TestSlot + 1);
     }
 
     public static string OpenLoadPanel()
     {
-        var menu = Object.FindAnyObjectByType<MainMenuController>();
-        menu.continueButton.onClick.Invoke();
-        return Object.FindAnyObjectByType<SaveSlotsPanel>() != null ? "abierto" : "no abrió";
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin menú";
+        menu.ShowHeroes();
+        return "abierto";
     }
 
     public static string AskDeleteTestSlot()
     {
-        var panel = Object.FindAnyObjectByType<SaveSlotsPanel>();
-        Button del = panel.GetComponentsInChildren<Button>().Where(b => b.name == "Borrar").LastOrDefault();
-        if (del == null) return "sin botón borrar";
-        del.onClick.Invoke();
-        return "pidiendo confirmación";
-    }
-
-    private static string ClickSlot()
-    {
-        var panel = Object.FindAnyObjectByType<SaveSlotsPanel>();
-        if (panel == null) return "no se abrió el panel de ranuras";
-        Button slot = panel.GetComponentsInChildren<Button>().FirstOrDefault(b => b.name == "Ranura_" + (TestSlot + 1));
-        if (slot == null) return "sin ranura";
-        bool occupied = SaveSystem.Exists(TestSlot);
-        slot.onClick.Invoke();
-        if (occupied && Object.FindAnyObjectByType<SaveSlotsPanel>() != null)
-        {
-            panel = Object.FindAnyObjectByType<SaveSlotsPanel>();
-            slot = panel.GetComponentsInChildren<Button>().First(b => b.name == "Ranura_" + (TestSlot + 1));
-            slot.onClick.Invoke();
-        }
-        return "ranura " + (TestSlot + 1) + (occupied ? " (sobrescrita)" : "");
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null || !SaveSystem.Exists(TestSlot)) return "sin partida de prueba";
+        menu.AskDeleteSlot(TestSlot);
+        return menu.ConfirmOpen ? "pidiendo confirmación" : "no pidió confirmación";
     }
 
     public static string WorldState()

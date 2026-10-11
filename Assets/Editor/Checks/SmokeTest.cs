@@ -11,17 +11,31 @@ public static class SmokeTest
 {
     public static string NewGame()
     {
-        var menu = Object.FindAnyObjectByType<MainMenuController>();
-        if (menu == null) return "sin MainMenuController";
-        menu.OpenClassSelect();
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin FrostMenu";
+        menu.ShowCreate();
+        return "ok";
+    }
+
+    public static string MenuState()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        return menu != null ? menu.State() : "sin FrostMenu";
+    }
+
+    public static string MenuHeroes()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin FrostMenu";
+        menu.ShowHeroes();
         return "ok";
     }
 
     public static string StartAdventure()
     {
-        var select = Object.FindAnyObjectByType<ClassSelectController>();
-        if (select == null) return "sin ClassSelectController";
-        select.StartAdventure();
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin FrostMenu";
+        menu.StartAdventure();
         return "ok";
     }
 
