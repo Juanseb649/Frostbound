@@ -73,7 +73,7 @@ public class PlayerDodge : MonoBehaviour
 
         Gamepad pad = PlayerController.PadOf(this);
         bool pressed = (PlayerController.UsesKeyboard(this) && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
-                       || (pad != null && pad.buttonSouth.wasPressedThisFrame
+                       || (pad != null && pad.buttonSouth.wasPressedThisFrame && (WorldHUD.Instance == null || !WorldHUD.Instance.MenuOpen)
                            && (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null));
         if (pressed) StartRoll(RollDirection());
     }

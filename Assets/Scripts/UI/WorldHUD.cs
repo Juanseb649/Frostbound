@@ -108,6 +108,8 @@ public class WorldHUD : MonoBehaviour
     private NPCInteractable _menuNpc;
     private float _menuOpenedAt;
     private readonly List<System.Action> _menuActions = new List<System.Action>();
+    private readonly List<Image> _menuBorders = new List<Image>();
+    private int _menuPick = -1;
 
 
     void Awake()
@@ -335,6 +337,8 @@ public class WorldHUD : MonoBehaviour
 
         for (int i = _menuButtons.childCount - 1; i >= 0; i--) DestroyImmediate(_menuButtons.GetChild(i).gameObject);
         _menuActions.Clear();
+        _menuBorders.Clear();
+        _menuPick = -1;
 
         GameObject first = null;
         int index = 1;
@@ -399,6 +403,7 @@ public class WorldHUD : MonoBehaviour
         fx.normalBorder = FrostboundUI.Border;
         fx.activeBorder = FrostboundUI.Ice;
         _menuActions.Add(action);
+        _menuBorders.Add(border);
         return border.gameObject;
     }
 
@@ -658,6 +663,22 @@ public class WorldHUD : MonoBehaviour
         {
             CloseMenu();
             return;
+        }
+        // Mando (cualquiera de los dos jugadores): cruceta arriba/abajo elige y A confirma.
+        if (pad != null && _menuActions.Count > 0)
+        {
+            int move = pad.dpad.down.wasPressedThisFrame ? 1 : pad.dpad.up.wasPressedThisFrame ? -1 : 0;
+            if (move != 0)
+            {
+                _menuPick = _menuPick < 0 ? (move > 0 ? 0 : _menuActions.Count - 1) : (_menuPick + move + _menuActions.Count) % _menuActions.Count;
+                for (int i = 0; i < _menuBorders.Count; i++)
+                    if (_menuBorders[i] != null) _menuBorders[i].color = i == _menuPick ? FrostboundUI.Ice : FrostboundUI.Border;
+            }
+            else if (pad.buttonSouth.wasPressedThisFrame && _menuPick >= 0 && _menuPick < _menuActions.Count)
+            {
+                _menuActions[_menuPick]();
+                return;
+            }
         }
         if (kb == null) return;
         for (int i = 0; i < _menuActions.Count && i < 9; i++)
