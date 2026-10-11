@@ -217,7 +217,7 @@ public class PlayerCombat : MonoBehaviour
         {
             float baseSpeed = HasWeapon ? Weapon.item.attackSpeed : unarmedAttackSpeed;
             float swift = _eq.RunePower(RuneEffect.Swiftness);
-            return baseSpeed * (1f + _stats.Agility * agilityAttackSpeed) * (1f + swift) * (1f + _eq.AffixSum(AffixKind.AttackSpeed));
+            return baseSpeed * (1f + 0.6f * (1f - Mathf.Exp(-_stats.Agility * agilityAttackSpeed / 0.6f))) * (1f + swift) * (1f + _eq.AffixSum(AffixKind.AttackSpeed));
         }
     }
 
@@ -666,7 +666,8 @@ public class PlayerCombat : MonoBehaviour
 
     private void OnWeaponBroke(ItemStack weapon)
     {
-        Notifications.Show("¡" + weapon.item.displayName + " se rompió! Se guardó en la mochila: llévala al herrero.", FrostboundUI.Negative);
+        bool stored = _eq != null && _eq.MainWeapon != weapon;
+        Notifications.Show("¡" + weapon.item.displayName + " se rompió! " + (stored ? "Se guardó en la mochila" : "Sigue en tu aleta, pero no hace daño") + ": llévala al herrero.", FrostboundUI.Negative);
     }
 
     void LateUpdate()

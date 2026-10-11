@@ -342,7 +342,7 @@ public class WorldHUD : MonoBehaviour
         foreach (NPCOption option in available)
         {
             NPCOption o = option;
-            GameObject b = MenuButton(index, NPCInteractable.Label(o), () => npc.Choose(o));
+            GameObject b = MenuButton(index, npc.LabelFor(o), () => npc.Choose(o));
             if (first == null) first = b;
             index++;
         }
@@ -380,6 +380,10 @@ public class WorldHUD : MonoBehaviour
         Stretch(text.rectTransform, 0f);
         text.rectTransform.offsetMin = new Vector2(14f, 0f);
         text.text = label;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 11f;
+        text.fontSizeMax = 16f;
+        text.rectTransform.offsetMax = new Vector2(-30f, 0f);
 
         TextMeshProUGUI key = Text(border.transform, "Tecla", subFont, 13f, FrostboundUI.Disabled, TextAlignmentOptions.Right);
         Stretch(key.rectTransform, 0f);

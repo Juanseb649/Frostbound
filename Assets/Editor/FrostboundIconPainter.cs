@@ -289,6 +289,15 @@ public static class FrostboundIconPainter
             .Add(new Ring(64, 64, 47, 4), SteelDark, false)
             .Add(new Circle(64, 64, 13), Steel);
 
+        d["scroll"] = new Icon()
+            .Add(new Box(64, 64, 30, 40, 4), H("#EAD9AE"))
+            .Add(new Box(64, 24, 38, 9, 8), H("#C9A86A"))
+            .Add(new Box(64, 104, 38, 9, 8), H("#C9A86A"))
+            .Add(new Box(64, 52, 18, 2.5f, 1), H("#9C7A45"), false, false)
+            .Add(new Box(64, 64, 22, 2.5f, 1), H("#9C7A45"), false, false)
+            .Add(new Box(64, 76, 15, 2.5f, 1), H("#9C7A45"), false, false)
+            .Add(new Circle(88, 92, 9), Red)
+            .Rotated(-12f, 0.95f);
         d["potion_red"] = Potion(Red);
         d["potion_blue"] = Potion(Blue);
 
