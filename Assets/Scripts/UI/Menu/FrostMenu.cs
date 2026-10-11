@@ -92,7 +92,7 @@ public class FrostMenu : MonoBehaviour
             _cam.transform.rotation = Quaternion.Slerp(_cam.transform.rotation, look, k);
             _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, _camFov, k);
         }
-        if (_busy || SaveSlotsPanel.IsOpen) return;
+        if (_busy || SaveSlotsPanel.IsOpen || OptionsPanel.IsOpen) return;
         if (_nameField != null && _nameField.isFocused) return;
         if (UICancel.Pressed())
         {
@@ -261,7 +261,7 @@ public class FrostMenu : MonoBehaviour
         _play = buttons[0]; _continue = buttons[1]; _options = buttons[2]; _credits = buttons[3]; _quit = buttons[4];
         _play.button.onClick.AddListener(() => { _targetSlot = -1; Go(Screen.Create); });
         _continue.button.onClick.AddListener(() => Go(Screen.Heroes));
-        _options.button.onClick.AddListener(() => Go(Screen.Options));
+        _options.button.onClick.AddListener(() => OptionsPanel.Open(() => Select(_options.button)));
         _credits.button.onClick.AddListener(() => Go(Screen.Credits));
         _quit.button.onClick.AddListener(Quit);
 

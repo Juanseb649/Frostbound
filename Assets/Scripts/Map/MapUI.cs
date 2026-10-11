@@ -160,7 +160,9 @@ public class MapUI : MonoBehaviour
     void Update()
     {
         Keyboard kb = Keyboard.current;
-        if (kb != null && kb.mKey.wasPressedThisFrame && !SaveSlotsPanel.IsOpen && !PauseMenu.IsPaused && MapSystem.Instance != null) Toggle();
+        GameObject p1 = Players.PrimaryObject;
+        bool mapPressed = InputMap.KeyPressed(GameAction.Map) || (p1 != null && InputMap.PadPressed(PlayerController.PadOf(p1.transform), GameAction.Map));
+        if (mapPressed && !GameplayInput.Blocked && !SaveSlotsPanel.IsOpen && !PauseMenu.IsPaused && MapSystem.Instance != null) Toggle();
         if (FullOpen && kb != null && kb.escapeKey.wasPressedThisFrame) Close();
 
         MapSystem map = MapSystem.Instance;

@@ -149,16 +149,17 @@ public class PlayerCombat : MonoBehaviour
         if (GameplayInput.Blocked || _stats.IsDead || (_dodge != null && _dodge.IsRolling)) return;
         // Mando: X (cuadrado) ataca; apunta solo al enemigo más cercano en la dirección del stick.
         Gamepad pad = PlayerController.PadOf(this);
-        if (pad != null && pad.buttonWest.isPressed)
+        if (InputMap.PadHeld(pad, GameAction.Attack))
         {
-            if (PlayerController.UsesKeyboard(this)) PlayerController.NoteP1Pad(pad);
             TryAttack(PadAimPoint());
             return;
         }
         if (!PlayerController.UsesKeyboard(this)) return;
-        Mouse mouse = Mouse.current;
-        bool wants = mouse != null && mouse.rightButton.isPressed && !GameplayInput.PointerOverUI;
-        if (wants && CursorPoint(out Vector3 p)) TryAttack(p);
+        bool wants = InputMap.KeyHeld(GameAction.Attack) && !(InputMap.KeyIsMouse(GameAction.Attack) && GameplayInput.PointerOverUI);
+        if (!wants) return;
+        // Con mando como periférico (o sin ratón) apunta solo; con ratón, al cursor.
+        if (pad != null || Mouse.current == null) TryAttack(PadAimPoint());
+        else if (CursorPoint(out Vector3 p)) TryAttack(p);
     }
 
     // Punto al que golpea quien juega con mando: el enemigo más cercano delante de él, o un paso al frente.

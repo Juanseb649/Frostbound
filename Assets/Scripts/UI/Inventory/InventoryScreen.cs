@@ -152,15 +152,15 @@ public class InventoryScreen : MonoBehaviour
                 && EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>() != null);
         if (!blocked)
         {
-            if (kb != null && kb.cKey.wasPressedThisFrame) Press(Tab.Character);
-            else if (kb != null && kb.iKey.wasPressedThisFrame) Press(Tab.Inventory);
+            if (InputMap.KeyPressed(GameAction.Character) || (!IsOpen && InputMap.PadPressed(pad, GameAction.Character))) Press(Tab.Character);
+            else if (InputMap.KeyPressed(GameAction.Inventory)) Press(Tab.Inventory);
             else if ((kb != null && kb.tabKey.wasPressedThisFrame) || (IsOpen && pad != null && pad.rightShoulder.wasPressedThisFrame))
             {
                 if (IsOpen) SetTab((Tab)(((int)Current + 1) % 3));
                 else SetOpen(true);
             }
             else if (IsOpen && pad != null && pad.leftShoulder.wasPressedThisFrame) SetTab((Tab)(((int)Current + 2) % 3));
-            else if (pad != null && pad.selectButton.wasPressedThisFrame && Time.frameCount != _openedFrame) SetOpen(!IsOpen);
+            else if (InputMap.PadPressed(pad, GameAction.Inventory) && Time.frameCount != _openedFrame) SetOpen(!IsOpen);
             else if (IsOpen && UICancel.Pressed()) SetOpen(false);
         }
 

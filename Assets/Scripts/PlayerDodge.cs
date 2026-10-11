@@ -72,8 +72,8 @@ public class PlayerDodge : MonoBehaviour
         if (GameplayInput.Blocked || Time.time < _readyAt || (_stats != null && _stats.IsDead)) return;
 
         Gamepad pad = PlayerController.PadOf(this);
-        bool pressed = (PlayerController.UsesKeyboard(this) && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
-                       || (pad != null && pad.buttonSouth.wasPressedThisFrame && (WorldHUD.Instance == null || !WorldHUD.Instance.MenuOpen)
+        bool pressed = (PlayerController.UsesKeyboard(this) && InputMap.KeyPressed(GameAction.Dodge))
+                       || (InputMap.PadPressed(pad, GameAction.Dodge) && (WorldHUD.Instance == null || !WorldHUD.Instance.MenuOpen)
                            && (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null));
         if (pressed) StartRoll(RollDirection());
     }
@@ -138,14 +138,7 @@ public class PlayerDodge : MonoBehaviour
     {
         if (_cam == null) _cam = Camera.main;
         Vector2 input = Vector2.zero;
-        Keyboard kb = PlayerController.UsesKeyboard(this) ? Keyboard.current : null;
-        if (kb != null)
-        {
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed) input.y += 1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) input.y -= 1f;
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) input.x -= 1f;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) input.x += 1f;
-        }
+        if (PlayerController.UsesKeyboard(this)) input = InputMap.KeyboardMove();
         if (input.sqrMagnitude < 0.01f) input = PlayerController.Stick(PlayerController.PadOf(this));
 
         if (input.sqrMagnitude > 0.01f)

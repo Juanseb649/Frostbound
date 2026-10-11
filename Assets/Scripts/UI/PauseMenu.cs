@@ -13,7 +13,8 @@ public class PauseMenu : MonoBehaviour
     public static bool IsPaused { get; private set; }
 
     private CanvasGroup _group, _confirm;
-    private FrostButton _resume, _quit;
+    private FrostButton _resume, _quit, _settings;
+    private RectTransform _legend;
     private TextMeshProUGUI _hero;
     private bool _leaving;
 
@@ -54,12 +55,14 @@ public class PauseMenu : MonoBehaviour
         if (_leaving) return;
         bool cancel = UICancel.Pressed();
         // START pausa desde el mando del jugador 1 o del jugador 2 (un mando libre con START une al jugador 2).
-        bool start = false;
+        // Pausa según Configuración → Control (Esc y el botón Menú por defecto), desde el jugador 1 o el 2.
+        if (OptionsPanel.IsOpen) return;
+        bool start = InputMap.KeyPressed(GameAction.Pause);
         GameObject p1 = Players.PrimaryObject;
-        UnityEngine.InputSystem.Gamepad mine = p1 != null ? PlayerController.PadOf(p1.transform) : UnityEngine.InputSystem.Gamepad.current;
-        if (mine != null && mine.startButton.wasPressedThisFrame && !CoopManager.IsJoinPad(mine)) start = true;
+        UnityEngine.InputSystem.Gamepad mine = p1 != null ? PlayerController.PadOf(p1.transform) : null;
+        if (InputMap.PadPressed(mine, GameAction.Pause)) start = true;
         foreach (PlayerController pc in Players.All)
-            if (pc != null && pc.playerIndex > 0 && pc.pad != null && pc.pad.startButton.wasPressedThisFrame) start = true;
+            if (pc != null && pc.playerIndex > 0 && InputMap.PadPressed(pc.pad, GameAction.Pause)) start = true;
         if (IsPaused)
         {
             if (cancel || start)
@@ -69,7 +72,7 @@ public class PauseMenu : MonoBehaviour
             }
             return;
         }
-        if ((cancel || start) && !OtherMenuOpen()) Pause();
+        if (start && !OtherMenuOpen()) Pause();
     }
 
     public static bool OtherMenuOpen()
@@ -96,8 +99,38 @@ public class PauseMenu : MonoBehaviour
         string name = d != null ? d.heroName : s != null ? s.HeroName : "";
         string level = stats != null ? "Nivel " + stats.level : "";
         _hero.text = string.Join(" · ", new[] { name, level, SceneIds.Title(SceneManager.GetActiveScene().name) }).Trim(' ', '·');
+        BuildLegend();
         SetGroup(_group, true);
         Select(_resume.button);
+    }
+
+    // Leyenda con los iconos del periférico preferido (teclas o botones de Xbox).
+    private static readonly GameAction[] LegendActions = { GameAction.Attack, GameAction.Ability, GameAction.Dodge, GameAction.QuickPotion, GameAction.Interact, GameAction.Inventory, GameAction.Map, GameAction.Character };
+
+    private void BuildLegend()
+    {
+        if (_legend == null) return;
+        var old = new System.Collections.Generic.List<Transform>();
+        foreach (Transform c in _legend) old.Add(c);
+        foreach (Transform c in old) { c.SetParent(null, false); Destroy(c.gameObject); }
+        InputMap.Device d = InputMap.Preferred;
+        for (int i = 0; i < LegendActions.Length; i++)
+        {
+            GameAction a = LegendActions[i];
+            int col = i % 2, row = i / 2;
+            RectTransform cell = FrostUI.Node(_legend, "Leyenda_" + a);
+            cell.anchorMin = cell.anchorMax = cell.pivot = new Vector2(0f, 1f);
+            cell.anchoredPosition = new Vector2(20f + col * 300f, -row * 30f);
+            cell.sizeDelta = new Vector2(290f, 28f);
+            RectTransform g = InputGlyph.ForAction(cell, a, d, 26f);
+            g.anchorMin = g.anchorMax = g.pivot = new Vector2(0f, 0.5f);
+            g.anchoredPosition = Vector2.zero;
+            TextMeshProUGUI t = FrostUI.Text(cell, "Texto", InputMap.ActionName(a), 16f, FrostUI.Label, TextAlignmentOptions.MidlineLeft, FrostUI.BodyLight);
+            t.rectTransform.anchorMin = new Vector2(0f, 0f);
+            t.rectTransform.anchorMax = new Vector2(1f, 1f);
+            t.rectTransform.offsetMin = new Vector2(g.sizeDelta.x + 10f, 0f);
+            t.rectTransform.offsetMax = Vector2.zero;
+        }
     }
 
     public void Resume()
@@ -185,7 +218,7 @@ public class PauseMenu : MonoBehaviour
         dim.raycastTarget = true;
 
         Image panel = FrostUI.Panel(main, "Panel", out _, 18f);
-        FrostUI.Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(560f, 520f));
+        FrostUI.Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(640f, 640f));
         Transform p = panel.transform;
         TextMeshProUGUI kicker = FrostUI.Kicker(p, "Antetitulo", "Partida en pausa", 17f, FrostUI.Ice);
         kicker.alignment = TextAlignmentOptions.Center;
@@ -199,14 +232,16 @@ public class PauseMenu : MonoBehaviour
         _resume = FrostButton.Create(p, "Reanudar", "Reanudar", new Vector2(400f, 66f), FrostButton.Style.Primary, 30f);
         FrostUI.Place((RectTransform)_resume.transform, new Vector2(0.5f, 1f), new Vector2(0f, -214f), new Vector2(400f, 66f));
         _resume.button.onClick.AddListener(Resume);
+        _settings = FrostButton.Create(p, "Configuracion", "Configuración", new Vector2(400f, 62f), FrostButton.Style.Normal, 28f);
+        FrostUI.Place((RectTransform)_settings.transform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(400f, 62f));
+        _settings.button.onClick.AddListener(() => OptionsPanel.Open(() => { BuildLegend(); Select(_settings.button); }));
         _quit = FrostButton.Create(p, "SalirMenu", "Salir al menú", new Vector2(400f, 62f), FrostButton.Style.Normal, 28f);
-        FrostUI.Place((RectTransform)_quit.transform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(400f, 62f));
+        FrostUI.Place((RectTransform)_quit.transform, new Vector2(0.5f, 1f), new Vector2(0f, -382f), new Vector2(400f, 62f));
         _quit.button.onClick.AddListener(AskQuit);
 
-        TextMeshProUGUI keys = FrostUI.Text(p, "Controles",
-            "F habilidad  ·  Q poción  ·  Espacio rodar\nI inventario  ·  M mapa  ·  E hablar", 17f, FrostUI.Label, TextAlignmentOptions.Center, FrostUI.BodyLight);
-        keys.textWrappingMode = TextWrappingModes.Normal;
-        FrostUI.Place(keys.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(500f, 60f));
+        _legend = FrostUI.Node(p, "Controles");
+        FrostUI.Place(_legend, new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(600f, 120f));
+        _legend.pivot = new Vector2(0.5f, 0f);
 
         RectTransform confirmRoot = FrostUI.Stretch(FrostUI.Node(root, "Confirmar"));
         _confirm = confirmRoot.gameObject.AddComponent<CanvasGroup>();
