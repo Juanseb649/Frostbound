@@ -82,4 +82,12 @@ public static class ReleaseBuilder
         _run = null;
         return r;
     }
+
+    // Nombre del juego en la ventana, en el ejecutable y en la carpeta de partidas guardadas.
+    public static string SetIdentity()
+    {
+        PlayerSettings.productName = GameName;
+        AssetDatabase.SaveAssets();
+        return "producto=" + PlayerSettings.productName + " compañía=" + PlayerSettings.companyName + " versión=" + PlayerSettings.bundleVersion;
+    }
 }
