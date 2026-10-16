@@ -95,6 +95,8 @@ public class VillageWorldGenerator : MonoBehaviour
             navMesh.BuildNavMesh();
         }
 
+        FallenWarriors.Scatter(root, Seed, FallenSpots());
+
         var map = new GameObject("Mapa").AddComponent<MapSystem>();
         map.transform.SetParent(transform, false);
         map.Setup(Layout);
@@ -228,6 +230,33 @@ public class VillageWorldGenerator : MonoBehaviour
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             peak.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
+    }
+
+    // Dónde yacen los guerreros caídos: al pie de la escalera del Frostspire y en su rellano, ante el castillo,
+    // junto a algunas hogueras y repartidos por el bosque.
+    private List<Vector3> FallenSpots()
+    {
+        var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("caidos_sitios")));
+        var spots = new List<Vector3>();
+        Vector3 foot = TrailPoint(0f);
+        for (int i = 0; i < 4; i++) spots.Add(foot + new Vector3(rng.Range(-7f, 7f), 0f, rng.Range(-9f, -3f)));
+        spots.Add(TrailPoint(0.5f) + Vector3.up * 0.5f);
+        Vector3 castle = Layout.castle.Foot;
+        Vector3 toVillage = (-castle).normalized;
+        for (int i = 0; i < 3; i++) spots.Add(castle + toVillage * rng.Range(6f, 14f) + new Vector3(rng.Range(-6f, 6f), 0f, rng.Range(-6f, 6f)));
+        foreach (VillageLayout.Spot b in Layout.bonfires)
+            if (rng.Chance(0.6f)) spots.Add(b.position + new Vector3(rng.Range(-5f, 5f), 0f, rng.Range(-5f, 5f)));
+        for (int tries = 0, added = 0; tries < 200 && added < 6; tries++)
+        {
+            Vector3 p = VillageLayout.Polar(rng.Range(0f, 360f), rng.Range(90f, 260f));
+            if (VillageLayout.OnRoad(p) || Mathf.Abs(p.x) > VillageLayout.PlayableHalfSize - 12f || Mathf.Abs(p.z) > VillageLayout.PlayableHalfSize - 12f) continue;
+            bool nearCamp = false;
+            foreach (Vector3 c in Layout.camps) if ((c - p).sqrMagnitude < 18f * 18f) nearCamp = true;
+            if (nearCamp) continue;
+            spots.Add(p);
+            added++;
+        }
+        return spots;
     }
 
     // El Frostspire de la escena (tres conos con la cima nevada): la cumbre central se apoya detrás de la plataforma

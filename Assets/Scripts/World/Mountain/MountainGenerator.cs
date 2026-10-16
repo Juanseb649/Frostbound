@@ -45,6 +45,15 @@ public class MountainGenerator : MonoBehaviour
         PlacePlayer();
         Atmosphere();
         BuildMap();
+        var fallen = new List<Vector3>();
+        var frng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("faldas_caidos")));
+        for (int i = 0; i < 8; i++)
+        {
+            float z = Mathf.Lerp(25f, MountainLayout.Length - 25f, (i + frng.Range(0.1f, 0.9f)) / 8f);
+            float x = Layout.CenterX(z) + frng.Range(-1f, 1f) * (Layout.HalfWidthAt(z) - 1.5f);
+            fallen.Add(Layout.Ground(x, z));
+        }
+        FallenWarriors.Scatter(transform, Seed, fallen);
         AdventureHUD.Ensure();
         Built = true;
     }
