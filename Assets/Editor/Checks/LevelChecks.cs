@@ -333,3 +333,61 @@ public static class TrailWalk
         return p.transform.position.ToString("F1") + " " + LevelState.Mover();
     }
 }
+
+public static class IglooChecks
+{
+    public static string State()
+    {
+        var sb = new StringBuilder();
+        foreach (var s in Object.FindObjectsByType<IglooSkirmish>(FindObjectsSortMode.None).OrderBy(x => x.id))
+            sb.Append(s.id).Append(s.fight ? "[pelea" : "[muertos").Append(s.Done ? ",hecha]" : "]").Append(" vivos ").Append(s.VillagersAlive).Append(" cuerpos ").Append(s.Bodies).Append(s.Fighting ? " PELEANDO" : "").Append("; ");
+        var dunes = GameObject.Find("Dunas_Nieve");
+        int chunks = dunes != null ? dunes.transform.childCount : 0, verts = 0;
+        if (dunes != null) foreach (MeshFilter mf in dunes.GetComponentsInChildren<MeshFilter>()) verts += mf.sharedMesh.vertexCount;
+        sb.Append("| dunas ").Append(chunks).Append(" trozos, ").Append(verts / 1000).Append("k vértices · iglús ").Append(GameObject.Find("Iglus_Bosque") != null ? GameObject.Find("Iglus_Bosque").transform.childCount : 0);
+        sb.Append(" · enemigos activos ").Append(EnemyBrain.All.Count);
+        return sb.ToString();
+    }
+
+    public static string GoToFight()
+    {
+        var s = Object.FindObjectsByType<IglooSkirmish>(FindObjectsSortMode.None).OrderBy(x => x.id).FirstOrDefault(x => x.fight && !x.Done);
+        if (s == null) return "no hay pelea pendiente";
+        Vector3 p = s.transform.position + (Vector3.zero - s.transform.position).normalized * 30f;
+        if (UnityEngine.AI.NavMesh.SamplePosition(p, out var h, 10f, -1)) p = h.position;
+        GameObject.Find("Player").GetComponent<PlayerPersistence>().MoveTo(p, Quaternion.identity);
+        return "junto a " + s.id + " en " + p.ToString("F0");
+    }
+
+    public static string Reload()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene(SceneIds.Village);
+        return "recargando";
+    }
+
+    public static string PlayerHealth()
+    {
+        var st = GameObject.Find("Player").GetComponent<CharacterStats>();
+        st.invulnerable = true;
+        return "invulnerable";
+    }
+}
+
+public static class DuneProbe
+{
+    public static string One()
+    {
+        var d = GameObject.Find("Dunas_Nieve");
+        var mf = d.GetComponentInChildren<MeshFilter>();
+        return mf.name + " mesh=" + mf.sharedMesh.name + " v=" + mf.sharedMesh.vertexCount + " sub=" + mf.sharedMesh.subMeshCount + " batched=" + mf.GetComponent<MeshRenderer>().isPartOfStaticBatch;
+    }
+}
+
+public static class ShotHelp
+{
+    public static string IglooSpot()
+    {
+        var s = Object.FindObjectsByType<IglooSkirmish>(FindObjectsSortMode.None).OrderBy(x => x.id).First(x => !x.fight);
+        return s.transform.position.ToString("F0");
+    }
+}
