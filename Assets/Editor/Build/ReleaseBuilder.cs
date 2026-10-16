@@ -90,4 +90,15 @@ public static class ReleaseBuilder
         AssetDatabase.SaveAssets();
         return "producto=" + PlayerSettings.productName + " compañía=" + PlayerSettings.companyName + " versión=" + PlayerSettings.bundleVersion;
     }
+
+    public static string SetVersion011() { PlayerSettings.bundleVersion = "0.1.1"; AssetDatabase.SaveAssets(); return "versión=" + PlayerSettings.bundleVersion; }
+
+    public static string UiCheck()
+    {
+        var sb = new StringBuilder("pantalla=" + Screen.width + "x" + Screen.height);
+        foreach (var s in Object.FindObjectsByType<UnityEngine.UI.CanvasScaler>(FindObjectsInactive.Include))
+            sb.Append(" | ").Append(s.name).Append(" match=").Append(s.matchWidthOrHeight.ToString("0.#"));
+        sb.Append(" | marcos=").Append(UltrawideFrame.All.Count).Append(" resoluciones=").Append(DisplaySettings.Resolutions().Count);
+        return sb.ToString();
+    }
 }

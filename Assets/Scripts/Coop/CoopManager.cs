@@ -703,6 +703,7 @@ public class CoopManager : MonoBehaviour
         FrostUI.Place(_hint.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(700f, 26f));
         _hint.rectTransform.pivot = new Vector2(0.5f, 1f);
         _hint.gameObject.SetActive(false);
+        UltrawideFrame.Wrap(root.transform);
     }
 
     private static GameHUD MainHud()
