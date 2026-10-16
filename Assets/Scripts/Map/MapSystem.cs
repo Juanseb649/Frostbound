@@ -87,10 +87,31 @@ public class MapSystem : MonoBehaviour
 
     void Start()
     {
-        if (Village != null && Village.map == null) Village.map = Capture(Village, 1024, false);
+        if (Village != null && Village.map == null) StartCoroutine(CaptureWhenReady(Village));
         // El poblado y sus calles se conocen desde el principio.
         if (Village != null && _layout != null) Reveal(Village, Vector3.zero, VillageLayout.WallRadius + 6f);
         if (Village != null && _zoneReveal.HasValue) Reveal(Village, _zoneReveal.Value, 18f);
+    }
+
+    // La foto se toma cuando la escena ya está dibujando; si sale casi negra (render aún no listo) se repite.
+    private System.Collections.IEnumerator CaptureWhenReady(Area a)
+    {
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            yield return null;
+            yield return null;
+            Texture2D tex = Capture(a, 1024, false);
+            if (Brightness(tex) > 0.08f || attempt == 3) { if (a.map != null) Destroy(a.map); a.map = tex; yield break; }
+            Destroy(tex);
+        }
+    }
+
+    private static float Brightness(Texture2D tex)
+    {
+        Color32[] px = tex.GetPixels32();
+        float sum = 0f;
+        for (int i = 0; i < px.Length; i += 37) sum += (px[i].r + px[i].g + px[i].b) / 765f;
+        return sum / Mathf.Max(1, px.Length / 37);
     }
 
     private void InitFog(Area a)
