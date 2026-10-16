@@ -92,12 +92,21 @@ public static class MountainLayout
             float e = Edge(x, z);
             float h = PathHeight(z);
             float soft = Mathf.PerlinNoise(nx + x * 0.12f, nz + z * 0.12f) - 0.5f;
-            if (e <= 0f) return h + soft * 0.35f * Mathf.Clamp01(-e / 3f);
+            // Sendero: lomas de nieve suaves (dunas de viento) que crecen al alejarse del centro del camino.
+            if (e <= 0f) return h + (soft * 0.35f + DuneAt(x, z) * 0.55f) * Mathf.Clamp01(-e / 3f);
             float cliff = Mathf.SmoothStep(0f, 1f, e / CliffWidth) * CliffHeight;
             float ridge = (Mathf.PerlinNoise(nx + x * 0.035f, nz + z * 0.035f) - 0.3f) * 10f * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(CliffWidth, 30f, e));
             float rough = (Mathf.PerlinNoise(nx + 50f + x * 0.22f, nz + z * 0.22f) - 0.5f) * 1.6f * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f, 5f, e));
             float far = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(18f, 110f, e)) * 34f + Mathf.Max(0f, e - CliffWidth) * 0.12f;
             return h + cliff + Mathf.Max(0f, ridge) + rough + far;
+        }
+
+        private float DuneAt(float x, float z)
+        {
+            float wx = x + (Mathf.PerlinNoise(nx + 7f + x * 0.03f, nz + z * 0.03f) - 0.5f) * 8f;
+            float a = Mathf.PerlinNoise(nx + 13f + wx * 0.16f, nz + 3f + z * 0.09f);
+            float b = Mathf.PerlinNoise(nx + 29f + wx * 0.3f, nz + 11f + z * 0.22f);
+            return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 0.8f, 0.7f * a + 0.3f * b));
         }
 
         public Vector3 Ground(float x, float z) => new Vector3(x, Height(x, z), z);

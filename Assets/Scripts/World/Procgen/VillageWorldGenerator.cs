@@ -103,6 +103,7 @@ public class VillageWorldGenerator : MonoBehaviour
 
         FallenWarriors.Scatter(root, Seed, FallenSpots());
         StartSkirmishes(root);
+        SnowSurface.BuildDunes(root, VillageLayout.PlayableHalfSize + 12f, DuneMask, Seed, SnowSurface.For(1f, "Nieve del poblado (dunas)"));
 
         var map = new GameObject("Mapa").AddComponent<MapSystem>();
         map.transform.SetParent(transform, false);
@@ -534,18 +535,14 @@ public class VillageWorldGenerator : MonoBehaviour
             }
     }
 
-    // Nieve con detalle: variación grande cada ~60 m (ventisqueros azulados) y grano/ondas de viento cada ~4 m.
-    public const float SnowMacroMeters = 60f, SnowDetailMeters = 4f;
-
+    // El suelo plano del poblado usa la misma nieve con relieve (sus UV abarcan todo el plano).
     public static void ApplyDetailedSnow(Renderer r, float meters)
     {
         if (r == null) return;
-        Material m = Resources.Load<Material>("Frostbound/NieveDetallada");
-        if (m == null) return;
-        var inst = new Material(m) { name = "Nieve del poblado" };
-        inst.SetTextureScale("_BaseMap", Vector2.one * (meters / SnowMacroMeters));
-        inst.SetTextureScale("_DetailAlbedoMap", Vector2.one * (meters / SnowDetailMeters));
-        r.sharedMaterial = inst;
+        Material m = SnowSurface.For(meters, "Nieve del poblado");
+        if (m != null) r.sharedMaterial = m;
+    }
+
     // ---------- Iglús del bosque ----------
     public readonly List<Vector3> IglooSites = new List<Vector3>();
     private readonly List<bool> _iglooFight = new List<bool>();
@@ -630,6 +627,38 @@ public class VillageWorldGenerator : MonoBehaviour
         }
     }
 
+    // Dónde hay dunas: nada dentro del poblado, en caminos, junto al castillo, hogueras, campamentos, iglús,
+    // el claro de Steve ni al pie del Frostspire; en el resto, plenas.
+    private float DuneMask(float x, float z)
+    {
+        Vector3 p = new Vector3(x, 0f, z);
+        float m = Mathf.InverseLerp(VillageLayout.WallRadius + 3f, VillageLayout.WallRadius + 12f, new Vector2(x, z).magnitude);
+        if (m <= 0f) return 0f;
+        m = Mathf.Min(m, Mathf.InverseLerp(VillageLayout.CastleClearance + 2f, VillageLayout.CastleClearance + 10f, VillageLayout.DistanceToCastle(Layout.castle, p)));
+        if (m <= 0f) return 0f;
+        Vector3 head = VillageLayout.Trailhead;
+        if (z > head.z - 40f && Mathf.Abs(x - TrailStartX * 0.5f) < 24f) return 0f;
+        if (z > head.z - 50f && Mathf.Abs(x - TrailStartX * 0.5f) < 34f) m = Mathf.Min(m, Mathf.InverseLerp(head.z - 40f, head.z - 50f, z));
+        m = Mathf.Min(m, Ramp(p, VillageLayout.SteveClearing, VillageLayout.SteveSafeRadius, 8f));
+        m = Mathf.Min(m, Ramp(p, Layout.castleBonfire.position, 4f, 5f));
+        foreach (VillageLayout.Spot b in Layout.bonfires) { m = Mathf.Min(m, Ramp(p, b.position, 4f, 5f)); if (m <= 0f) return 0f; }
+        foreach (Vector3 c in Layout.camps) { m = Mathf.Min(m, Ramp(p, c, VillageLayout.CampRadius + 3f, 6f)); if (m <= 0f) return 0f; }
+        foreach (Vector3 c in IglooSites) { m = Mathf.Min(m, Ramp(p, c, 10f, 6f)); if (m <= 0f) return 0f; }
+        if (m <= 0f) return 0f;
+        // Caminos: plano en el camino y una franja de 4 m que sube suave.
+        if (VillageLayout.OnRoad(p)) return 0f;
+        int near = 0;
+        foreach (Vector3 o in RoadProbe) if (VillageLayout.OnRoad(p + o)) near++;
+        if (near > 0) m = Mathf.Min(m, near >= 3 ? 0.15f : near == 2 ? 0.4f : 0.7f);
+        return m;
+    }
+
+    private static readonly Vector3[] RoadProbe = { new Vector3(3f, 0, 0), new Vector3(-3f, 0, 0), new Vector3(0, 0, 3f), new Vector3(0, 0, -3f) };
+
+    private static float Ramp(Vector3 p, Vector3 c, float inner, float width)
+    {
+        float d = new Vector2(p.x - c.x, p.z - c.z).magnitude;
+        return Mathf.InverseLerp(inner, inner + width, d);
     }
 
     private static GameObject Block(Transform parent, string name, Vector3 pos, Vector3 size, Material mat, bool collide)

@@ -151,7 +151,12 @@ public class MountainGenerator : MonoBehaviour
         Mesh mesh = MountainMeshes.Terrain(Layout);
         terrain.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = terrain.AddComponent<MeshRenderer>();
-        mr.sharedMaterials = new[] { _path, _snow, _rock };
+        // Nieve con relieve (las UV del terreno van a 10 m por unidad); el sendero pisado, con el mismo grano más gris.
+        Material relief = SnowSurface.For(10f, "Nieve de Las Faldas");
+        Material trodden = SnowSurface.For(10f, "Sendero pisado");
+        if (trodden != null) trodden.SetColor("_BaseColor", new Color(0.8f, 0.84f, 0.9f));
+        mr.sharedMaterials = new[] { trodden != null ? trodden : _path, relief != null ? relief : _snow, _rock };
+        if (mesh.tangents == null || mesh.tangents.Length == 0) mesh.RecalculateTangents();
         terrain.AddComponent<MeshCollider>().sharedMesh = mesh;
         terrain.isStatic = true;
 
