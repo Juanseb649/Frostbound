@@ -98,6 +98,7 @@ public class NPCInteractable : MonoBehaviour
             else
             {
                 int n = player.RepairAll();
+                AudioManager.PlaySFX("Combate/Herrero/", 0.9f);
                 text = "¡Listo! " + (n == 1 ? "Tu arma quedó" : "Tus " + n + " armas quedaron") + " como nuevas. Son " + cost + " monedas.";
                 if (GameSession.Instance != null) GameSession.Instance.SaveNow();
             }

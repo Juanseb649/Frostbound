@@ -121,6 +121,8 @@ public class FrostMenu : MonoBehaviour
     private void Go(Screen to)
     {
         if (_busy || to == _screen) return;
+        if (to == Screen.Title) AudioManager.PlayUI(AudioId.UI_Back, 0.7f);
+        else AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.7f);
         StartCoroutine(Swap(to));
     }
 
@@ -775,6 +777,7 @@ public class FrostMenu : MonoBehaviour
 
     public void StartAdventure()
     {
+        AudioManager.PlayUI(AudioId.UI_QuestBanner, 0.9f);
         CharacterClass cls = Db.classes[_classIndex];
         string heroName = _nameField != null ? _nameField.text.Trim() : "";
         if (string.IsNullOrEmpty(heroName)) heroName = cls.displayName;
