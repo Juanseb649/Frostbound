@@ -147,8 +147,8 @@ public static class LevelWalk
     {
         GameObject p = GameObject.Find("Player");
         Vector3 t = VillageLayout.Trailhead;
-        p.GetComponent<PlayerPersistence>().MoveTo(new Vector3(0, 0.1f, t.z - 24f), Quaternion.identity);
-        p.GetComponent<PlayerController>().MoveTo(new Vector3(0, 5f, t.z + 2f));
+        p.GetComponent<PlayerPersistence>().MoveTo(new Vector3(0, 0.1f, t.z - 42f), Quaternion.identity);
+        p.GetComponent<PlayerController>().MoveTo(new Vector3(0, VillageWorldGenerator.TrailRise, t.z + 2f));
         return "ok";
     }
 
@@ -271,5 +271,65 @@ public static class LevelSlope
             }
         }
         return "pendiente máxima " + worst.ToString("0.0") + "°";
+    }
+}
+
+public static class MapProbe
+{
+    public static string Pixels()
+    {
+        MapSystem m = MapSystem.Instance;
+        if (m == null) return "sin mapa";
+        var a = m.CurrentArea;
+        if (a == null || a.map == null) return "sin foto";
+        Color32[] px = a.map.GetPixels32();
+        float sum = 0f; int dark = 0;
+        foreach (var c in px) { float l = (c.r + c.g + c.b) / 765f; sum += l; if (l < 0.12f) dark++; }
+        int shown = 0; foreach (bool b in a.fog) if (b) shown++;
+        GameObject p = GameObject.Find("Player");
+        return a.id + " brillo medio " + (sum / px.Length).ToString("0.00") + " · oscuros " + (dark * 100 / px.Length) + "% · niebla despejada " + (shown * 100f / a.fog.Length).ToString("0.0") + "% · explorado aquí " + a.IsExplored(p.transform.position) + " · centro " + a.center + " half " + a.half;
+    }
+}
+
+public static class TrailChecks
+{
+    public static string Surface()
+    {
+        var sb = new StringBuilder();
+        int holes = 0, navMiss = 0; float worst = 0f;
+        for (float t = 0f; t <= 1f; t += 0.02f)
+        {
+            Vector3 p = VillageWorldGenerator.TrailPoint(t);
+            foreach (float o in new[] { -2.4f, 0f, 2.4f })
+            {
+                Vector3 q = p + new Vector3(o, 0, 0);
+                if (!Physics.Raycast(q + Vector3.up * 3f, Vector3.down, out RaycastHit h, 6f, ~(1 << 2), QueryTriggerInteraction.Ignore) || Mathf.Abs(h.point.y - p.y) > 0.6f) holes++;
+                else worst = Mathf.Max(worst, Vector3.Angle(h.normal, Vector3.up));
+            }
+            if (!UnityEngine.AI.NavMesh.SamplePosition(p, out var nh, 0.8f, -1)) navMiss++;
+        }
+        var path = new UnityEngine.AI.NavMeshPath();
+        UnityEngine.AI.NavMesh.SamplePosition(new Vector3(0, 0, VillageLayout.Trailhead.z - 40f), out var a, 3f, -1);
+        UnityEngine.AI.NavMesh.SamplePosition(new Vector3(0, 8, VillageLayout.Trailhead.z + 2f), out var b, 3f, -1);
+        UnityEngine.AI.NavMesh.CalculatePath(a.position, b.position, -1, path);
+        return "huecos " + holes + " · sin navmesh " + navMiss + "/51 · pendiente máx " + worst.ToString("0") + "° · ruta " + path.status + " (" + a.position.ToString("F1") + "→" + b.position.ToString("F1") + ")";
+    }
+
+    public static string Fallen()
+    {
+        var f = Object.FindAnyObjectByType<FallenWarriors>();
+        if (f == null) return "sin caídos";
+        int frozen = 0, total = 0;
+        foreach (var r in f.GetComponentsInChildren<PenguinRagdoll>()) { total++; if (r.Bodies.Count > 0 && r.Bodies[0].isKinematic) frozen++; }
+        return "cuerpos " + total + " (" + f.Count + ") · congelados " + frozen + " · enemigos activos " + EnemyBrain.All.Count;
+    }
+}
+
+public static class TrailWalk
+{
+    public static string Track()
+    {
+        GameObject p = GameObject.Find("Player");
+        return p.transform.position.ToString("F1") + " " + LevelState.Mover();
     }
 }
