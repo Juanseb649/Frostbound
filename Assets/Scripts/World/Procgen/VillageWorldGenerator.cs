@@ -75,6 +75,8 @@ public class VillageWorldGenerator : MonoBehaviour
                 pine.transform.localScale = Vector3.one * s.scale;
             }
 
+        BuildBorder(root);
+
         Transform snow = new GameObject("Montones_Nieve").transform;
         snow.SetParent(root, false);
         if (moundPrefab != null)
@@ -200,8 +202,8 @@ public class VillageWorldGenerator : MonoBehaviour
         if (snow == null) return;
         for (int i = 0; i < 7; i++)
         {
-            float x = (i - 3) * rng.Range(48f, 62f) + rng.Range(-15f, 15f);
-            float z = VillageLayout.GroundVisualHalfSize + rng.Range(40f, 140f) + (i == 3 ? 90f : 0f);
+            float x = (i - 3) * rng.Range(80f, 105f) + rng.Range(-15f, 15f);
+            float z = VillageLayout.GroundHalfSize + rng.Range(30f, 110f) + (i == 3 ? 80f : 0f);
             float s = i == 3 ? 170f : rng.Range(70f, 120f);
             var peak = new GameObject("Cumbre_Frostspire");
             peak.transform.SetParent(t, false);
@@ -211,6 +213,34 @@ public class VillageWorldGenerator : MonoBehaviour
             var r = peak.AddComponent<MeshRenderer>();
             r.sharedMaterial = snow;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+    }
+
+    // Borde del mundo: hileras de pinos (sin colisión, agrupados en lotes estáticos) y paredes invisibles detrás.
+    private void BuildBorder(Transform root)
+    {
+        Transform border = new GameObject("Borde_Bosque").transform;
+        border.SetParent(root, false);
+        if (pinePrefab != null)
+        {
+            foreach (VillageLayout.Spot s in Layout.border)
+            {
+                GameObject pine = Instantiate(pinePrefab, s.position, Quaternion.Euler(0f, s.yaw, 0f), border);
+                pine.transform.localScale = Vector3.one * s.scale;
+                foreach (Collider c in pine.GetComponentsInChildren<Collider>()) Destroy(c);
+            }
+            StaticBatchingUtility.Combine(border.gameObject);
+        }
+        float d = VillageLayout.PlayableHalfSize + 1f, len = d * 2f + 4f;
+        for (int side = 0; side < 4; side++)
+        {
+            var wall = new GameObject("Limite_Mundo");
+            wall.transform.SetParent(root, false);
+            bool alongX = side % 2 == 0;
+            float sign = side < 2 ? 1f : -1f;
+            wall.transform.position = alongX ? new Vector3(0f, 10f, sign * (d + 1f)) : new Vector3(sign * (d + 1f), 10f, 0f);
+            BoxCollider c = wall.AddComponent<BoxCollider>();
+            c.size = alongX ? new Vector3(len, 30f, 2f) : new Vector3(2f, 30f, len);
         }
     }
 
