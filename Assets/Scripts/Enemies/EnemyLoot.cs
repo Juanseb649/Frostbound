@@ -10,7 +10,7 @@ public static class EnemyLoot
 
     public static void Drop(EnemyBrain enemy, Vector3 center)
     {
-        LootDirector dir = LootDirector.Instance;
+        LootDirector dir = LootDirector.Ensure();
         if (dir == null || dir.database == null || enemy.definition == null) return;
 
         int world = GameSession.Instance != null ? GameSession.Instance.worldSeed : 12345;

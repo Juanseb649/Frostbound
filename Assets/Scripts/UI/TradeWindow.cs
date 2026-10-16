@@ -11,6 +11,7 @@ public class TradeWindow : MonoBehaviour
     private enum Mode { Stash, Shop }
 
     public static bool IsOpen => _instance != null && _instance._open;
+    public static GameObject Customer => _instance != null && _instance._player != null ? _instance._player.gameObject : null;
     private static TradeWindow _instance;
 
     private Mode _mode;
@@ -101,6 +102,15 @@ public class TradeWindow : MonoBehaviour
             ? "Clic en un objeto de la mochila para guardarlo; clic en el arcón para sacarlo."
             : "Clic en un objeto de la mochila para venderlo; clic en la tienda para comprar. Un segundo clic confirma.", FrostboundUI.Muted);
         Refresh();
+        // Con mando: la cruceta recorre las casillas y A compra, vende, guarda o saca (B cierra).
+        UIDeviceFocus.FocusOn(_player);
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            ItemSlotView first = _left.Count > 0 ? _left[0] : _right.Count > 0 ? _right[0] : null;
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(first != null ? first.gameObject : null);
+        }
+        if (PlayerController.PadOf(_player) != null)
+            SetInfo("", mode == Mode.Stash ? "Cruceta para elegir · A guarda o saca · B cierra." : "Cruceta para elegir · A compra o vende (pulsa A dos veces para confirmar) · B cierra.", FrostboundUI.Muted);
     }
 
     private void Close()
@@ -111,6 +121,8 @@ public class TradeWindow : MonoBehaviour
         _group.blocksRaycasts = false;
         _group.interactable = false;
         GameplayInput.Unblock();
+        UIDeviceFocus.Release();
+        if (UnityEngine.EventSystems.EventSystem.current != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
         Unhook();
         if (GameSession.Instance != null) GameSession.Instance.SaveNow();
     }
@@ -174,13 +186,14 @@ public class TradeWindow : MonoBehaviour
         int price = ItemPricing.BuyPrice(item);
         if (_armed != v) { Arm(v, "Clic otra vez para comprar por " + price + " monedas", FrostboundUI.Gold); return; }
         _armed = null;
-        if (_wallet.Coins < price) { Toast("Te faltan " + (price - _wallet.Coins) + " monedas", FrostboundUI.Negative); return; }
+        if (_wallet.CoinsWithStash < price) { Toast("Te faltan " + (price - _wallet.CoinsWithStash) + " monedas (contando las del arcón)", FrostboundUI.Negative); return; }
         if (!_player.Inventory.HasSpaceFor(item.item, 1)) { Toast("La mochila está llena", FrostboundUI.Negative); return; }
-        _wallet.Spend(price);
+        int fromStash = Mathf.Max(0, price - _wallet.Coins);
+        _wallet.SpendWithStash(price);
         bool consumable = item.item.IsConsumable;
         _player.Inventory.AddStack(consumable ? new ItemStack(item.item, 1) : item);
         if (!consumable) Stock.RemoveAt(v.index);
-        Toast("Compraste " + item.DisplayName + " por " + price + " monedas", FrostboundUI.Positive);
+        Toast("Compraste " + item.DisplayName + " por " + price + " monedas" + (fromStash > 0 ? " (" + fromStash + " del arcón)" : ""), FrostboundUI.Positive);
         _dirty = true;
     }
 
@@ -240,7 +253,7 @@ public class TradeWindow : MonoBehaviour
         Inventory inv = _player.Inventory;
         EnsureCells(_right, _rightGrid, inv.Capacity, OnRight);
         for (int i = 0; i < _right.Count; i++) Show(_right[i], i < inv.Capacity ? inv.Get(i) : null);
-        _rightCoins.text = Fmt(_wallet.Coins) + " monedas";
+        _rightCoins.text = Fmt(_wallet.Coins) + " monedas" + (_mode == Mode.Shop && Stash.Coins > 0 ? "  <size=14><color=#9FB3C8>+ " + Fmt(Stash.Coins) + " en el arcón</color></size>" : "");
         _leftCoins.text = _mode == Mode.Stash ? "Guardadas: " + Fmt(Stash.Coins) + " monedas   ·   " + Stash.Items.UsedSlots + "/" + Stash.Capacity : "";
     }
 
@@ -298,7 +311,7 @@ public class TradeWindow : MonoBehaviour
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(FrostboundUI.ReferenceWidth, FrostboundUI.ReferenceHeight);
-        scaler.matchWidthOrHeight = 0.5f;
+        ScreenAdapter.Match(scaler);
         gameObject.AddComponent<GraphicRaycaster>();
         _group = gameObject.AddComponent<CanvasGroup>();
         _group.alpha = 0f;

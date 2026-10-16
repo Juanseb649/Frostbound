@@ -53,7 +53,7 @@ public class WorldAndSaveTests
         {
             VillageLayout.Result r = VillageLayout.Generate(seed * 7919, Anchors);
             VillageLayout.CastleDesign c0 = r.castle;
-            float half = VillageLayout.GroundHalfSize - 2f;
+            float half = VillageLayout.PlayableHalfSize;
             foreach (float lx in new[] { -VillageLayout.CastleDesign.HalfWidth, VillageLayout.CastleDesign.HalfWidth })
                 foreach (float lz in new[] { c0.FrontZ, c0.BackZ })
                 {
@@ -81,7 +81,7 @@ public class WorldAndSaveTests
                 Assert.GreaterOrEqual(VillageLayout.DistanceToCastle(c0, c), VillageLayout.CastleClearance + VillageLayout.CampRadius, "campamento sobre el castillo, seed " + seed);
             }
 
-            Assert.That(r.bonfires.Count, Is.InRange(2, 3), "hogueras, seed " + seed);
+            Assert.That(r.bonfires.Count, Is.InRange(4, 5), "hogueras, seed " + seed);
             foreach (VillageLayout.Spot b in r.bonfires)
             {
                 foreach (Vector3 c in r.camps) Assert.GreaterOrEqual(Vector3.Distance(b.position, c), VillageLayout.MinBonfireFromCamp - 0.01f, "hoguera junto a un campamento, seed " + seed);

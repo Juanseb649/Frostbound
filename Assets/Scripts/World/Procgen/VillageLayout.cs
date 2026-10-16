@@ -79,27 +79,31 @@ public static class VillageLayout
         public readonly List<Vector3> camps = new List<Vector3>();
         public readonly List<Spot> pines = new List<Spot>();
         public readonly List<Spot> mounds = new List<Spot>();
+        public readonly List<Spot> border = new List<Spot>();
     }
 
     public const float WallRadius = 32f;
     public const float CampSafeRadius = 38f;
     public const float SteveSafeRadius = 20f;
     public const float CampRadius = 5f;
-    public const float ForestRadius = 150f;
+    public const float ForestRadius = 300f;
     public static readonly Vector3 SteveClearing = new Vector3(-11f, 0f, -47f);
     // Inicio del sendero de la montaña: al final del camino del norte, pasado el bosque.
-    public static readonly Vector3 Trailhead = new Vector3(0f, 0f, 166f);
+    public static readonly Vector3 Trailhead = new Vector3(0f, 0f, 296f);
 
-    public const int PineCount = 210;
-    public const int MoundCount = 30;
+    public const int PineCount = 620;
+    public const int MoundCount = 80;
     public const float MinCampDistance = CampSafeRadius + CampRadius + 4f;
     public const float MinCampFromSteve = SteveSafeRadius + CampRadius + 4f;
     public const float MinBonfireFromCamp = 20f;
     public const float CastleClearance = CastleDesign.TownHalfWidth + 4f;
     public const float MinBonfireFromVillage = 48f;
-    public const float MinBonfireSpacing = 35f;
-    public const float GroundHalfSize = 185f;
-    public const float GroundVisualHalfSize = 260f;
+    public const float MinBonfireSpacing = 55f;
+    public const float GroundHalfSize = 330f;
+    // Franja del borde: un muro de pinos (y una pared invisible detrás) para que nadie caiga al vacío.
+    public const float BorderDepth = 14f;
+    public const float PlayableHalfSize = GroundHalfSize - BorderDepth;
+    public const float GroundVisualHalfSize = 430f;
 
     public static Result Generate(int seed, IList<Vector3> campAnchors)
     {
@@ -110,6 +114,7 @@ public static class VillageLayout
         PlaceBonfires(r, Stream(seed, "hogueras"));
         PlacePines(r, Stream(seed, "bosque"));
         PlaceMounds(r, Stream(seed, "nieve"));
+        PlaceBorder(r, Stream(seed, "borde"));
         return r;
     }
 
@@ -133,7 +138,7 @@ public static class VillageLayout
         };
         float side = rng.Chance(0.5f) ? 1f : -1f;
         float deg = side * rng.Range(52f, 68f);
-        float footRadius = rng.Range(92f, 98f);
+        float footRadius = rng.Range(165f, 185f);
         Vector3 inward = -Polar(deg, 1f);
         d.yaw = Yaw(inward);
         d.position = Polar(deg, footRadius) - inward * d.FrontZ;
@@ -232,13 +237,13 @@ public static class VillageLayout
         foreach (Vector3 anchor in anchors)
         {
             float baseDeg = Mathf.Atan2(anchor.x, anchor.z) * Mathf.Rad2Deg;
-            float baseRadius = new Vector2(anchor.x, anchor.z).magnitude;
+            float baseRadius = new Vector2(anchor.x, anchor.z).magnitude * 1.8f;   // el mundo es más grande: campamentos más repartidos
             Vector3 chosen = anchor;
             bool found = false;
             for (int attempt = 0; attempt < 120 && !found; attempt++)
             {
                 float spread = attempt < 40 ? 16f : attempt < 80 ? 40f : 180f;
-                Vector3 p = Polar(baseDeg + rng.Range(-spread, spread), Mathf.Clamp(baseRadius + rng.Range(-5f, 9f), MinCampDistance + 0.5f, 72f));
+                Vector3 p = Polar(baseDeg + rng.Range(-spread, spread), Mathf.Clamp(baseRadius + rng.Range(-5f, 9f), MinCampDistance + 0.5f, 160f));
                 if (!CampOk(r, p)) continue;
                 chosen = p;
                 found = true;
@@ -254,13 +259,13 @@ public static class VillageLayout
         if (Mathf.Abs(p.x) < 7f && p.z > 0f) return false;
         foreach (Vector3 c in r.camps) if (Dist(p, c) < 18f) return false;
         if (DistanceToCastle(r.castle, p) < CastleClearance + CampRadius + 4f) return false;
-        if (Mathf.Abs(p.x) > GroundHalfSize - 10f || Mathf.Abs(p.z) > GroundHalfSize - 10f) return false;
+        if (Mathf.Abs(p.x) > PlayableHalfSize - 10f || Mathf.Abs(p.z) > PlayableHalfSize - 10f) return false;
         return Dist(p, r.castleBonfire.position) >= MinBonfireFromCamp;
     }
 
     private static void PlaceBonfires(Result r, DeterministicRng rng)
     {
-        int count = rng.NextInt(2, 4);
+        int count = rng.NextInt(4, 6);
         float offset = rng.Range(0f, 360f);
         for (int k = 0; k < count; k++)
         {
@@ -268,7 +273,7 @@ public static class VillageLayout
             for (int attempt = 0; attempt < 300; attempt++)
             {
                 float halfSector = attempt < 150 ? 180f / count * 0.8f : 180f;
-                Vector3 p = Polar(center + rng.Range(-halfSector, halfSector), rng.Range(MinBonfireFromVillage + 2f, 88f));
+                Vector3 p = Polar(center + rng.Range(-halfSector, halfSector), rng.Range(MinBonfireFromVillage + 2f, 230f));
                 if (!BonfireOk(r, p)) continue;
                 r.bonfires.Add(new Spot { position = p, yaw = Yaw(-p), scale = 0.85f });
                 break;
@@ -279,7 +284,7 @@ public static class VillageLayout
     private static bool BonfireOk(Result r, Vector3 p)
     {
         if (OnRoad(p) || Flat(p).magnitude < MinBonfireFromVillage) return false;
-        if (Mathf.Abs(p.x) > GroundHalfSize - 10f || Mathf.Abs(p.z) > GroundHalfSize - 10f) return false;
+        if (Mathf.Abs(p.x) > PlayableHalfSize - 10f || Mathf.Abs(p.z) > PlayableHalfSize - 10f) return false;
         if (Dist(p, SteveClearing) < SteveSafeRadius + 6f) return false;
         if (DistanceToCastle(r.castle, p) < CastleClearance + 4f) return false;
         if (Dist(p, r.castleBonfire.position) < MinBonfireSpacing) return false;
@@ -290,10 +295,12 @@ public static class VillageLayout
 
     private static void PlacePines(Result r, DeterministicRng rng)
     {
-        for (int attempt = 0; attempt < 1400 && r.pines.Count < PineCount; attempt++)
+        for (int attempt = 0; attempt < 6000 && r.pines.Count < PineCount; attempt++)
         {
             Vector3 p = Polar(rng.Range(0f, 360f), rng.Range(WallRadius + 4.5f, ForestRadius));
-            if (Mathf.Abs(p.x) > GroundHalfSize - 4f || Mathf.Abs(p.z) > GroundHalfSize - 4f) continue;
+            if (Mathf.Abs(p.x) > PlayableHalfSize - 2f || Mathf.Abs(p.z) > PlayableHalfSize - 2f) continue;
+            if (Mathf.Abs(p.x) < 22f && p.z > Trailhead.z - 38f) continue;
+            if (p.z > Trailhead.z + 6f) continue;
             if (!Clear(r, p, 10f, 7f, 5f)) continue;
             foreach (Spot o in r.pines) if (Dist(p, o.position) < 2.6f) { p = Vector3.positiveInfinity; break; }
             if (float.IsInfinity(p.x)) continue;
@@ -303,14 +310,35 @@ public static class VillageLayout
 
     private static void PlaceMounds(Result r, DeterministicRng rng)
     {
-        for (int attempt = 0; attempt < 300 && r.mounds.Count < MoundCount; attempt++)
+        for (int attempt = 0; attempt < 900 && r.mounds.Count < MoundCount; attempt++)
         {
             bool inside = r.mounds.Count < 8;
             float deg = rng.Range(0f, 360f);
             if (inside && (Mathf.Abs(Mathf.DeltaAngle(deg, 0f)) < 14f || Mathf.Abs(Mathf.DeltaAngle(deg, 180f)) < 14f)) continue;
-            Vector3 p = Polar(deg, inside ? rng.Range(WallRadius - 4.5f, WallRadius - 2.5f) : rng.Range(WallRadius + 4f, 65f));
+            Vector3 p = Polar(deg, inside ? rng.Range(WallRadius - 4.5f, WallRadius - 2.5f) : rng.Range(WallRadius + 4f, 240f));
+            if (Mathf.Abs(p.x) > PlayableHalfSize - 4f || Mathf.Abs(p.z) > PlayableHalfSize - 4f) continue;
             if (!Clear(r, p, 7f, 5f, 4f)) continue;
             r.mounds.Add(new Spot { position = p, yaw = rng.Range(0f, 360f), scale = rng.Range(0.8f, 2.2f) });
+        }
+    }
+
+    // Muro de pinos en el borde del mundo: dos hileras escalonadas recorriendo los cuatro lados del cuadrado.
+    private static void PlaceBorder(Result r, DeterministicRng rng)
+    {
+        float[] rows = { PlayableHalfSize + 2.5f, PlayableHalfSize + 8f };
+        for (int row = 0; row < rows.Length; row++)
+        {
+            float d = rows[row];
+            float step = 4.6f;
+            for (int side = 0; side < 4; side++)
+                for (float u = -d; u < d; u += step)
+                {
+                    float along = u + (row % 2) * step * 0.5f + rng.Range(-0.9f, 0.9f);
+                    float off = d + rng.Range(-1f, 1f);
+                    Vector3 p = side == 0 ? new Vector3(along, 0f, off) : side == 1 ? new Vector3(off, 0f, -along)
+                              : side == 2 ? new Vector3(-along, 0f, -off) : new Vector3(-off, 0f, along);
+                    r.border.Add(new Spot { position = p, yaw = rng.Range(0f, 360f), scale = rng.Range(1.3f, 2.1f) });
+                }
         }
     }
 

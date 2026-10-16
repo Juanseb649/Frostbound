@@ -53,6 +53,8 @@ public class WorldHUD : MonoBehaviour
     }
 
     public bool MenuOpen => _menuNpc != null;
+    // Héroe que habla con el NPC del menú (queda quieto mientras tanto).
+    [System.NonSerialized] public PlayerController MenuTalker;
     public NPCInteractable MenuTarget => _menuNpc;
 
     private class Label
@@ -138,7 +140,7 @@ public class WorldHUD : MonoBehaviour
         if (scaler == null) scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(FrostboundUI.ReferenceWidth, FrostboundUI.ReferenceHeight);
-        scaler.matchWidthOrHeight = 0.5f;
+        ScreenAdapter.Match(scaler);
         if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
         _canvasRt = (RectTransform)transform;
 
@@ -361,12 +363,16 @@ public class WorldHUD : MonoBehaviour
         _menu.gameObject.SetActive(true);
         LayoutRebuilder.ForceRebuildLayoutImmediate(_menu);
         UpdateMenu();
+        // Solo el mando (o teclado) de quien habla mueve la selección del menú.
+        UIDeviceFocus.FocusOn(MenuTalker != null ? MenuTalker : (Component)Players.Nearest(npc.transform.position));
         if (EventSystem.current != null && first != null) EventSystem.current.SetSelectedGameObject(first);
     }
 
     public void CloseMenu()
     {
-        if (_menuNpc != null) _menuNpc.InConversation = false;
+        // Lo pulsado para cerrar o elegir (A, B, Intro...) no hace rodar ni atacar al héroe justo después.
+        if (MenuTalker != null && _menuNpc != null) MenuTalker.LockForDialogue(0.35f);
+        if (_menuNpc != null) { _menuNpc.InConversation = false; UIDeviceFocus.Release(); }
         _menuNpc = null;
         if (_menu != null) _menu.gameObject.SetActive(false);
         if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null

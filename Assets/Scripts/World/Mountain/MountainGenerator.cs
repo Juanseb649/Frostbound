@@ -44,6 +44,16 @@ public class MountainGenerator : MonoBehaviour
         Build();
         PlacePlayer();
         Atmosphere();
+        BuildMap();
+        var fallen = new List<Vector3>();
+        var frng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("faldas_caidos")));
+        for (int i = 0; i < 8; i++)
+        {
+            float z = Mathf.Lerp(25f, MountainLayout.Length - 25f, (i + frng.Range(0.1f, 0.9f)) / 8f);
+            float x = Layout.CenterX(z) + frng.Range(-1f, 1f) * (Layout.HalfWidthAt(z) - 1.5f);
+            fallen.Add(Layout.Ground(x, z));
+        }
+        FallenWarriors.Scatter(transform, Seed, fallen);
         AdventureHUD.Ensure();
         Built = true;
     }
@@ -141,7 +151,12 @@ public class MountainGenerator : MonoBehaviour
         Mesh mesh = MountainMeshes.Terrain(Layout);
         terrain.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = terrain.AddComponent<MeshRenderer>();
-        mr.sharedMaterials = new[] { _path, _snow, _rock };
+        // Nieve con relieve (las UV del terreno van a 10 m por unidad); el sendero pisado, con el mismo grano más gris.
+        Material relief = SnowSurface.For(10f, "Nieve de Las Faldas");
+        Material trodden = SnowSurface.For(10f, "Sendero pisado");
+        if (trodden != null) trodden.SetColor("_BaseColor", new Color(0.8f, 0.84f, 0.9f));
+        mr.sharedMaterials = new[] { trodden != null ? trodden : _path, relief != null ? relief : _snow, _rock };
+        if (mesh.tangents == null || mesh.tangents.Length == 0) mesh.RecalculateTangents();
         terrain.AddComponent<MeshCollider>().sharedMesh = mesh;
         terrain.isStatic = true;
 
@@ -458,6 +473,20 @@ public class MountainGenerator : MonoBehaviour
 
         float yaw = Layout.PathYaw(14f);
         ZoneArrival.Create(gates, MountainLayout.ArrivalFromVillage, Layout.entry + Vector3.up * 0.1f, yaw);
+    }
+
+    // Mapa de Las Faldas: la franja del sendero, con la bajada al poblado y el paso helado.
+    private void BuildMap()
+    {
+        var map = new GameObject("Mapa").AddComponent<MapSystem>();
+        map.transform.SetParent(transform, false);
+        float half = MountainLayout.Length * 0.5f + 18f;
+        Vector3 center = new Vector3(Layout.CenterX(MountainLayout.Length * 0.5f), 0f, MountainLayout.Length * 0.5f);
+        map.SetupZone("faldas", "Las Faldas del Frostspire", center, half, 160, 20f, new[]
+        {
+            MapSystem.Mark(MapSystem.MarkerKind.Exit, Layout.bottomGate, "Bajar al poblado"),
+            MapSystem.Mark(MapSystem.MarkerKind.Exit, Layout.summitGate, "Paso helado"),
+        }, () => Layout.summitGate, Layout.entry);
     }
 
     // El Frostspire al fondo: cumbres enormes al norte (sin colisión).

@@ -10,7 +10,7 @@ public static class StairsLayout
     public const string BonfirePrefix = "escalinata_hoguera_";
 
     public const int Terraces = 7;
-    public const float TerraceSpacing = 14f;   // distancia en Z entre terrazas
+    public const float TerraceSpacing = 20f;   // distancia en Z entre terrazas (deja sitio a la curva del tramo)
     public const float TerraceRise = 5.5f;     // altura entre terrazas
     public const float TerraceDepth = 8f;
     public const float HalfWidth = 24f;
@@ -30,7 +30,37 @@ public static class StairsLayout
     {
         float s = FlightSide(i);
         from = new Vector3(s * 10f, TerraceY(i - 1), TerraceZ(i - 1) - TerraceDepth * 0.5f);
-        to = new Vector3(s * 21f, TerraceY(i), TerraceZ(i) + TerraceDepth * 0.5f);
+        to = new Vector3(s * 14f, TerraceY(i), TerraceZ(i) + TerraceDepth * 0.5f);
+    }
+
+    // Punto del tramo curvo (S suave): sale perpendicular a la terraza de abajo y llega perpendicular a la de arriba,
+    // así los huecos de los muros encajan con los muretes del tramo y no queda ningún agujero.
+    public static Vector3 FlightPoint(Vector3 from, Vector3 to, float t)
+    {
+        Vector3 q = Bezier(from, to, t);
+        // La altura sube según la distancia recorrida: pendiente pareja en toda la curva.
+        float done = 0f, total = 0f;
+        Vector3 prev = Bezier(from, to, 0f);
+        for (int i = 1; i <= 32; i++)
+        {
+            float ti = i / 32f;
+            Vector3 cur = Bezier(from, to, ti);
+            float d = Vector2.Distance(new Vector2(prev.x, prev.z), new Vector2(cur.x, cur.z));
+            if (ti <= t) done += d;
+            else if (ti - 1f / 32f < t) done += d * (t - (ti - 1f / 32f)) * 32f;
+            total += d;
+            prev = cur;
+        }
+        q.y = Mathf.Lerp(from.y, to.y, total > 0f ? done / total : t);
+        return q;
+    }
+
+    private static Vector3 Bezier(Vector3 from, Vector3 to, float t)
+    {
+        float k = Mathf.Abs(from.z - to.z) * 0.5f;
+        Vector3 p1 = from + new Vector3(0f, 0f, -k), p2 = to + new Vector3(0f, 0f, k);
+        float u = 1f - t;
+        return u * u * u * from + 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t * to;
     }
 
     public static float ArenaY => TerraceY(Terraces - 1) + 3.5f;

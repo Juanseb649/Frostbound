@@ -92,6 +92,7 @@ public static class ReleaseBuilder
     }
 
     public static string SetVersion011() { PlayerSettings.bundleVersion = "0.1.1"; AssetDatabase.SaveAssets(); return "versión=" + PlayerSettings.bundleVersion; }
+    public static string SetVersion012() { PlayerSettings.bundleVersion = "0.1.2"; AssetDatabase.SaveAssets(); return "versión=" + PlayerSettings.bundleVersion; }
 
     public static string UiCheck()
     {
