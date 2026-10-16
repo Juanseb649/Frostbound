@@ -500,6 +500,9 @@ public class PlayerCombat : MonoBehaviour
             }
             return;
         }
+        if (weapon != null)
+            foreach (ItemDefinition rune in weapon.runes)
+                if (rune != null && rune.runeEffect == RuneEffect.Swiftness) RuneAudio.Proc(RuneEffect.Swiftness, transform.position, 0.35f, 0.8f);
         if (UsesMagic) CastOrb();
         else if (IsRanged) Shoot(weapon);
         else Melee(weapon);
@@ -632,22 +635,41 @@ public class PlayerCombat : MonoBehaviour
             {
                 case RuneEffect.Fire:
                     target.ApplyBurn(rune.runePower, rune.runeDuration);
+                    RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.6f, 0.35f);
                     break;
                 case RuneEffect.Poison:
                     target.ApplyPoison(rune.runePower, rune.runeDuration);
+                    RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.55f, 0.35f);
                     break;
                 case RuneEffect.Frost:
                     target.ApplySlow(rune.runePower, rune.runeDuration);
-                    if (Random.value < rune.runeChance) target.Freeze(1.5f);
+                    if (Random.value < rune.runeChance)
+                    {
+                        target.Freeze(1.5f);
+                        RuneAudio.Proc(rune.runeEffect, target.transform.position, 1f, 0f);
+                    }
+                    else RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.45f, 0.4f);
                     break;
                 case RuneEffect.Chain:
-                    if (allowChain && Random.value < rune.runeChance) Chain(target, damage * rune.runePower);
+                    if (allowChain && Random.value < rune.runeChance)
+                    {
+                        Chain(target, damage * rune.runePower);
+                        RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.9f, 0.1f);
+                    }
                     break;
                 case RuneEffect.Lifesteal:
                     _stats.Heal(damage * rune.runePower);
+                    RuneAudio.Proc(rune.runeEffect, transform.position, 0.5f, 0.6f);
+                    break;
+                case RuneEffect.Sharpness:
+                    RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.4f, 0.45f);
                     break;
                 case RuneEffect.Knockback:
-                    if (Random.value < rune.runeChance) target.Knockback(dir, rune.runePower);
+                    if (Random.value < rune.runeChance)
+                    {
+                        target.Knockback(dir, rune.runePower);
+                        RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.9f, 0.15f);
+                    }
                     break;
             }
         }

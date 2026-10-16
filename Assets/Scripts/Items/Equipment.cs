@@ -272,6 +272,7 @@ public class Equipment : MonoBehaviour
             return false;
         }
         weapon.runes.Add(rune.item);
+        RuneAudio.Engrave(rune.item.runeEffect);
         _inventory.RemoveAt(inventoryIndex, 1);
         message = "La runa " + WeaponCatalog.RuneName(rune.item.runeEffect) + " quedó grabada en " + weapon.item.displayName;
         Apply();
