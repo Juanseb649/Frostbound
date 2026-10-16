@@ -440,6 +440,30 @@ public class AudioManager : MonoBehaviour
 
     public static bool Has(string path) => Instance != null && Instance.ResolvePath(path) != null;
 
+    // ---------- Música de jefe ----------
+    // Mientras un jefe esté en pelea suena el tema de jefe; al terminar vuelve la música de la zona.
+    private AmbienceId _beforeBoss = AmbienceId.None;
+    private float _bossCheckAt;
+    public bool BossMusicOn => _currentAmbience == AmbienceId.Boss;
+
+    void Update()
+    {
+        if (Time.unscaledTime < _bossCheckAt) return;
+        _bossCheckAt = Time.unscaledTime + 0.4f;
+        BossController boss = BossController.Active;
+        bool fight = boss != null && boss.Engaged && boss.Health != null && !boss.Health.IsDead;
+        if (fight && _currentAmbience != AmbienceId.Boss && _musicClips.ContainsKey(AmbienceId.Boss))
+        {
+            _beforeBoss = _currentAmbience;
+            PlayAmbience(AmbienceId.Boss, 1.2f);
+        }
+        else if (!fight && _currentAmbience == AmbienceId.Boss)
+        {
+            if (_beforeBoss != AmbienceId.None) PlayAmbience(_beforeBoss, 3.5f);
+            else PlayAmbienceForScene(SceneManager.GetActiveScene().name);
+        }
+    }
+
     private AudioClip ResolveClip(AudioId id)
     {
         if (id == AudioId.Penguin_ChirpRandom)
