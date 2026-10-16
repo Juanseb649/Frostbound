@@ -21,7 +21,6 @@ public class OptionsPanel : MonoBehaviour
     private RectTransform _content, _general, _control, _grid;
     private FrostButton _tabGeneral, _tabControl, _kbCard, _padCard, _reset, _back;
     private TextMeshProUGUI _status, _gridTitle, _help, _volume;
-    private FrostButton _fullscreen;
     private readonly List<(GameAction action, FrostButton button, RectTransform glyphSlot)> _rows = new List<(GameAction, FrostButton, RectTransform)>();
 
     // Reasignación en curso.
@@ -145,32 +144,76 @@ public class OptionsPanel : MonoBehaviour
         return FrostButton.Create(parent, text, text, size, style, font);
     }
 
+    // General: volumen, modo de pantalla, resolución (de 1280×720 a 4K, con las ultrawide 21:9 y 32:9) y HUD en ultrawide.
+    private List<DisplaySettings.Res> _resList;
+    private int _resIndex, _modeIndex;
+    private TextMeshProUGUI _resText, _modeText, _hudText;
+
     private void BuildGeneral()
     {
         _general = FrostUI.Stretch(FrostUI.Node(_content, "General"));
-        TextMeshProUGUI vl = FrostUI.Text(_general, "Volumen", "Volumen general", 26f, Color.white);
-        FrostUI.Place(vl.rectTransform, new Vector2(0f, 1f), new Vector2(160f, -40f), new Vector2(360f, 50f));
-        FrostButton minus = MakeButton(_general, "−", new Vector2(64f, 54f), 30f);
-        FrostUI.Place((RectTransform)minus.transform, new Vector2(0f, 1f), new Vector2(560f, -38f), new Vector2(64f, 54f));
-        _volume = FrostUI.Text(_general, "Valor", "", 26f, FrostUI.Ice, TextAlignmentOptions.Center);
-        FrostUI.Place(_volume.rectTransform, new Vector2(0f, 1f), new Vector2(634f, -40f), new Vector2(120f, 50f));
-        FrostButton plus = MakeButton(_general, "+", new Vector2(64f, 54f), 30f);
-        FrostUI.Place((RectTransform)plus.transform, new Vector2(0f, 1f), new Vector2(764f, -38f), new Vector2(64f, 54f));
-        minus.button.onClick.AddListener(() => { GameSettings.Volume = Mathf.Round((GameSettings.Volume - 0.1f) * 10f) / 10f; GameSettings.Save(); RefreshGeneral(); });
-        plus.button.onClick.AddListener(() => { GameSettings.Volume = Mathf.Round((GameSettings.Volume + 0.1f) * 10f) / 10f; GameSettings.Save(); RefreshGeneral(); });
+        _resList = DisplaySettings.Resolutions();
+        DisplaySettings.Res cur = DisplaySettings.Current;
+        _resIndex = Mathf.Max(0, _resList.FindIndex(r => r.w == cur.w && r.h == cur.h));
+        _modeIndex = Mathf.Max(0, System.Array.IndexOf(DisplaySettings.Modes, DisplaySettings.Mode));
 
-        TextMeshProUGUI fl = FrostUI.Text(_general, "Pantalla", "Pantalla completa", 26f, Color.white);
-        FrostUI.Place(fl.rectTransform, new Vector2(0f, 1f), new Vector2(160f, -130f), new Vector2(360f, 50f));
-        _fullscreen = MakeButton(_general, "PantallaCompleta", new Vector2(200f, 54f), 24f);
-        FrostUI.Place((RectTransform)_fullscreen.transform, new Vector2(0f, 1f), new Vector2(560f, -128f), new Vector2(268f, 54f));
-        _fullscreen.button.onClick.AddListener(() => { GameSettings.Fullscreen = !GameSettings.Fullscreen; GameSettings.Save(); RefreshGeneral(); });
+        _volume = Selector(_general, "Volumen general", 0, () => ChangeVolume(-0.1f), () => ChangeVolume(0.1f));
+        _modeText = Selector(_general, "Modo de pantalla", 1, () => { _modeIndex = (_modeIndex + DisplaySettings.Modes.Length - 1) % DisplaySettings.Modes.Length; RefreshGeneral(); },
+                                                             () => { _modeIndex = (_modeIndex + 1) % DisplaySettings.Modes.Length; RefreshGeneral(); });
+        _resText = Selector(_general, "Resolución", 2, () => { _resIndex = Mathf.Max(0, _resIndex - 1); RefreshGeneral(); },
+                                                       () => { _resIndex = Mathf.Min(_resList.Count - 1, _resIndex + 1); RefreshGeneral(); });
+        _hudText = Selector(_general, "HUD en ultrawide", 3, () => { DisplaySettings.HudCentered = !DisplaySettings.HudCentered; RefreshGeneral(); },
+                                                             () => { DisplaySettings.HudCentered = !DisplaySettings.HudCentered; RefreshGeneral(); });
+
+        FrostButton apply = MakeButton(_general, "Aplicar pantalla", new Vector2(300f, 58f), 24f, FrostButton.Style.Primary);
+        FrostUI.Place((RectTransform)apply.transform, new Vector2(0f, 1f), new Vector2(560f, -4f * 90f - 40f), new Vector2(300f, 58f));
+        apply.button.onClick.AddListener(() =>
+        {
+            DisplaySettings.Res r = _resList[_resIndex];
+            DisplaySettings.Apply(r, DisplaySettings.Modes[_modeIndex]);
+            SetHelp("Pantalla: " + r + " (" + r.AspectName + ") · " + DisplaySettings.ModeName(DisplaySettings.Modes[_modeIndex]) + "."
+                    + (Application.isEditor ? " En el editor no cambia; se aplica en el juego compilado." : ""), FrostUI.Ice);
+        });
+        RefreshGeneral();
+    }
+
+    // Fila con nombre y un valor entre dos flechas (se maneja con ratón, teclado o mando).
+    private TextMeshProUGUI Selector(Transform parent, string label, int row, Action left, Action right)
+    {
+        float y = -row * 90f - 40f;
+        TextMeshProUGUI l = FrostUI.Text(parent, label, label, 26f, Color.white);
+        FrostUI.Place(l.rectTransform, new Vector2(0f, 1f), new Vector2(160f, y), new Vector2(380f, 54f));
+        FrostButton minus = MakeButton(parent, "◄ " + label, new Vector2(64f, 54f), 24f);
+        minus.label.text = "<";
+        FrostUI.Place((RectTransform)minus.transform, new Vector2(0f, 1f), new Vector2(560f, y), new Vector2(64f, 54f));
+        TextMeshProUGUI value = FrostUI.Text(parent, label + "_Valor", "", 24f, FrostUI.Ice, TextAlignmentOptions.Center);
+        FrostUI.Place(value.rectTransform, new Vector2(0f, 1f), new Vector2(634f, y), new Vector2(420f, 54f));
+        FrostButton plus = MakeButton(parent, "► " + label, new Vector2(64f, 54f), 24f);
+        plus.label.text = ">";
+        FrostUI.Place((RectTransform)plus.transform, new Vector2(0f, 1f), new Vector2(1064f, y), new Vector2(64f, 54f));
+        minus.button.onClick.AddListener(() => left());
+        plus.button.onClick.AddListener(() => right());
+        return value;
+    }
+
+    private void ChangeVolume(float delta)
+    {
+        GameSettings.Volume = Mathf.Clamp01(Mathf.Round((GameSettings.Volume + delta) * 10f) / 10f);
+        GameSettings.Save();
         RefreshGeneral();
     }
 
     private void RefreshGeneral()
     {
         _volume.text = Mathf.RoundToInt(GameSettings.Volume * 100f) + " %";
-        _fullscreen.label.text = GameSettings.Fullscreen ? "Sí" : "No";
+        if (_resList == null || _resList.Count == 0) return;
+        DisplaySettings.Res r = _resList[_resIndex];
+        DisplaySettings.Res n = DisplaySettings.Native;
+        string tag = r.w == n.w && r.h == n.h ? "  <size=17><color=#7FDB94>nativa</color></size>"
+                   : (n.w > 0 && (r.w > n.w || r.h > n.h)) ? "  <size=17><color=#F07A6E>mayor que tu monitor</color></size>" : "";
+        _resText.text = r + "  <size=18><color=#9FB3C8>" + r.AspectName + "</color></size>" + tag;
+        _modeText.text = DisplaySettings.ModeName(DisplaySettings.Modes[_modeIndex]);
+        _hudText.text = DisplaySettings.HudCentered ? "Centrado 16:9" : "Toda la pantalla";
     }
 
     private void BuildControl()
