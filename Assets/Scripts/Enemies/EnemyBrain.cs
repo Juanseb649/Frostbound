@@ -270,6 +270,12 @@ public class EnemyBrain : MonoBehaviour
         _agent.speed = definition.moveSpeed * mult;
         _agent.isStopped = _dmg.IsFrozen;
         if (_dmg.IsFrozen) return;
+        // Cháchara de caído mientras persigue: gruñidos y chillidos cada pocos segundos (sin amontonarse entre todos).
+        if (Current == State.Chase && Time.time >= _chatterAt)
+        {
+            _chatterAt = Time.time + Random.Range(2.5f, 6f);
+            if (_chatterAt > 0f && Random.value < 0.7f) AudioManager.Play3D("SFX/Corrupt/Chatter/", transform.position, 0.6f, 0.45f, 2f, 22f, 0.12f);
+        }
 
         // Los gólems de nieve del mago atraen a los corruptos que pasan cerca.
         _golem = SnowGolem.PickFor(transform.position, _player.position, definition.sightRange, _golem);
@@ -554,6 +560,8 @@ public class EnemyBrain : MonoBehaviour
     public void GoHome()
     {
         ReleaseAttackerSlot();
+        // Se retira chillando de pánico.
+        if (Current == State.Chase || Current == State.Recover) AudioManager.Play3D("SFX/Corrupt/Flee/", transform.position, 0.75f, 0.6f, 2f, 24f, 0.1f);
         Current = State.Return;
         if (_agent.isOnNavMesh) _agent.SetDestination(_home);
     }
@@ -575,6 +583,8 @@ public class EnemyBrain : MonoBehaviour
             _agent.Move(push.normalized * (info.critical ? 0.6f : 0.25f));
         }
     }
+
+    private float _chatterAt;
 
     private void OnDied()
     {

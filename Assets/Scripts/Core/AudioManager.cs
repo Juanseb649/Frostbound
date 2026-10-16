@@ -206,9 +206,13 @@ public class AudioManager : MonoBehaviour
         LoadMusic(AmbienceId.StarlitPath, "Audio/Music/Ambience_StarlitPath");
         LoadMusic(AmbienceId.Boss, "Audio/Music/Boss_Theme");
 
-        // Variantes: el grito de ataque y la muerte de los corruptos (estilo caídos) se eligen al azar.
-        AddVariants(AudioId.Corrupt_Attack, "Audio/SFX/Corrupt_Attack1", "Audio/SFX/Corrupt_Attack2", "Audio/SFX/Corrupt_Attack3");
-        AddVariants(AudioId.Corrupt_Death, "Audio/SFX/Corrupt_Death1", "Audio/SFX/Corrupt_Death2", "Audio/SFX/Corrupt_Death3");
+        // Voces de los corruptos (gruñidos goblinoides y chillidos agudos, estilo caídos): cada una se elige al azar de su carpeta.
+        AddFolder(AudioId.Corrupt_Alert1, "Audio/SFX/Corrupt/Alert");
+        AddFolder(AudioId.Corrupt_Alert2, "Audio/SFX/Corrupt/Alert");
+        AddFolder(AudioId.Corrupt_Attack, "Audio/SFX/Corrupt/Attack");
+        AddFolder(AudioId.Corrupt_Pain1, "Audio/SFX/Corrupt/Pain");
+        AddFolder(AudioId.Corrupt_Pain2, "Audio/SFX/Corrupt/Pain");
+        AddFolder(AudioId.Corrupt_Death, "Audio/SFX/Corrupt/Death");
     }
 
     private void LoadClip(AudioId id, string resourcePath)
@@ -228,6 +232,12 @@ public class AudioManager : MonoBehaviour
             if (c != null) list.Add(c);
         }
         if (list.Count > 0) _variants[id] = list.ToArray();
+    }
+
+    private void AddFolder(AudioId id, string folder)
+    {
+        AudioClip[] clips = Resources.LoadAll<AudioClip>(folder);
+        if (clips != null && clips.Length > 0) _variants[id] = clips;
     }
 
     private void LoadMusic(AmbienceId id, string resourcePath)
