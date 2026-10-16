@@ -83,7 +83,8 @@ public class StairsGenerator : MonoBehaviour
             _kit.Box(new Vector3(0f, (c.y + bottom) * 0.5f - 0.3f, (south + north) * 0.5f), Vector3.zero, new Vector3(hw * 2f + 4f, c.y - bottom - 0.6f, north - south), _rock);
             // Suelo de losas con nieve en los bordes.
             _kit.Box(new Vector3(0f, c.y - 0.3f, c.z), Vector3.zero, new Vector3(hw * 2f, 0.6f, depth), _stone, true);
-            _kit.Box(new Vector3(0f, c.y - 0.25f, c.z - depth * 0.5f - 3f), Vector3.zero, new Vector3(hw * 2f, 0.5f, 6f), _rock, false);
+            float gap = StairsLayout.TerraceSpacing - depth;
+            _kit.Box(new Vector3(0f, c.y - 0.25f, c.z - depth * 0.5f - gap * 0.5f), Vector3.zero, new Vector3(hw * 2f, 0.5f, gap), _rock, false);
             for (float x = -hw + 2f; x < hw - 1f; x += _rng.Range(5f, 9f))
                 _kit.Box(new Vector3(x, c.y + 0.02f, c.z + _rng.Range(-2.5f, 2.5f)), new Vector3(0f, _rng.Range(0f, 90f), 0f), new Vector3(_rng.Range(1.5f, 3f), 0.06f, _rng.Range(1f, 2f)), _snow);
             // Pared del fondo (al sur), con el hueco por donde sale el tramo que sube a la siguiente terraza.
@@ -165,7 +166,7 @@ public class StairsGenerator : MonoBehaviour
         for (int i = 1; i < StairsLayout.Terraces; i++)
         {
             StairsLayout.Flight(i, out Vector3 a, out Vector3 b);
-            Stair(a, b);
+            CurvedStair(a, b);
         }
         StairsLayout.FinalFlight(out Vector3 fa, out Vector3 fb);
         Stair(fa, fb, 5f);
@@ -200,6 +201,90 @@ public class StairsGenerator : MonoBehaviour
             Vector3 center = new Vector3((p0.x + p1.x) * 0.5f, (top + p0.y - 0.35f) * 0.5f, (p0.z + p1.z) * 0.5f);
             _kit.Box(center, yaw.eulerAngles, new Vector3(width, top - p0.y + 0.35f, run / steps + 0.02f), (k & 1) == 0 ? _stone : _stoneDark);
         }
+    }
+
+    // Tramo curvo: se arma con segmentos cortos (rampa invisible + muretes con colisión que se solapan) y peldaños
+    // que siguen la curva. Los extremos van rectos hacia el sur para encajar con los huecos de muro y barandilla.
+    private void CurvedStair(Vector3 a, Vector3 b, float width = StairsLayout.FlightWidth)
+    {
+        const int segments = 14;
+        for (int j = 0; j < segments; j++)
+        {
+            Vector3 p0 = StairsLayout.FlightPoint(a, b, j / (float)segments);
+            Vector3 p1 = StairsLayout.FlightPoint(a, b, (j + 1) / (float)segments);
+            Vector3 flat = new Vector3(p1.x - p0.x, 0f, p1.z - p0.z);
+            float run = flat.magnitude, rise = p1.y - p0.y;
+            Quaternion yaw = Quaternion.LookRotation(flat.normalized);
+            float pitch = -Mathf.Atan2(rise, run) * Mathf.Rad2Deg;
+            float length = Mathf.Sqrt(run * run + rise * rise);
+            Vector3 mid = (p0 + p1) * 0.5f;
+            Vector3 euler = (yaw * Quaternion.Euler(pitch, 0f, 0f)).eulerAngles;
+            Vector3 right = yaw * Vector3.right;
+            foreach (float s in new[] { -1f, 1f })
+            {
+                _kit.Box(mid + right * s * (width * 0.5f + 0.2f) + Vector3.up * 0.5f, euler, new Vector3(0.4f, 1f, length + 0.35f), _stoneDark, false);
+                _kit.ColliderBox(mid + right * s * (width * 0.5f + 0.25f) + Vector3.up * 1.1f, euler, new Vector3(0.5f, 2.4f, length + 0.7f));
+            }
+            float low = Mathf.Min(p0.y, p1.y);
+            _kit.Box(new Vector3(mid.x, (low + StairsLayout.KingdomDepth) * 0.5f, mid.z), yaw.eulerAngles, new Vector3(width + 1f, low - StairsLayout.KingdomDepth, run + 0.2f), _rock);
+        }
+        RampSurface(a, b, width + 0.3f);
+        float totalRise = b.y - a.y;
+        int steps = Mathf.Max(2, Mathf.RoundToInt(totalRise / 0.28f));
+        for (int k = 0; k < steps; k++)
+        {
+            Vector3 p0 = StairsLayout.FlightPoint(a, b, k / (float)steps), p1 = StairsLayout.FlightPoint(a, b, (k + 1) / (float)steps);
+            Vector3 flat = new Vector3(p1.x - p0.x, 0f, p1.z - p0.z);
+            Quaternion yaw = Quaternion.LookRotation(flat.normalized);
+            float top = p1.y;
+            Vector3 center = new Vector3((p0.x + p1.x) * 0.5f, (top + p0.y - 0.35f) * 0.5f, (p0.z + p1.z) * 0.5f);
+            _kit.Box(center, yaw.eulerAngles, new Vector3(width, top - p0.y + 0.35f, flat.magnitude + 0.12f), (k & 1) == 0 ? _stone : _stoneDark);
+        }
+    }
+
+    // Superficie continua del tramo curvo (una sola malla): sin juntas ni aristas en las que se enganche el héroe.
+    // Empieza y termina un poco metida dentro del suelo de cada terraza.
+    private void RampSurface(Vector3 a, Vector3 b, float width)
+    {
+        const int n = 48;
+        var verts = new List<Vector3>();
+        var tris = new List<int>();
+        for (int k = 0; k <= n + 2; k++)
+        {
+            float t = (k - 1) / (float)n;
+            Vector3 p, fwd;
+            if (t < 0f) { fwd = Vector3.back; p = a + Vector3.forward * 0.6f + Vector3.down * 0.05f; }
+            else if (t > 1f) { fwd = Vector3.back; p = b + Vector3.back * 0.6f + Vector3.down * 0.05f; }
+            else
+            {
+                p = StairsLayout.FlightPoint(a, b, t);
+                Vector3 q = StairsLayout.FlightPoint(a, b, Mathf.Min(1f, t + 0.01f)) - StairsLayout.FlightPoint(a, b, Mathf.Max(0f, t - 0.01f));
+                q.y = 0f;
+                fwd = q.sqrMagnitude > 1e-6f ? q.normalized : Vector3.back;
+            }
+            Vector3 right = Vector3.Cross(Vector3.up, fwd).normalized;
+            verts.Add(p - right * width * 0.5f);
+            verts.Add(p + right * width * 0.5f);
+            if (k > 0)
+            {
+                int i0 = (k - 1) * 2;
+                tris.AddRange(new[] { i0, i0 + 2, i0 + 1, i0 + 1, i0 + 2, i0 + 3 });
+            }
+        }
+        var mesh = new Mesh { name = "Rampa_Tramo" };
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        if (mesh.normals.Length > 0 && mesh.normals[0].y < 0f)
+        {
+            for (int i = 0; i < tris.Count; i += 3) { int tmp = tris[i + 1]; tris[i + 1] = tris[i + 2]; tris[i + 2] = tmp; }
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+        }
+        var go = new GameObject("Rampa_Tramo");
+        go.transform.SetParent(_kit.colliders, false);
+        go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }
 
     // ---------- Explanada de Rocco ----------
