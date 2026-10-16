@@ -55,6 +55,16 @@ public static class Stash
         Changed?.Invoke();
     }
 
+    // Saca monedas del arcón para pagar a un NPC.
+    public static bool TakeCoins(int amount)
+    {
+        if (amount <= 0) return true;
+        if (_coins < amount) return false;
+        _coins -= amount;
+        Changed?.Invoke();
+        return true;
+    }
+
     public static void Load(SaveData data)
     {
         Inventory inv = Items;

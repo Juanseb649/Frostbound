@@ -174,13 +174,14 @@ public class TradeWindow : MonoBehaviour
         int price = ItemPricing.BuyPrice(item);
         if (_armed != v) { Arm(v, "Clic otra vez para comprar por " + price + " monedas", FrostboundUI.Gold); return; }
         _armed = null;
-        if (_wallet.Coins < price) { Toast("Te faltan " + (price - _wallet.Coins) + " monedas", FrostboundUI.Negative); return; }
+        if (_wallet.CoinsWithStash < price) { Toast("Te faltan " + (price - _wallet.CoinsWithStash) + " monedas (contando las del arcón)", FrostboundUI.Negative); return; }
         if (!_player.Inventory.HasSpaceFor(item.item, 1)) { Toast("La mochila está llena", FrostboundUI.Negative); return; }
-        _wallet.Spend(price);
+        int fromStash = Mathf.Max(0, price - _wallet.Coins);
+        _wallet.SpendWithStash(price);
         bool consumable = item.item.IsConsumable;
         _player.Inventory.AddStack(consumable ? new ItemStack(item.item, 1) : item);
         if (!consumable) Stock.RemoveAt(v.index);
-        Toast("Compraste " + item.DisplayName + " por " + price + " monedas", FrostboundUI.Positive);
+        Toast("Compraste " + item.DisplayName + " por " + price + " monedas" + (fromStash > 0 ? " (" + fromStash + " del arcón)" : ""), FrostboundUI.Positive);
         _dirty = true;
     }
 
@@ -240,7 +241,7 @@ public class TradeWindow : MonoBehaviour
         Inventory inv = _player.Inventory;
         EnsureCells(_right, _rightGrid, inv.Capacity, OnRight);
         for (int i = 0; i < _right.Count; i++) Show(_right[i], i < inv.Capacity ? inv.Get(i) : null);
-        _rightCoins.text = Fmt(_wallet.Coins) + " monedas";
+        _rightCoins.text = Fmt(_wallet.Coins) + " monedas" + (_mode == Mode.Shop && Stash.Coins > 0 ? "  <size=14><color=#9FB3C8>+ " + Fmt(Stash.Coins) + " en el arcón</color></size>" : "");
         _leftCoins.text = _mode == Mode.Stash ? "Guardadas: " + Fmt(Stash.Coins) + " monedas   ·   " + Stash.Items.UsedSlots + "/" + Stash.Capacity : "";
     }
 

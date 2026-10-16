@@ -90,8 +90,8 @@ public class NPCInteractable : MonoBehaviour
             Wallet wallet = player != null ? Wallet.Of(player.gameObject) : null;
             string text;
             if (cost <= 0) text = "Tus armas están en perfecto estado.";
-            else if (wallet == null || !wallet.Spend(cost))
-                text = "Eso son " + cost + " monedas de trabajo. Vuelve cuando las tengas" + (wallet != null ? " (te faltan " + (cost - wallet.Coins) + ")." : ".");
+            else if (wallet == null || !wallet.SpendWithStash(cost))
+                text = "Eso son " + cost + " monedas de trabajo. Vuelve cuando las tengas" + (wallet != null ? " (te faltan " + (cost - wallet.CoinsWithStash) + ")." : ".");
             else
             {
                 int n = player.RepairAll();
