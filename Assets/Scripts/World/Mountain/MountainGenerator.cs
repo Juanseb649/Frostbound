@@ -44,6 +44,7 @@ public class MountainGenerator : MonoBehaviour
         Build();
         PlacePlayer();
         Atmosphere();
+        BuildMap();
         AdventureHUD.Ensure();
         Built = true;
     }
@@ -458,6 +459,20 @@ public class MountainGenerator : MonoBehaviour
 
         float yaw = Layout.PathYaw(14f);
         ZoneArrival.Create(gates, MountainLayout.ArrivalFromVillage, Layout.entry + Vector3.up * 0.1f, yaw);
+    }
+
+    // Mapa de Las Faldas: la franja del sendero, con la bajada al poblado y el paso helado.
+    private void BuildMap()
+    {
+        var map = new GameObject("Mapa").AddComponent<MapSystem>();
+        map.transform.SetParent(transform, false);
+        float half = MountainLayout.Length * 0.5f + 18f;
+        Vector3 center = new Vector3(Layout.CenterX(MountainLayout.Length * 0.5f), 0f, MountainLayout.Length * 0.5f);
+        map.SetupZone("faldas", "Las Faldas del Frostspire", center, half, 160, 20f, new[]
+        {
+            MapSystem.Mark(MapSystem.MarkerKind.Exit, Layout.bottomGate, "Bajar al poblado"),
+            MapSystem.Mark(MapSystem.MarkerKind.Exit, Layout.summitGate, "Paso helado"),
+        }, () => Layout.summitGate, Layout.entry);
     }
 
     // El Frostspire al fondo: cumbres enormes al norte (sin colisión).

@@ -61,16 +61,36 @@ public class MapSystem : MonoBehaviour
     public void Setup(VillageLayout.Result layout)
     {
         _layout = layout;
-        Village = new Area { id = "poblado", title = "Alrededores del poblado", center = Vector3.zero, half = VillageLayout.GroundHalfSize, fogSize = 128, revealRadius = 24f };
+        Village = new Area { id = "poblado", title = "Alrededores del poblado", center = Vector3.zero, half = VillageLayout.GroundHalfSize, fogSize = 192, revealRadius = 26f };
         InitFog(Village);
         areas.Add(Village);
     }
+
+    // Mapa de una zona de la montaña (Las Faldas, La Escalinata...): área, marcadores fijos y objetivo.
+    private readonly List<Marker> _zoneMarkers = new List<Marker>();
+    private Func<Vector3?> _zoneObjective;
+    private Vector3? _zoneReveal;
+
+    public void SetupZone(string id, string title, Vector3 center, float half, int fogSize, float revealRadius, IEnumerable<Marker> fixedMarkers, Func<Vector3?> objective = null, Vector3? revealAtStart = null)
+    {
+        _layout = null;
+        Village = new Area { id = id, title = title, center = center, half = half, fogSize = fogSize, revealRadius = revealRadius };
+        InitFog(Village);
+        areas.Add(Village);
+        _zoneMarkers.Clear();
+        if (fixedMarkers != null) _zoneMarkers.AddRange(fixedMarkers);
+        _zoneObjective = objective;
+        _zoneReveal = revealAtStart;
+    }
+
+    public static Marker Mark(MarkerKind kind, Vector3 position, string label, bool always = true) => new Marker { kind = kind, position = position, label = label, always = always };
 
     void Start()
     {
         if (Village != null && Village.map == null) Village.map = Capture(Village, 1024, false);
         // El poblado y sus calles se conocen desde el principio.
-        if (Village != null) Reveal(Village, Vector3.zero, VillageLayout.WallRadius + 6f);
+        if (Village != null && _layout != null) Reveal(Village, Vector3.zero, VillageLayout.WallRadius + 6f);
+        if (Village != null && _zoneReveal.HasValue) Reveal(Village, _zoneReveal.Value, 18f);
     }
 
     private void InitFog(Area a)
@@ -272,7 +292,21 @@ public class MapSystem : MonoBehaviour
     private void RebuildMarkers()
     {
         markers.Clear();
-        if (_layout == null) return;
+        if (_layout == null)
+        {
+            if (Village == null) return;
+            markers.AddRange(_zoneMarkers);
+            foreach (Bonfire b in Bonfire.Instances)
+            {
+                if (b == null) continue;
+                bool lit = b.IsLit;
+                markers.Add(new Marker { kind = lit ? MarkerKind.BonfireLit : MarkerKind.Bonfire, position = b.transform.position, label = lit ? "Hoguera" : "Hoguera apagada", always = lit });
+            }
+            Vector3? zo = _zoneObjective != null ? _zoneObjective() : null;
+            if (zo.HasValue) markers.Add(new Marker { kind = MarkerKind.Objective, position = zo.Value, label = "Objetivo", always = true, clampToEdge = true });
+            if (_player != null) markers.Add(new Marker { kind = MarkerKind.Player, position = _player.position, label = "Tú", always = true });
+            return;
+        }
         markers.Add(new Marker { kind = MarkerKind.Village, position = Vector3.zero, label = "Poblado", always = true });
         foreach (Bonfire b in Bonfire.Instances)
         {
@@ -308,6 +342,7 @@ public class MapSystem : MonoBehaviour
     // Dónde está el objetivo actual de la misión (según la etapa y si el héroe está dentro del castillo).
     public Vector3? ObjectivePosition()
     {
+        if (_layout == null) return _zoneObjective != null ? _zoneObjective() : null;
         int stage = QuestLog.Stage(QuestLog.Citadel);
         bool inside = CastleInterior.Instance != null && CastleInterior.Instance.PlayerInside;
         switch (stage)

@@ -46,6 +46,7 @@ public class StairsGenerator : MonoBehaviour
         BakeNavMesh();
         PlacePlayer();
         Atmosphere();
+        BuildMap();
         AdventureHUD.Ensure();
         Built = true;
     }
@@ -527,6 +528,21 @@ public class StairsGenerator : MonoBehaviour
             cam.transform.position = StairsLayout.Entry + follow.offset;
             cam.transform.LookAt(StairsLayout.Entry + Vector3.up * follow.lookHeight);
         }
+    }
+
+    // Mapa de La Escalinata: terrazas, la bajada a Las Faldas y la explanada de Rocco.
+    private void BuildMap()
+    {
+        var map = new GameObject("Mapa").AddComponent<MapSystem>();
+        map.transform.SetParent(transform, false);
+        Vector3 top = StairsLayout.ArenaCenter;
+        float half = Mathf.Max(StairsLayout.HalfWidth + 10f, (-top.z + StairsLayout.ArenaRadius + 14f) * 0.5f);
+        Vector3 center = new Vector3(0f, 0f, (top.z - StairsLayout.ArenaRadius + 8f) * 0.5f);
+        map.SetupZone("escalinata", "La Escalinata", center, half, 96, 14f, new[]
+        {
+            MapSystem.Mark(MapSystem.MarkerKind.Exit, StairsLayout.BottomGate, "Bajar a Las Faldas"),
+            MapSystem.Mark(MapSystem.MarkerKind.Throne, StairsLayout.ArenaCenter, "Explanada de Rocco"),
+        }, () => QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentRocco ? StairsLayout.ArenaGate : StairsLayout.ArenaCenter, StairsLayout.Entry);
     }
 
     private void Atmosphere()
