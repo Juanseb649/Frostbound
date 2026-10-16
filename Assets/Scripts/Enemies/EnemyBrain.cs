@@ -494,6 +494,7 @@ public class EnemyBrain : MonoBehaviour
         float before = stats.currentHealth;
         stats.TakeDamage(amount);
         float taken = before - stats.currentHealth;
+        if (taken > 0f) CombatAudio.PlayerHit(stats.transform.position + Vector3.up);
         if (taken > 0f && WorldHUD.Instance != null)
             WorldHUD.Instance.Popup(stats.transform.position + Vector3.up * 1.7f + Random.insideUnitSphere * 0.15f,
                 Mathf.CeilToInt(taken).ToString(), FrostboundUI.HealthBar, 0.9f);
@@ -580,6 +581,7 @@ public class EnemyBrain : MonoBehaviour
         ReleaseAttackerSlot();
         Current = State.Dead;
         AudioManager.Play3D(AudioId.Corrupt_Death, transform.position, Champion ? 1.1f : 0.9f, 2f, 25f, Champion ? 0.02f : 0.1f);
+        CombatAudio.Death(transform.position);
         if (_agent.isOnNavMesh) _agent.ResetPath();
         _agent.enabled = false;
         SetEyes(Color.black);

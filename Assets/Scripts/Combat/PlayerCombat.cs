@@ -503,6 +503,7 @@ public class PlayerCombat : MonoBehaviour
         if (weapon != null)
             foreach (ItemDefinition rune in weapon.runes)
                 if (rune != null && rune.runeEffect == RuneEffect.Swiftness) RuneAudio.Proc(RuneEffect.Swiftness, transform.position, 0.35f, 0.8f);
+        CombatAudio.Attack(this, weapon);
         if (UsesMagic) CastOrb();
         else if (IsRanged) Shoot(weapon);
         else Melee(weapon);
@@ -622,6 +623,7 @@ public class PlayerCombat : MonoBehaviour
         float damage = _stats.Damage * Random.Range(1f - spread, 1f + spread) * multiplier;
         Vector3 dir = target.transform.position - transform.position;
         target.TakeHit(new DamageInfo { amount = damage, type = DamageType.Physical, source = gameObject, direction = dir, critical = critical });
+        CombatAudio.Hit(target.transform.position, critical, weapon);
 
         if (weapon == null || weapon.IsBroken) return;
         float steal = weapon.AffixSum(AffixKind.Lifesteal);
