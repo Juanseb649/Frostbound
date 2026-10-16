@@ -51,6 +51,7 @@ public class VillageWorldGenerator : MonoBehaviour
         {
             float scale = VillageLayout.GroundVisualHalfSize * 2f / 10f;
             ground.localScale = new Vector3(scale, ground.localScale.y, scale);
+            ApplyDetailedSnow(ground.GetComponent<Renderer>(), VillageLayout.GroundVisualHalfSize * 2f);
         }
 
         if (castlePrefab != null)
@@ -525,6 +526,20 @@ public class VillageWorldGenerator : MonoBehaviour
                 l.intensity = 1.6f;
                 l.shadows = LightShadows.None;
             }
+    }
+
+    // Nieve con detalle: variación grande cada ~60 m (ventisqueros azulados) y grano/ondas de viento cada ~4 m.
+    public const float SnowMacroMeters = 60f, SnowDetailMeters = 4f;
+
+    public static void ApplyDetailedSnow(Renderer r, float meters)
+    {
+        if (r == null) return;
+        Material m = Resources.Load<Material>("Frostbound/NieveDetallada");
+        if (m == null) return;
+        var inst = new Material(m) { name = "Nieve del poblado" };
+        inst.SetTextureScale("_BaseMap", Vector2.one * (meters / SnowMacroMeters));
+        inst.SetTextureScale("_DetailAlbedoMap", Vector2.one * (meters / SnowDetailMeters));
+        r.sharedMaterial = inst;
     }
 
     private static GameObject Block(Transform parent, string name, Vector3 pos, Vector3 size, Material mat, bool collide)
