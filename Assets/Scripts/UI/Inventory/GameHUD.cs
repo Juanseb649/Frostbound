@@ -67,6 +67,8 @@ public class GameHUD : MonoBehaviour
         _ability = player.GetComponent<PlayerAbility>();
         if (_ability != null) _ability.Failed += OnAbilityFailed;
         Build();
+        // En ultrawide el HUD puede quedarse en un 16:9 centrado (Configuración → General).
+        if (GetComponent<UltrawideFrame>() == null) gameObject.AddComponent<UltrawideFrame>();
         _stats.LeveledUp += OnLevelUp;
         _stats.ExperienceGained += OnExperienceGained;
         player.Inventory.ItemAdded += OnItemAdded;
