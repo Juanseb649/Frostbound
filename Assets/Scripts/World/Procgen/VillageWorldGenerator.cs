@@ -204,9 +204,12 @@ public class VillageWorldGenerator : MonoBehaviour
         // El Frostspire: la cumbre mayor se apoya justo detrás de la plataforma del paso (la escalera sube a su ladera)
         // y las demás quedan detrás del acantilado. Todas son sólidas: no se pueden atravesar.
         float wall = VillageLayout.Trailhead.z + TrailBack;
+        bool sceneMountain = PlaceSceneFrostspire(wall);
         for (int i = 0; i < 7; i++)
         {
             bool main = i == 3;
+            // Con el Frostspire de la escena, las cumbres generadas solo rellenan los extremos.
+            if (sceneMountain && i >= 2 && i <= 4) continue;
             float x = main ? 0f : (i - 3) * rng.Range(80f, 105f) + rng.Range(-15f, 15f);
             float s = main ? 170f : rng.Range(70f, 120f);
             Quaternion rot = Quaternion.Euler(0f, main ? 0f : rng.Range(0f, 360f), 0f);
@@ -225,6 +228,29 @@ public class VillageWorldGenerator : MonoBehaviour
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             peak.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
+    }
+
+    // El Frostspire de la escena (tres conos con la cima nevada): la cumbre central se apoya detrás de la plataforma
+    // del paso, de modo que la escalera sube a su ladera. Todos sus picos reciben colisión.
+    private bool PlaceSceneFrostspire(float wall)
+    {
+        GameObject fs = GameObject.Find("The_Frostspire");
+        if (fs == null) return false;
+        Renderer main = null;
+        foreach (Renderer r in fs.GetComponentsInChildren<Renderer>())
+            if (r.name == "Pico" && (main == null || r.bounds.size.x > main.bounds.size.x)) main = r;
+        if (main == null) return false;
+        Bounds b = main.bounds;
+        // A la altura del suelo la ladera ya se metió hacia dentro: radio / alto × lo enterrado.
+        float buried = Mathf.Max(0f, -b.min.y);
+        float frontAtGround = b.min.z + buried * (b.extents.z / Mathf.Max(1f, b.size.y));
+        Vector3 shift = new Vector3(-b.center.x, 0f, wall + 0.5f - frontAtGround);
+        fs.transform.position += shift;
+        foreach (MeshFilter mf in fs.GetComponentsInChildren<MeshFilter>())
+            if (mf.sharedMesh != null && mf.GetComponent<Collider>() == null) mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+        GameObject oldExit = GameObject.Find("Salida_HaciaFoothills");
+        if (oldExit != null) oldExit.SetActive(false);
+        return true;
     }
 
     // Base de la cumbre (anillo inferior, ya girado y escalado).
@@ -268,8 +294,9 @@ public class VillageWorldGenerator : MonoBehaviour
 
     public const float TrailRise = 8f;      // altura de la plataforma del paso (en la ladera del Frostspire)
     public const float TrailBack = 12f;     // fondo de la plataforma desde el Trailhead
-    public const float TrailRun = 24f;      // largo de la escalera
-    public const float TrailHalfWidth = 4f;
+    public const float TrailRun = 30f;      // fondo (en z) que ocupa la escalera curva
+    public const float TrailHalfWidth = 3f;
+    public const float TrailStartX = -8f;  // la escalera arranca a un lado del camino y se curva hasta el centro
 
     // Escalinata de piedra al pie de la montaña: sube del camino a una plataforma donde está el arco del sendero.
     // Detrás, un acantilado sólido (rocas + colisión) impide atravesar la montaña. Devuelve el centro de la plataforma.
@@ -281,30 +308,7 @@ public class VillageWorldGenerator : MonoBehaviour
         Transform stairs = new GameObject("Escalinata_Sendero").transform;
         stairs.SetParent(t, false);
 
-        // Peldaños visibles (sin colisión: el héroe pisa una rampa lisa invisible y no se engancha).
-        int steps = Mathf.RoundToInt(TrailRise / 0.25f);
-        float depth = TrailRun / steps;
-        for (int i = 0; i < steps; i++)
-        {
-            float h = (i + 1) * TrailRise / steps;
-            Block(stairs, "Peldano", new Vector3(0f, h * 0.5f, z0 + depth * (i + 0.5f)), new Vector3(TrailHalfWidth * 2f, h, depth + 0.02f), stone, false);
-        }
-        float len = Mathf.Sqrt(TrailRun * TrailRun + TrailRise * TrailRise);
-        float ang = Mathf.Atan2(TrailRise, TrailRun) * Mathf.Rad2Deg;
-        var ramp = new GameObject("Rampa");
-        ramp.transform.SetParent(stairs, false);
-        ramp.transform.SetPositionAndRotation(new Vector3(0f, TrailRise * 0.5f, (z0 + z1) * 0.5f), Quaternion.Euler(-ang, 0f, 0f));
-        BoxCollider rc = ramp.AddComponent<BoxCollider>();
-        rc.size = new Vector3(TrailHalfWidth * 2f + 0.4f, 0.5f, len + 0.6f);
-        rc.center = new Vector3(0f, -0.25f, 0f);
-
-        // Barandas a los lados de la escalera (siguen la pendiente).
-        for (int side = -1; side <= 1; side += 2)
-        {
-            var rail = Block(stairs, "Baranda", Vector3.zero, new Vector3(0.8f, 1.6f, len + 0.4f), stone, true);
-            rail.transform.SetPositionAndRotation(new Vector3(side * (TrailHalfWidth + 0.4f), TrailRise * 0.5f + 0.5f, (z0 + z1) * 0.5f), Quaternion.Euler(-ang, 0f, 0f));
-            Block(stairs, "Zocalo", new Vector3(side * (TrailHalfWidth + 0.4f), TrailRise * 0.25f, (z0 + z1) * 0.5f + TrailRun * 0.25f), new Vector3(0.8f, TrailRise * 0.5f, TrailRun * 0.5f), stone, false);
-        }
+        BuildCurvedFlight(stairs, stone);
 
         // Plataforma del paso, con murete alrededor (menos por donde llega la escalera).
         float platDepth = platBack - z1;
@@ -348,6 +352,150 @@ public class VillageWorldGenerator : MonoBehaviour
             rock.AddComponent<MeshCollider>().sharedMesh = rock.GetComponent<MeshFilter>().sharedMesh;
         }
         return new Vector3(0f, TrailRise, z1 + 2.5f);
+    }
+
+
+    // ---------- Escalera curva del sendero ----------
+    // Sube en S desde el camino hasta la plataforma: un tramo, un rellano a media altura y otro tramo.
+    // El héroe pisa una superficie lisa (una malla) y los peldaños, macizos hasta el suelo, son solo visuales.
+    private static Vector3 TrailBezier(float t)
+    {
+        Vector3 head = VillageLayout.Trailhead;
+        Vector3 p0 = new Vector3(TrailStartX, 0f, head.z - TrailRun), p3 = new Vector3(0f, 0f, head.z);
+        Vector3 p1 = p0 + Vector3.forward * TrailRun * 0.45f, p2 = p3 - Vector3.forward * TrailRun * 0.45f;
+        float u = 1f - t;
+        return u * u * u * p0 + 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t * p3;
+    }
+
+    // Altura según la fracción del recorrido: sube, rellano, sube.
+    private static float TrailHeight(float f)
+    {
+        const float landA = 0.42f, landB = 0.58f;
+        if (f < landA) return Mathf.SmoothStep(0f, 1f, f / landA) * 0.5f * TrailRise * 0.92f + f / landA * 0.04f * TrailRise;
+        if (f < landB) return TrailRise * 0.5f;
+        float k = (f - landB) / (1f - landB);
+        return TrailRise * 0.5f + TrailRise * 0.5f * (0.92f * Mathf.SmoothStep(0f, 1f, k) + 0.08f * k);
+    }
+
+    public static Vector3 TrailPoint(float t)
+    {
+        const int n = 64;
+        float done = 0f, total = 0f;
+        Vector3 prev = TrailBezier(0f);
+        for (int i = 1; i <= n; i++)
+        {
+            float ti = i / (float)n;
+            Vector3 cur = TrailBezier(ti);
+            float d = Vector3.Distance(prev, cur);
+            if (ti <= t) done += d;
+            else if (ti - 1f / n < t) done += d * (t - (ti - 1f / n)) * n;
+            total += d;
+            prev = cur;
+        }
+        Vector3 p = TrailBezier(t);
+        p.y = TrailHeight(total > 0f ? done / total : t);
+        return p;
+    }
+
+    private static Vector3 TrailForward(float t)
+    {
+        Vector3 d = TrailBezier(Mathf.Min(1f, t + 0.01f)) - TrailBezier(Mathf.Max(0f, t - 0.01f));
+        d.y = 0f;
+        return d.sqrMagnitude > 1e-6f ? d.normalized : Vector3.forward;
+    }
+
+    private void BuildCurvedFlight(Transform parent, Material stone)
+    {
+        Material dark = new Material(stone) { name = "Piedra escalera oscura" };
+        if (dark.HasProperty("_BaseColor")) dark.SetColor("_BaseColor", stone.GetColor("_BaseColor") * 0.78f);
+        float w = TrailHalfWidth * 2f;
+
+        // Superficie para caminar.
+        const int n = 72;
+        var verts = new List<Vector3>();
+        var tris = new List<int>();
+        for (int k = 0; k <= n + 2; k++)
+        {
+            float t = (k - 1) / (float)n;
+            Vector3 p, fwd;
+            if (t < 0f) { fwd = TrailForward(0f); p = TrailPoint(0f) - fwd * 0.8f + Vector3.down * 0.06f; }
+            else if (t > 1f) { fwd = Vector3.forward; p = TrailPoint(1f) + fwd * 0.8f; }
+            else { p = TrailPoint(t); fwd = TrailForward(t); }
+            Vector3 right = Vector3.Cross(Vector3.up, fwd).normalized;
+            verts.Add(p - right * (w * 0.5f + 0.2f));
+            verts.Add(p + right * (w * 0.5f + 0.2f));
+            if (k > 0) { int i0 = (k - 1) * 2; tris.AddRange(new[] { i0, i0 + 1, i0 + 2, i0 + 1, i0 + 3, i0 + 2 }); }
+        }
+        var mesh = new Mesh { name = "Rampa_Sendero" };
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        if (mesh.normals[0].y < 0f)
+        {
+            for (int i = 0; i < tris.Count; i += 3) { int tmp = tris[i + 1]; tris[i + 1] = tris[i + 2]; tris[i + 2] = tmp; }
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+        }
+        var walk = new GameObject("Rampa_Sendero");
+        walk.transform.SetParent(parent, false);
+        walk.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        walk.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+        // Peldaños (y losas en el rellano), macizos hasta el suelo.
+        const int steps = 60;
+        float lastTop = -1f;
+        for (int k = 0; k < steps; k++)
+        {
+            float t0 = k / (float)steps, t1 = (k + 1) / (float)steps;
+            Vector3 a = TrailPoint(t0), b = TrailPoint(t1);
+            Vector3 fwd = TrailForward((t0 + t1) * 0.5f);
+            float top = Mathf.Max(a.y, b.y);
+            // Peldaño de 25 cm como mucho: si el tramo apenas sube, se une al anterior (rellano).
+            if (lastTop >= 0f && top - lastTop < 0.12f) top = lastTop;
+            lastTop = top;
+            Vector3 mid = (a + b) * 0.5f;
+            float depth = new Vector2(b.x - a.x, b.z - a.z).magnitude + 0.18f;
+            GameObject step = Block(parent, "Peldano", new Vector3(mid.x, top * 0.5f - 0.05f, mid.z), new Vector3(w, top + 0.1f, depth), (k & 1) == 0 ? stone : dark, false);
+            step.transform.rotation = Quaternion.LookRotation(fwd);
+        }
+
+        // Muretes a ambos lados (con colisión), siguiendo la curva, y faroles de hielo en el rellano.
+        const int segs = 30;
+        for (int j = 0; j < segs; j++)
+        {
+            Vector3 a = TrailPoint(j / (float)segs), b = TrailPoint((j + 1) / (float)segs);
+            Vector3 d = b - a;
+            Vector3 flat = new Vector3(d.x, 0f, d.z);
+            Quaternion rot = Quaternion.LookRotation(d.normalized, Vector3.up);
+            Vector3 right = Vector3.Cross(Vector3.up, flat.normalized).normalized;
+            Vector3 mid = (a + b) * 0.5f;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector3 c = mid + right * side * (w * 0.5f + 0.35f);
+                GameObject wall = Block(parent, "Murete_Escalera", Vector3.zero, new Vector3(0.7f, 1.1f, d.magnitude + 0.45f), dark, true);
+                wall.transform.SetPositionAndRotation(c + Vector3.up * 0.55f, rot);
+                // Zócalo que baja hasta el suelo por fuera del murete.
+                Block(parent, "Zocalo_Escalera", new Vector3(c.x, Mathf.Min(a.y, b.y) * 0.5f, c.z), new Vector3(0.7f, Mathf.Min(a.y, b.y) + 0.05f, flat.magnitude + 0.45f), stone, false)
+                    .transform.rotation = Quaternion.LookRotation(flat.normalized);
+            }
+        }
+        foreach (float f in new[] { 0.43f, 0.57f })
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector3 p = TrailPoint(f);
+                Vector3 right = Vector3.Cross(Vector3.up, TrailForward(f)).normalized;
+                Vector3 at = p + right * side * (w * 0.5f + 0.35f) + Vector3.up * 1.1f;
+                Block(parent, "Poste_Farol", at + Vector3.up * 0.5f, new Vector3(0.35f, 1f, 0.35f), dark, false);
+                var lamp = new GameObject("Farol_Hielo");
+                lamp.transform.SetParent(parent, false);
+                lamp.transform.position = at + Vector3.up * 1.3f;
+                Light l = lamp.AddComponent<Light>();
+                l.type = LightType.Point;
+                l.color = new Color(0.55f, 0.78f, 1f);
+                l.range = 8f;
+                l.intensity = 1.6f;
+                l.shadows = LightShadows.None;
+            }
     }
 
     private static GameObject Block(Transform parent, string name, Vector3 pos, Vector3 size, Material mat, bool collide)

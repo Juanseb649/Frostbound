@@ -299,7 +299,7 @@ public static class VillageLayout
         {
             Vector3 p = Polar(rng.Range(0f, 360f), rng.Range(WallRadius + 4.5f, ForestRadius));
             if (Mathf.Abs(p.x) > PlayableHalfSize - 2f || Mathf.Abs(p.z) > PlayableHalfSize - 2f) continue;
-            if (Mathf.Abs(p.x) < 16f && p.z > Trailhead.z - 30f) continue;
+            if (Mathf.Abs(p.x) < 22f && p.z > Trailhead.z - 38f) continue;
             if (p.z > Trailhead.z + 6f) continue;
             if (!Clear(r, p, 10f, 7f, 5f)) continue;
             foreach (Spot o in r.pines) if (Dist(p, o.position) < 2.6f) { p = Vector3.positiveInfinity; break; }
