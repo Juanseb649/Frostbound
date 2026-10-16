@@ -211,6 +211,7 @@ public class Equipment : MonoBehaviour
         }
         if (s.item.heal > 0f) _stats.Heal(s.item.heal);
         if (s.item.restoreMana > 0f) _stats.RestoreMana(s.item.restoreMana);
+        AudioManager.PlaySFX(s.item.heal > 0f ? "SFX/Potion_Health" : "SFX/Potion_Mana", 0.9f, 0.15f);
         _inventory.RemoveAt(inventoryIndex, 1);
         ItemUsed?.Invoke(s.item);
         return true;

@@ -36,6 +36,7 @@ public class TownPortal : MonoBehaviour
     private IEnumerator Read(Equipment user)
     {
         Casting = true;
+        AudioManager.Play3D("SFX/Portal_Open", transform.position, 1f, 0f, 3f, 30f, 0f);
         Notifications.Show("Lees el pergamino... el viento te llevará al poblado.", new Color(1f, 0.86f, 0.55f));
         var lightGo = new GameObject("Luz");
         lightGo.transform.SetParent(transform, false);
