@@ -161,7 +161,8 @@ public class VillageWorldGenerator : MonoBehaviour
         t.SetParent(root, false);
         Material cloth = MenuRuins.Lit("Banderín rojo", new Color(0.62f, 0.16f, 0.18f), 0.1f);
         cloth.SetFloat("_Cull", 0f);
-        ZoneGate gate = ZoneGate.Build(t, "Paso_Montana", VillageLayout.Trailhead, 0f, 8f, stone, cloth);
+        Vector3 top = BuildTrailStairs(t, stone);
+        ZoneGate gate = ZoneGate.Build(t, "Paso_Montana", top + new Vector3(0f, 0f, 4f), 0f, 8f, stone, cloth);
         gate.targetScene = SceneIds.Foothills;
         gate.arrival = MountainLayout.ArrivalFromVillage;
         gate.label = "Sendero del Frostspire";
@@ -171,13 +172,13 @@ public class VillageWorldGenerator : MonoBehaviour
         {
             if (QuestLog.Stage(QuestLog.Ascent) < QuestLog.AscentFoothills) QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentFoothills);
         };
-        ZoneArrival.Create(t, MountainLayout.ArrivalFromFoothills, VillageLayout.Trailhead + new Vector3(0f, 0.1f, -6f), 180f);
+        ZoneArrival.Create(t, MountainLayout.ArrivalFromFoothills, top + new Vector3(0f, 0.1f, -0.5f), 180f);
         // Llegada del pergamino de regreso: la plaza, donde empieza la partida.
         ZoneArrival.Create(root, TownPortal.ArrivalId, new Vector3(0f, 0.1f, -9f), 0f);
 
         var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("sendero_norte")));
         Mesh rock = MountainMeshes.Rock(SeedUtil.Combine(Seed, 77), 0.6f);
-        for (float z = 48f; z < VillageLayout.Trailhead.z - 8f; z += rng.Range(24f, 34f))
+        for (float z = 48f; z < VillageLayout.Trailhead.z - TrailRun - 6f; z += rng.Range(24f, 34f))
         {
             float side = rng.Chance(0.5f) ? 1f : -1f;
             var cairn = new GameObject("Mojon");
@@ -214,6 +215,101 @@ public class VillageWorldGenerator : MonoBehaviour
             r.sharedMaterial = snow;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
+    }
+
+    public const float TrailRise = 5f;      // altura de la plataforma del paso
+    public const float TrailRun = 16f;      // largo de la escalera
+    public const float TrailHalfWidth = 4f;
+
+    // Escalinata de piedra al pie de la montaña: sube del camino a una plataforma donde está el arco del sendero.
+    // Detrás, un acantilado sólido (rocas + colisión) impide atravesar la montaña. Devuelve el centro de la plataforma.
+    private Vector3 BuildTrailStairs(Transform t, Material stone)
+    {
+        Vector3 head = VillageLayout.Trailhead;
+        float z0 = head.z - TrailRun, z1 = head.z;          // la escalera ocupa [z0, z1]
+        float platBack = head.z + 12f, platHalf = TrailHalfWidth + 4f;
+        Transform stairs = new GameObject("Escalinata_Sendero").transform;
+        stairs.SetParent(t, false);
+
+        // Peldaños visibles (sin colisión: el héroe pisa una rampa lisa invisible y no se engancha).
+        int steps = Mathf.RoundToInt(TrailRise / 0.25f);
+        float depth = TrailRun / steps;
+        for (int i = 0; i < steps; i++)
+        {
+            float h = (i + 1) * TrailRise / steps;
+            Block(stairs, "Peldano", new Vector3(0f, h * 0.5f, z0 + depth * (i + 0.5f)), new Vector3(TrailHalfWidth * 2f, h, depth + 0.02f), stone, false);
+        }
+        float len = Mathf.Sqrt(TrailRun * TrailRun + TrailRise * TrailRise);
+        float ang = Mathf.Atan2(TrailRise, TrailRun) * Mathf.Rad2Deg;
+        var ramp = new GameObject("Rampa");
+        ramp.transform.SetParent(stairs, false);
+        ramp.transform.SetPositionAndRotation(new Vector3(0f, TrailRise * 0.5f, (z0 + z1) * 0.5f), Quaternion.Euler(-ang, 0f, 0f));
+        BoxCollider rc = ramp.AddComponent<BoxCollider>();
+        rc.size = new Vector3(TrailHalfWidth * 2f + 0.4f, 0.5f, len + 0.6f);
+        rc.center = new Vector3(0f, -0.25f, 0f);
+
+        // Barandas a los lados de la escalera (siguen la pendiente).
+        for (int side = -1; side <= 1; side += 2)
+        {
+            var rail = Block(stairs, "Baranda", Vector3.zero, new Vector3(0.8f, 1.6f, len + 0.4f), stone, true);
+            rail.transform.SetPositionAndRotation(new Vector3(side * (TrailHalfWidth + 0.4f), TrailRise * 0.5f + 0.5f, (z0 + z1) * 0.5f), Quaternion.Euler(-ang, 0f, 0f));
+            Block(stairs, "Zocalo", new Vector3(side * (TrailHalfWidth + 0.4f), TrailRise * 0.25f, (z0 + z1) * 0.5f + TrailRun * 0.25f), new Vector3(0.8f, TrailRise * 0.5f, TrailRun * 0.5f), stone, false);
+        }
+
+        // Plataforma del paso, con murete alrededor (menos por donde llega la escalera).
+        float platDepth = platBack - z1;
+        Block(stairs, "Plataforma", new Vector3(0f, TrailRise * 0.5f, z1 + platDepth * 0.5f), new Vector3(platHalf * 2f, TrailRise, platDepth), stone, true);
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(stairs, "Murete", new Vector3(side * (platHalf - 0.4f), TrailRise + 0.6f, z1 + platDepth * 0.5f), new Vector3(0.8f, 1.2f, platDepth), stone, true);
+            float w = platHalf - TrailHalfWidth - 0.8f;
+            Block(stairs, "Murete", new Vector3(side * (TrailHalfWidth + 0.8f + w * 0.5f), TrailRise + 0.6f, z1 + 0.4f), new Vector3(w, 1.2f, 0.8f), stone, true);
+        }
+
+        // Acantilado: la ladera de la montaña es sólida de lado a lado del mundo.
+        float half = VillageLayout.GroundHalfSize;
+        var cliff = new GameObject("Acantilado_Frostspire");
+        cliff.transform.SetParent(stairs, false);
+        cliff.transform.position = new Vector3(0f, 20f, platBack + (half + 10f - platBack) * 0.5f);
+        BoxCollider cc = cliff.AddComponent<BoxCollider>();
+        cc.size = new Vector3(half * 2f + 20f, 44f, half + 10f - platBack);
+        var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("acantilado")));
+        Mesh[] rocks = { MountainMeshes.Rock(SeedUtil.Combine(Seed, 91), 0.9f), MountainMeshes.Rock(SeedUtil.Combine(Seed, 92), 0.8f), MountainMeshes.Rock(SeedUtil.Combine(Seed, 93), 1f) };
+        for (float x = -half; x <= half; x += rng.Range(11f, 16f))
+        {
+            bool nearGate = Mathf.Abs(x) < platHalf + 10f;
+            float sx = rng.Range(9f, 14f), sy = nearGate ? rng.Range(16f, 22f) : rng.Range(10f, 20f);
+            var rock = new GameObject("Roca_Acantilado");
+            rock.transform.SetParent(stairs, false);
+            rock.transform.SetPositionAndRotation(new Vector3(x, sy * 0.35f, platBack + rng.Range(4f, 9f)), Quaternion.Euler(rng.Range(-8f, 8f), rng.Range(0f, 360f), rng.Range(-8f, 8f)));
+            rock.transform.localScale = new Vector3(sx, sy, rng.Range(8f, 12f));
+            rock.AddComponent<MeshFilter>().sharedMesh = rocks[rng.NextInt(0, rocks.Length)];
+            rock.AddComponent<MeshRenderer>().sharedMaterial = stone;
+        }
+        // Rocas que enmarcan la plataforma.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            var rock = new GameObject("Roca_Paso");
+            rock.transform.SetParent(stairs, false);
+            rock.transform.SetPositionAndRotation(new Vector3(side * (platHalf + 4f), 4f, z1 + 4f), Quaternion.Euler(0f, rng.Range(0f, 360f), 0f));
+            rock.transform.localScale = new Vector3(7f, 12f, 9f);
+            rock.AddComponent<MeshFilter>().sharedMesh = rocks[side > 0 ? 0 : 1];
+            rock.AddComponent<MeshRenderer>().sharedMaterial = stone;
+            rock.AddComponent<MeshCollider>().sharedMesh = rock.GetComponent<MeshFilter>().sharedMesh;
+        }
+        return new Vector3(0f, TrailRise, z1 + 2.5f);
+    }
+
+    private static GameObject Block(Transform parent, string name, Vector3 pos, Vector3 size, Material mat, bool collide)
+    {
+        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        go.name = name;
+        go.transform.SetParent(parent, false);
+        go.transform.position = pos;
+        go.transform.localScale = size;
+        go.GetComponent<Renderer>().sharedMaterial = mat;
+        if (!collide) Destroy(go.GetComponent<Collider>());
+        return go;
     }
 
     // Borde del mundo: hileras de pinos (sin colisión, agrupados en lotes estáticos) y paredes invisibles detrás.
