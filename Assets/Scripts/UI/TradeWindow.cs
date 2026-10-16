@@ -11,6 +11,7 @@ public class TradeWindow : MonoBehaviour
     private enum Mode { Stash, Shop }
 
     public static bool IsOpen => _instance != null && _instance._open;
+    public static GameObject Customer => _instance != null && _instance._player != null ? _instance._player.gameObject : null;
     private static TradeWindow _instance;
 
     private Mode _mode;

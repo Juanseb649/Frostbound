@@ -53,6 +53,8 @@ public class WorldHUD : MonoBehaviour
     }
 
     public bool MenuOpen => _menuNpc != null;
+    // Héroe que habla con el NPC del menú (queda quieto mientras tanto).
+    [System.NonSerialized] public PlayerController MenuTalker;
     public NPCInteractable MenuTarget => _menuNpc;
 
     private class Label
@@ -366,7 +368,9 @@ public class WorldHUD : MonoBehaviour
 
     public void CloseMenu()
     {
-        if (_menuNpc != null) _menuNpc.InConversation = false;
+        // Lo pulsado para cerrar o elegir (A, B, Intro...) no hace rodar ni atacar al héroe justo después.
+        if (MenuTalker != null && _menuNpc != null) MenuTalker.LockForDialogue(0.35f);
+        if (_menuNpc != null) { _menuNpc.InConversation = false; UIDeviceFocus.Release(); }
         _menuNpc = null;
         if (_menu != null) _menu.gameObject.SetActive(false);
         if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null
