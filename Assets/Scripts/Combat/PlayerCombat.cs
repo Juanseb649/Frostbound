@@ -146,7 +146,7 @@ public class PlayerCombat : MonoBehaviour
             ResolveAttack();
         }
 
-        if (GameplayInput.Blocked || _stats.IsDead || (_dodge != null && _dodge.IsRolling)) return;
+        if (GameplayInput.Blocked || _stats.IsDead || (_dodge != null && _dodge.IsRolling) || PlayerController.Busy(this)) return;
         // Mando: X (cuadrado) ataca; apunta solo al enemigo más cercano en la dirección del stick.
         Gamepad pad = PlayerController.PadOf(this);
         if (InputMap.PadHeld(pad, GameAction.Attack))

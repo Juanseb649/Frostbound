@@ -207,7 +207,7 @@ public class PauseMenu : MonoBehaviour
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        ScreenAdapter.Match(scaler);
         gameObject.AddComponent<GraphicRaycaster>();
         RectTransform root = (RectTransform)transform;
 

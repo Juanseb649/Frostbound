@@ -69,7 +69,7 @@ public class PlayerDodge : MonoBehaviour
             if (Time.time - _startedAt >= duration) EndRoll();
             return;
         }
-        if (GameplayInput.Blocked || Time.time < _readyAt || (_stats != null && _stats.IsDead)) return;
+        if (GameplayInput.Blocked || Time.time < _readyAt || (_stats != null && _stats.IsDead) || PlayerController.Busy(this)) return;
 
         Gamepad pad = PlayerController.PadOf(this);
         bool pressed = (PlayerController.UsesKeyboard(this) && InputMap.KeyPressed(GameAction.Dodge))

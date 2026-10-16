@@ -63,6 +63,7 @@ public class NPCInteractable : MonoBehaviour
         OptionChosen?.Invoke(this, option);
         WorldHUD hud = WorldHUD.Instance;
         if (hud == null) return;
+        PlayerController talker = hud.MenuTalker != null ? hud.MenuTalker : Players.Nearest(transform.position);
 
         hud.CloseMenu();
         if (option == NPCOption.Hablar && talkOverride != null && talkOverride()) return;
@@ -72,6 +73,8 @@ public class NPCInteractable : MonoBehaviour
             float seconds = Mathf.Clamp(2f + text.Length * 0.05f, 3f, 7f);
             TalkUntil = Time.time + seconds;
             hud.Say(transform, headHeight * transform.lossyScale.y, text, seconds);
+            // El héroe se queda escuchando (Esc o B lo salta).
+            if (talker != null) talker.LockForDialogue(Mathf.Min(seconds, 4f));
         }
         else if (option == NPCOption.Comprar || option == NPCOption.Vender)
         {
@@ -90,8 +93,8 @@ public class NPCInteractable : MonoBehaviour
             Wallet wallet = player != null ? Wallet.Of(player.gameObject) : null;
             string text;
             if (cost <= 0) text = "Tus armas están en perfecto estado.";
-            else if (wallet == null || !wallet.Spend(cost))
-                text = "Eso son " + cost + " monedas de trabajo. Vuelve cuando las tengas" + (wallet != null ? " (te faltan " + (cost - wallet.Coins) + ")." : ".");
+            else if (wallet == null || !wallet.SpendWithStash(cost))
+                text = "Eso son " + cost + " monedas de trabajo. Vuelve cuando las tengas" + (wallet != null ? " (te faltan " + (cost - wallet.CoinsWithStash) + ")." : ".");
             else
             {
                 int n = player.RepairAll();
@@ -100,6 +103,7 @@ public class NPCInteractable : MonoBehaviour
             }
             TalkUntil = Time.time + 3.5f;
             hud.Say(transform, headHeight * transform.lossyScale.y, text, 3.5f);
+            if (talker != null) talker.LockForDialogue(2.5f);
         }
     }
 

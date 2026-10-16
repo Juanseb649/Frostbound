@@ -84,7 +84,7 @@ public class PlayerAbility : MonoBehaviour
     {
         if (_cam == null) _cam = Camera.main;
         RefreshClass();
-        if (GameplayInput.Blocked || _stats.IsDead || PauseMenu.IsPaused) return;
+        if (GameplayInput.Blocked || _stats.IsDead || PauseMenu.IsPaused || PlayerController.Busy(this)) return;
         bool pressed = InputMap.Pressed(GameAction.Ability, this);
         if (pressed) TryUse();
     }

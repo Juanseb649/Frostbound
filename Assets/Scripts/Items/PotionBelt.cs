@@ -103,7 +103,7 @@ public class PotionBelt : MonoBehaviour
 
     void Update()
     {
-        if (GameplayInput.Blocked) return;
+        if (GameplayInput.Blocked || PlayerController.Busy(this)) return;
         if (WorldHUD.Instance != null && WorldHUD.Instance.MenuOpen) return;
         // Teclas y botones del cinturón según Configuración → Control.
         if (WorldHUD.Instance != null && WorldHUD.Instance.MenuOpen) return;

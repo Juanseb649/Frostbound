@@ -11,6 +11,27 @@ public class PlayerController : MonoBehaviour
 
     public CharacterStats Stats => _stats != null ? _stats : _stats = GetComponent<CharacterStats>();
 
+    // Diálogo con un NPC: mientras el menú está abierto o el NPC habla, este héroe no se mueve, no rueda ni ataca.
+    [System.NonSerialized] public float dialogueUntil;
+    public bool InDialogue
+    {
+        get
+        {
+            WorldHUD hud = WorldHUD.Instance;
+            if (hud != null && hud.MenuOpen && hud.MenuTalker == this) return true;
+            if (TradeWindow.IsOpen && TradeWindow.Customer == gameObject) return true;
+            return Time.time < dialogueUntil;
+        }
+    }
+
+    public static bool Busy(Component c)
+    {
+        PlayerController pc = c != null ? c.GetComponent<PlayerController>() : null;
+        return pc != null && pc.InDialogue;
+    }
+
+    public void LockForDialogue(float seconds) => dialogueUntil = Mathf.Max(dialogueUntil, Time.time + seconds);
+
     // Mando del jugador 2 (el jugador 1 usa teclado y ratón, o un mando que no esté reclamado).
     [System.NonSerialized] public Gamepad pad;
     // Jugador 2 con teclado y ratón (el jugador 1 pasa entonces al mando).
@@ -163,6 +184,15 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (_camera == null) _camera = Camera.main;
+        if (InDialogue)
+        {
+            // Se salta el resto del diálogo con Esc o B.
+            if (Time.time < dialogueUntil && UICancel.Pressed()) dialogueUntil = 0f;
+            _moveDirection = Vector3.zero;
+            _clickTarget = null;
+            _attackTarget = null;
+            return;
+        }
         if (IsPadPlayer)
         {
             PadUpdate();
@@ -408,7 +438,7 @@ public class PlayerController : MonoBehaviour
         if (offset.sqrMagnitude <= reach * reach)
         {
             _targetRotation = Quaternion.LookRotation(offset.sqrMagnitude > 0.001f ? offset.normalized : transform.forward, Vector3.up);
-            if (WorldHUD.Instance != null) WorldHUD.Instance.OpenMenu(_interactTarget);
+            if (WorldHUD.Instance != null) { WorldHUD.Instance.MenuTalker = this; WorldHUD.Instance.OpenMenu(_interactTarget); }
             _interactTarget = null;
             return Vector3.zero;
         }
