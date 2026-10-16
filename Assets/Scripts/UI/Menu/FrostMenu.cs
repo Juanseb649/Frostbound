@@ -184,7 +184,7 @@ public class FrostMenu : MonoBehaviour
         var scaler = go.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        ScreenAdapter.Match(scaler);
         go.AddComponent<GraphicRaycaster>();
         _canvas = (RectTransform)go.transform;
         if (FindAnyObjectByType<EventSystem>() == null)

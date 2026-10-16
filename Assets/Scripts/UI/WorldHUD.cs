@@ -138,7 +138,7 @@ public class WorldHUD : MonoBehaviour
         if (scaler == null) scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(FrostboundUI.ReferenceWidth, FrostboundUI.ReferenceHeight);
-        scaler.matchWidthOrHeight = 0.5f;
+        ScreenAdapter.Match(scaler);
         if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
         _canvasRt = (RectTransform)transform;
 

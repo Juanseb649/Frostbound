@@ -697,7 +697,7 @@ public class CoopManager : MonoBehaviour
         var scaler = root.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(FrostboundUI.ReferenceWidth, FrostboundUI.ReferenceHeight);
-        scaler.matchWidthOrHeight = 0.5f;
+        ScreenAdapter.Match(scaler);
 
         _hint = FrostUI.Text(root.transform, "Aviso", "Mando: pulsa START para que entre el JUGADOR 2", 16f, FrostboundUI.Ice, TextAlignmentOptions.Center);
         FrostUI.Place(_hint.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(700f, 26f));
