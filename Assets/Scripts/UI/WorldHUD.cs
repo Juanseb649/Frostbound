@@ -363,6 +363,8 @@ public class WorldHUD : MonoBehaviour
         _menu.gameObject.SetActive(true);
         LayoutRebuilder.ForceRebuildLayoutImmediate(_menu);
         UpdateMenu();
+        // Solo el mando (o teclado) de quien habla mueve la selección del menú.
+        UIDeviceFocus.FocusOn(MenuTalker != null ? MenuTalker : (Component)Players.Nearest(npc.transform.position));
         if (EventSystem.current != null && first != null) EventSystem.current.SetSelectedGameObject(first);
     }
 

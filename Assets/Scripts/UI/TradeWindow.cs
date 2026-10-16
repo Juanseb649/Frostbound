@@ -102,6 +102,15 @@ public class TradeWindow : MonoBehaviour
             ? "Clic en un objeto de la mochila para guardarlo; clic en el arcón para sacarlo."
             : "Clic en un objeto de la mochila para venderlo; clic en la tienda para comprar. Un segundo clic confirma.", FrostboundUI.Muted);
         Refresh();
+        // Con mando: la cruceta recorre las casillas y A compra, vende, guarda o saca (B cierra).
+        UIDeviceFocus.FocusOn(_player);
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            ItemSlotView first = _left.Count > 0 ? _left[0] : _right.Count > 0 ? _right[0] : null;
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(first != null ? first.gameObject : null);
+        }
+        if (PlayerController.PadOf(_player) != null)
+            SetInfo("", mode == Mode.Stash ? "Cruceta para elegir · A guarda o saca · B cierra." : "Cruceta para elegir · A compra o vende (pulsa A dos veces para confirmar) · B cierra.", FrostboundUI.Muted);
     }
 
     private void Close()
@@ -112,6 +121,8 @@ public class TradeWindow : MonoBehaviour
         _group.blocksRaycasts = false;
         _group.interactable = false;
         GameplayInput.Unblock();
+        UIDeviceFocus.Release();
+        if (UnityEngine.EventSystems.EventSystem.current != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
         Unhook();
         if (GameSession.Instance != null) GameSession.Instance.SaveNow();
     }
