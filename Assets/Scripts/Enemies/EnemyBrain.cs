@@ -415,6 +415,7 @@ public class EnemyBrain : MonoBehaviour
         // Arquero: la flecha se suelta justo al terminar la preparación.
         if (definition.ranged && _archery != null && _rig != null) _rig.PlayBowShot(windup / 0.66f, 0.66f);
         SetEyes(EyeCharge);
+        AudioManager.Play3D(definition.ranged ? AudioId.Corrupt_Alert1 : AudioId.Corrupt_Attack, transform.position, 0.7f, 2f, 20f);
     }
 
     private void ResolveAttack(float dist, Vector3 toPlayer)
@@ -528,6 +529,7 @@ public class EnemyBrain : MonoBehaviour
         if (Current == State.Idle || Current == State.Return)
         {
             Current = State.Chase;
+            AudioManager.Play3D(Champion ? AudioId.Corrupt_Alert2 : AudioId.Corrupt_Alert1, transform.position, 0.85f, 2f, 25f);
             if (Camp != null) Camp.AlertAll(this);
             else
                 foreach (EnemyBrain b in Active)
@@ -559,6 +561,11 @@ public class EnemyBrain : MonoBehaviour
     {
         if (Current == State.Dead) return;
         _lastHit = info;
+        if (!info.periodic)
+        {
+            AudioId painSound = Champion ? AudioId.Boss_Pain1 : (Random.value < 0.5f ? AudioId.Corrupt_Pain1 : AudioId.Corrupt_Pain2);
+            AudioManager.Play3D(painSound, transform.position, 0.7f, 2f, 20f);
+        }
         if (Current == State.Idle || Current == State.Return) Alert();
         if (!info.periodic && info.direction.sqrMagnitude > 0.01f && _agent.isOnNavMesh)
         {
@@ -572,6 +579,7 @@ public class EnemyBrain : MonoBehaviour
     {
         ReleaseAttackerSlot();
         Current = State.Dead;
+        AudioManager.Play3D(AudioId.Corrupt_Death, transform.position, Champion ? 1.1f : 0.9f, 2f, 25f, Champion ? 0.02f : 0.1f);
         if (_agent.isOnNavMesh) _agent.ResetPath();
         _agent.enabled = false;
         SetEyes(Color.black);

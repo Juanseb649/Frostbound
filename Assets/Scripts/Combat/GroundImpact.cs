@@ -16,6 +16,7 @@ public class GroundImpact : MonoBehaviour
         var go = new GameObject("Impacto");
         go.transform.position = position + Vector3.up * 0.04f;
         go.AddComponent<GroundImpact>().Build(radius, intensity);
+        AudioManager.Play3D(AudioId.Boss_Grunt2, position, Mathf.Clamp01(0.7f * intensity), 2f, 24f, 0.1f);
     }
 
     private void Build(float radius, float intensity)

@@ -165,6 +165,7 @@ public class PlayerDodge : MonoBehaviour
         _dir = dir;
         _startedAt = Time.time;
         IsRolling = true;
+        AudioManager.Play3D(AudioId.Penguin_ChirpRandom, transform.position, 0.45f, 1f, 12f, 0.15f);
         if (_controller != null)
         {
             // Cancela el destino del clic y deja al héroe mirando hacia donde rodó.

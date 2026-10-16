@@ -94,11 +94,13 @@ public class PlayerAbility : MonoBehaviour
         if (_dodge != null && _dodge.IsRolling) return false;
         if (Time.time < _readyAt)
         {
+            AudioManager.PlayUI(AudioId.UI_Error, 0.5f);
             Failed?.Invoke(Data.name + " se está recargando");
             return false;
         }
         if (!_stats.SpendMana(Data.cost))
         {
+            AudioManager.PlayUI(AudioId.UI_Error, 0.6f);
             Failed?.Invoke("Necesitas " + Mathf.CeilToInt(Data.cost) + " de maná para " + Data.name);
             return false;
         }
@@ -106,10 +108,22 @@ public class PlayerAbility : MonoBehaviour
         Vector3 aim = AimDirection();
         switch (Current)
         {
-            case Kind.SnowGolem: StartCoroutine(SummonGolem(aim)); break;
-            case Kind.KunaiFan: KunaiFan(aim); break;
-            case Kind.WarCry: StartCoroutine(WarCry()); break;
-            default: StartCoroutine(ShieldCharge(aim)); break;
+            case Kind.SnowGolem:
+                AudioManager.Play3D(AudioId.Spell_FaeMagic, transform.position, 0.9f);
+                StartCoroutine(SummonGolem(aim));
+                break;
+            case Kind.KunaiFan:
+                AudioManager.Play3D(AudioId.Spell_IceHiss, transform.position, 0.85f);
+                KunaiFan(aim);
+                break;
+            case Kind.WarCry:
+                AudioManager.Play3D(AudioId.Boss_Grunt1, transform.position, 1.1f);
+                StartCoroutine(WarCry());
+                break;
+            default:
+                AudioManager.Play3D(AudioId.Boss_Attack, transform.position, 0.9f);
+                StartCoroutine(ShieldCharge(aim));
+                break;
         }
         return true;
     }

@@ -230,6 +230,7 @@ public class VillagerNPC : MonoBehaviour
         float height = 1.35f * speaker.transform.lossyScale.y;
         if (speaker._interact != null) height = speaker._interact.headHeight * speaker.transform.lossyScale.y;
         if (WorldHUD.Instance != null) WorldHUD.Instance.SayAmbient(speaker.transform, height, _script[_line], LineSeconds - 0.25f);
+        AudioManager.Play3D(AudioId.Penguin_ChirpRandom, speaker.transform.position, 0.7f, 1f, 14f, 0.12f);
         _line++;
         _nextLineAt = Time.time + LineSeconds;
     }
