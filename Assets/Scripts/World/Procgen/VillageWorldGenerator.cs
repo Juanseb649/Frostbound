@@ -201,24 +201,74 @@ public class VillageWorldGenerator : MonoBehaviour
 
         Material snow = ground != null && ground.GetComponent<Renderer>() != null ? ground.GetComponent<Renderer>().sharedMaterial : null;
         if (snow == null) return;
+        // El Frostspire: la cumbre mayor se apoya justo detrás de la plataforma del paso (la escalera sube a su ladera)
+        // y las demás quedan detrás del acantilado. Todas son sólidas: no se pueden atravesar.
+        float wall = VillageLayout.Trailhead.z + TrailBack;
         for (int i = 0; i < 7; i++)
         {
-            float x = (i - 3) * rng.Range(80f, 105f) + rng.Range(-15f, 15f);
-            float z = VillageLayout.GroundHalfSize + rng.Range(30f, 110f) + (i == 3 ? 80f : 0f);
-            float s = i == 3 ? 170f : rng.Range(70f, 120f);
-            var peak = new GameObject("Cumbre_Frostspire");
+            bool main = i == 3;
+            float x = main ? 0f : (i - 3) * rng.Range(80f, 105f) + rng.Range(-15f, 15f);
+            float s = main ? 170f : rng.Range(70f, 120f);
+            Quaternion rot = Quaternion.Euler(0f, main ? 0f : rng.Range(0f, 360f), 0f);
+            Vector3 scale = new Vector3(s * 1.5f, s, s * 1.5f);
+            Mesh mesh = MountainMeshes.Peak(SeedUtil.Combine(Seed, 300 + i));
+            float front = main ? FrontAtCenter(mesh, rot, scale) : FrontMost(mesh, rot, scale);
+            // Distancia del centro al pie de la ladera (a la altura del suelo la ladera se mete ~4 m).
+            float z = main ? wall - 3f + front : wall + rng.Range(8f, 40f) + front;
+            var peak = new GameObject(main ? "Frostspire" : "Cumbre_Frostspire");
             peak.transform.SetParent(t, false);
-            peak.transform.SetPositionAndRotation(new Vector3(x, -6f, z), Quaternion.Euler(0f, rng.Range(0f, 360f), 0f));
-            peak.transform.localScale = new Vector3(s * 1.5f, s, s * 1.5f);
-            peak.AddComponent<MeshFilter>().sharedMesh = MountainMeshes.Peak(SeedUtil.Combine(Seed, 300 + i));
+            peak.transform.SetPositionAndRotation(new Vector3(x, -6f, z), rot);
+            peak.transform.localScale = scale;
+            peak.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = peak.AddComponent<MeshRenderer>();
             r.sharedMaterial = snow;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            peak.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
     }
 
-    public const float TrailRise = 5f;      // altura de la plataforma del paso
-    public const float TrailRun = 16f;      // largo de la escalera
+    // Base de la cumbre (anillo inferior, ya girado y escalado).
+    private static List<Vector3> BaseRing(Mesh mesh, Quaternion rot, Vector3 scale)
+    {
+        var ring = new List<Vector3>();
+        foreach (Vector3 v in mesh.vertices)
+            if (v.y < 0.06f)
+            {
+                Vector3 w = rot * Vector3.Scale(v, scale);
+                w.y = 0f;
+                if (!ring.Exists(o => (o - w).sqrMagnitude < 0.01f)) ring.Add(w);
+            }
+        ring.Sort((a, b) => Mathf.Atan2(a.x, a.z).CompareTo(Mathf.Atan2(b.x, b.z)));
+        return ring;
+    }
+
+    // Cuánto sobresale la base hacia el sur (−z) en el peor punto.
+    private static float FrontMost(Mesh mesh, Quaternion rot, Vector3 scale)
+    {
+        float m = 0f;
+        foreach (Vector3 w in BaseRing(mesh, rot, scale)) m = Mathf.Max(m, -w.z);
+        return m;
+    }
+
+    // Cuánto sobresale la base hacia el sur justo en x = 0 (donde llega la escalera).
+    private static float FrontAtCenter(Mesh mesh, Quaternion rot, Vector3 scale)
+    {
+        List<Vector3> ring = BaseRing(mesh, rot, scale);
+        float best = 0f;
+        for (int i = 0; i < ring.Count; i++)
+        {
+            Vector3 a = ring[i], b = ring[(i + 1) % ring.Count];
+            if ((a.x <= 0f) == (b.x <= 0f) || Mathf.Approximately(a.x, b.x)) continue;
+            float k = -a.x / (b.x - a.x);
+            float z = Mathf.Lerp(a.z, b.z, k);
+            if (z < 0f) best = Mathf.Max(best, -z);
+        }
+        return best > 0f ? best : FrontMost(mesh, rot, scale);
+    }
+
+    public const float TrailRise = 8f;      // altura de la plataforma del paso (en la ladera del Frostspire)
+    public const float TrailBack = 12f;     // fondo de la plataforma desde el Trailhead
+    public const float TrailRun = 24f;      // largo de la escalera
     public const float TrailHalfWidth = 4f;
 
     // Escalinata de piedra al pie de la montaña: sube del camino a una plataforma donde está el arco del sendero.
@@ -227,7 +277,7 @@ public class VillageWorldGenerator : MonoBehaviour
     {
         Vector3 head = VillageLayout.Trailhead;
         float z0 = head.z - TrailRun, z1 = head.z;          // la escalera ocupa [z0, z1]
-        float platBack = head.z + 12f, platHalf = TrailHalfWidth + 4f;
+        float platBack = head.z + TrailBack, platHalf = TrailHalfWidth + 4f;
         Transform stairs = new GameObject("Escalinata_Sendero").transform;
         stairs.SetParent(t, false);
 
@@ -291,8 +341,8 @@ public class VillageWorldGenerator : MonoBehaviour
         {
             var rock = new GameObject("Roca_Paso");
             rock.transform.SetParent(stairs, false);
-            rock.transform.SetPositionAndRotation(new Vector3(side * (platHalf + 4f), 4f, z1 + 4f), Quaternion.Euler(0f, rng.Range(0f, 360f), 0f));
-            rock.transform.localScale = new Vector3(7f, 12f, 9f);
+            rock.transform.SetPositionAndRotation(new Vector3(side * (platHalf + 4f), TrailRise * 0.6f, z1 + 4f), Quaternion.Euler(0f, rng.Range(0f, 360f), 0f));
+            rock.transform.localScale = new Vector3(8f, TrailRise * 2.2f, 10f);
             rock.AddComponent<MeshFilter>().sharedMesh = rocks[side > 0 ? 0 : 1];
             rock.AddComponent<MeshRenderer>().sharedMaterial = stone;
             rock.AddComponent<MeshCollider>().sharedMesh = rock.GetComponent<MeshFilter>().sharedMesh;

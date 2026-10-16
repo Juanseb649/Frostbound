@@ -33,14 +33,15 @@ public static class LevelChecks
         Vector3 t = VillageLayout.Trailhead;
         var sb = new StringBuilder();
         int holes = 0; float prev = -1f; int drops = 0;
-        for (float z = t.z - 19f; z <= t.z + 10f; z += 0.25f)
+        float run = VillageWorldGenerator.TrailRun, rise = VillageWorldGenerator.TrailRise;
+        for (float z = t.z - run - 3f; z <= t.z + 10f; z += 0.25f)
             for (float x = -3.5f; x <= 3.5f; x += 0.5f)
             {
-                if (!Down(new Vector3(x, 1f + Mathf.Clamp01((z - (t.z - 16f)) / 16f) * 5f, z), out RaycastHit h)) { holes++; continue; }
+                if (!Down(new Vector3(x, 1f + Mathf.Clamp01((z - (t.z - run)) / run) * rise, z), out RaycastHit h)) { holes++; continue; }
                 if (x == -3.5f) { if (h.point.y < prev - 0.05f) drops++; prev = h.point.y; }
             }
-        Down(new Vector3(0, 6, t.z + 4f), out RaycastHit top);
-        bool cliff = Physics.Raycast(new Vector3(0, 6.5f, t.z + 6f), Vector3.forward, out RaycastHit c, 20f, Mask, QueryTriggerInteraction.Ignore);
+        Down(new Vector3(0, rise + 1f, t.z + 4f), out RaycastHit top);
+        bool cliff = Physics.Raycast(new Vector3(0, rise + 1.5f, t.z + 6f), Vector3.forward, out RaycastHit c, 20f, Mask, QueryTriggerInteraction.Ignore);
         bool cliffFar = Physics.Raycast(new Vector3(80, 1f, t.z), Vector3.forward, out RaycastHit c2, 30f, Mask, QueryTriggerInteraction.Ignore);
         float b = VillageLayout.PlayableHalfSize;
         int walls = 0;
@@ -113,6 +114,28 @@ public static class LevelChecks
         Vector3 from = p.transform.position;
         pp.MoveTo(from + new Vector3(0, -40f, 0), p.transform.rotation);
         return "lanzado desde " + from.ToString("F1");
+    }
+
+    // Recorre el borde norte del área jugable: nada debe dejar entrar en una cumbre (rayos hacia el norte chocan antes de su malla).
+    public static string PeaksSolid()
+    {
+        int inside = 0, open = 0;
+        var peaks = Object.FindObjectsByType<MeshCollider>().Where(c => c.name.Contains("Frostspire")).ToArray();
+        for (float x = -VillageLayout.PlayableHalfSize + 2f; x < VillageLayout.PlayableHalfSize; x += 4f)
+            for (float z = 200f; z < VillageLayout.PlayableHalfSize; z += 4f)
+            {
+                Vector3 p = new Vector3(x, 1f, z);
+                foreach (var c in peaks)
+                    if (c.bounds.Contains(p) && Physics.Raycast(p + Vector3.up * 400f, Vector3.down, out RaycastHit h, 400f, ~(1 << 2), QueryTriggerInteraction.Ignore) && h.collider == c && h.point.y > 1.5f)
+                    {
+                        // p está bajo la ladera: ¿es alcanzable? (no debe haber camino por el NavMesh)
+                        if (UnityEngine.AI.NavMesh.SamplePosition(p, out var nh, 1f, -1) && nh.position.y < 1f) inside++;
+                    }
+            }
+        Vector3 t = VillageLayout.Trailhead;
+        var main = GameObject.Find("Frostspire");
+        Physics.Raycast(new Vector3(0, 30f, t.z + VillageWorldGenerator.TrailBack + 6f), Vector3.down, out RaycastHit back, 60f, ~(1 << 2), QueryTriggerInteraction.Ignore);
+        return "cumbres " + peaks.Length + " · puntos de NavMesh bajo una cumbre " + inside + " · detrás de la plataforma: " + (back.collider != null ? back.collider.name + " y=" + back.point.y.ToString("0.0") : "nada") + " · Frostspire en z=" + (main != null ? main.transform.position.z.ToString("0") : "?");
     }
 
     public static string Where() { var p = GameObject.Find("Player"); return p.transform.position.ToString("F1"); }
