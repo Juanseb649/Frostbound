@@ -63,9 +63,6 @@ public static class GameSettings
     private static void ApplySaved()
     {
         AudioListener.volume = Volume;
-        if (Application.isEditor) return;
-        int w = PlayerPrefs.GetInt(WidthKey, 0), h = PlayerPrefs.GetInt(HeightKey, 0);
-        if (w > 0 && h > 0) Screen.SetResolution(w, h, Fullscreen);
-        else Screen.fullScreen = Fullscreen;
+        // La resolución y el modo de pantalla los aplica DisplaySettings.
     }
 }

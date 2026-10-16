@@ -44,6 +44,7 @@ public class AdventureHUD : MonoBehaviour
         BuildBossBar();
         Map = gameObject.AddComponent<MapUI>();
         Map.Build(transform, _skin);
+        UltrawideFrame.Wrap(transform);
     }
 
     void OnDestroy()
