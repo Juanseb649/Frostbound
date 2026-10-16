@@ -500,6 +500,10 @@ public class PlayerCombat : MonoBehaviour
             }
             return;
         }
+        if (weapon != null)
+            foreach (ItemDefinition rune in weapon.runes)
+                if (rune != null && rune.runeEffect == RuneEffect.Swiftness) RuneAudio.Proc(RuneEffect.Swiftness, transform.position, 0.35f, 0.8f);
+        CombatAudio.Attack(this, weapon);
         if (UsesMagic) CastOrb();
         else if (IsRanged) Shoot(weapon);
         else Melee(weapon);
@@ -619,6 +623,7 @@ public class PlayerCombat : MonoBehaviour
         float damage = _stats.Damage * Random.Range(1f - spread, 1f + spread) * multiplier;
         Vector3 dir = target.transform.position - transform.position;
         target.TakeHit(new DamageInfo { amount = damage, type = DamageType.Physical, source = gameObject, direction = dir, critical = critical });
+        CombatAudio.Hit(target.transform.position, critical, weapon);
 
         if (weapon == null || weapon.IsBroken) return;
         float steal = weapon.AffixSum(AffixKind.Lifesteal);
@@ -632,22 +637,41 @@ public class PlayerCombat : MonoBehaviour
             {
                 case RuneEffect.Fire:
                     target.ApplyBurn(rune.runePower, rune.runeDuration);
+                    RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.6f, 0.35f);
                     break;
                 case RuneEffect.Poison:
                     target.ApplyPoison(rune.runePower, rune.runeDuration);
+                    RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.55f, 0.35f);
                     break;
                 case RuneEffect.Frost:
                     target.ApplySlow(rune.runePower, rune.runeDuration);
-                    if (Random.value < rune.runeChance) target.Freeze(1.5f);
+                    if (Random.value < rune.runeChance)
+                    {
+                        target.Freeze(1.5f);
+                        RuneAudio.Proc(rune.runeEffect, target.transform.position, 1f, 0f);
+                    }
+                    else RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.45f, 0.4f);
                     break;
                 case RuneEffect.Chain:
-                    if (allowChain && Random.value < rune.runeChance) Chain(target, damage * rune.runePower);
+                    if (allowChain && Random.value < rune.runeChance)
+                    {
+                        Chain(target, damage * rune.runePower);
+                        RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.9f, 0.1f);
+                    }
                     break;
                 case RuneEffect.Lifesteal:
                     _stats.Heal(damage * rune.runePower);
+                    RuneAudio.Proc(rune.runeEffect, transform.position, 0.5f, 0.6f);
+                    break;
+                case RuneEffect.Sharpness:
+                    RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.4f, 0.45f);
                     break;
                 case RuneEffect.Knockback:
-                    if (Random.value < rune.runeChance) target.Knockback(dir, rune.runePower);
+                    if (Random.value < rune.runeChance)
+                    {
+                        target.Knockback(dir, rune.runePower);
+                        RuneAudio.Proc(rune.runeEffect, target.transform.position, 0.9f, 0.15f);
+                    }
                     break;
             }
         }

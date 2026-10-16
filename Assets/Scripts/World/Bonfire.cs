@@ -68,6 +68,7 @@ public class Bonfire : MonoBehaviour
         SetLit(true);
         GameSession s = GameSession.Instance;
         if (s != null) s.LightBonfire(id);
+        AudioManager.Play3D(AudioId.UI_BonfireLit, transform.position, 1.1f, 3f, 30f);
         BonfireBanner.Show();
     }
 

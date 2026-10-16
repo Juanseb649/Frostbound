@@ -66,6 +66,7 @@ public class RoccoBoss : MonoBehaviour
                 break;
         }
         if (old == Phase.None) return;
+        AudioManager.Play3D(AudioId.Boss_Grunt1, transform.position, 1.2f, 3f, 35f);
         string line = p == Phase.Bow ? "¡Quieto ahí! Veamos si esquivas esto." : "¡Basta de juegos! Te aplastaré con mis propias aletas.";
         if (WorldHUD.Instance != null) WorldHUD.Instance.Say(transform, 1.55f * transform.lossyScale.y, line, 3f);
         Summon(2);
@@ -73,6 +74,7 @@ public class RoccoBoss : MonoBehaviour
 
     private void Summon(int count)
     {
+        AudioManager.Play3D(AudioId.Boss_Laugh, transform.position, 1.15f, 3f, 35f);
         for (int i = 0; i < count; i++)
         {
             Vector3 at = transform.position + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(2.5f, 4.5f);

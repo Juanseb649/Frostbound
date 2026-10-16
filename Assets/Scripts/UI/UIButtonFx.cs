@@ -28,9 +28,17 @@ public class UIButtonFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         transform.localScale = Vector3.one;
     }
 
-    public void OnPointerEnter(PointerEventData e) => _hover = true;
+    public void OnPointerEnter(PointerEventData e)
+    {
+        _hover = true;
+        if (_selectable == null || _selectable.IsInteractable()) AudioManager.PlayUI(AudioId.UI_Hover, 0.4f, 0.06f);
+    }
     public void OnPointerExit(PointerEventData e) => _hover = false;
-    public void OnSelect(BaseEventData e) => _selected = true;
+    public void OnSelect(BaseEventData e)
+    {
+        _selected = true;
+        if (_selectable == null || _selectable.IsInteractable()) AudioManager.PlayUI(AudioId.UI_Hover, 0.4f, 0.06f);
+    }
     public void OnDeselect(BaseEventData e) => _selected = false;
 
     void Update()

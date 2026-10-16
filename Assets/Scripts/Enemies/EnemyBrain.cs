@@ -270,6 +270,12 @@ public class EnemyBrain : MonoBehaviour
         _agent.speed = definition.moveSpeed * mult;
         _agent.isStopped = _dmg.IsFrozen;
         if (_dmg.IsFrozen) return;
+        // Cháchara de caído mientras persigue: gruñidos y chillidos cada pocos segundos (sin amontonarse entre todos).
+        if (Current == State.Chase && Time.time >= _chatterAt)
+        {
+            _chatterAt = Time.time + Random.Range(2.5f, 6f);
+            if (_chatterAt > 0f && Random.value < 0.7f) AudioManager.Play3D("SFX/Corrupt/Chatter/", transform.position, 0.6f, 0.45f, 2f, 22f, 0.12f);
+        }
 
         // Los gólems de nieve del mago atraen a los corruptos que pasan cerca.
         _golem = SnowGolem.PickFor(transform.position, _player.position, definition.sightRange, _golem);
@@ -415,6 +421,7 @@ public class EnemyBrain : MonoBehaviour
         // Arquero: la flecha se suelta justo al terminar la preparación.
         if (definition.ranged && _archery != null && _rig != null) _rig.PlayBowShot(windup / 0.66f, 0.66f);
         SetEyes(EyeCharge);
+        AudioManager.Play3D(definition.ranged ? AudioId.Corrupt_Alert1 : AudioId.Corrupt_Attack, transform.position, 0.7f, 2f, 20f);
     }
 
     private void ResolveAttack(float dist, Vector3 toPlayer)
@@ -493,6 +500,7 @@ public class EnemyBrain : MonoBehaviour
         float before = stats.currentHealth;
         stats.TakeDamage(amount);
         float taken = before - stats.currentHealth;
+        if (taken > 0f) CombatAudio.PlayerHit(stats.transform.position + Vector3.up);
         if (taken > 0f && WorldHUD.Instance != null)
             WorldHUD.Instance.Popup(stats.transform.position + Vector3.up * 1.7f + Random.insideUnitSphere * 0.15f,
                 Mathf.CeilToInt(taken).ToString(), FrostboundUI.HealthBar, 0.9f);
@@ -528,6 +536,7 @@ public class EnemyBrain : MonoBehaviour
         if (Current == State.Idle || Current == State.Return)
         {
             Current = State.Chase;
+            AudioManager.Play3D(Champion ? AudioId.Corrupt_Alert2 : AudioId.Corrupt_Alert1, transform.position, 0.85f, 2f, 25f);
             if (Camp != null) Camp.AlertAll(this);
             else
                 foreach (EnemyBrain b in Active)
@@ -551,6 +560,8 @@ public class EnemyBrain : MonoBehaviour
     public void GoHome()
     {
         ReleaseAttackerSlot();
+        // Se retira chillando de pánico.
+        if (Current == State.Chase || Current == State.Recover) AudioManager.Play3D("SFX/Corrupt/Flee/", transform.position, 0.75f, 0.6f, 2f, 24f, 0.1f);
         Current = State.Return;
         if (_agent.isOnNavMesh) _agent.SetDestination(_home);
     }
@@ -559,6 +570,11 @@ public class EnemyBrain : MonoBehaviour
     {
         if (Current == State.Dead) return;
         _lastHit = info;
+        if (!info.periodic)
+        {
+            AudioId painSound = Champion ? AudioId.Boss_Pain1 : (Random.value < 0.5f ? AudioId.Corrupt_Pain1 : AudioId.Corrupt_Pain2);
+            AudioManager.Play3D(painSound, transform.position, 0.7f, 2f, 20f);
+        }
         if (Current == State.Idle || Current == State.Return) Alert();
         if (!info.periodic && info.direction.sqrMagnitude > 0.01f && _agent.isOnNavMesh)
         {
@@ -568,10 +584,14 @@ public class EnemyBrain : MonoBehaviour
         }
     }
 
+    private float _chatterAt;
+
     private void OnDied()
     {
         ReleaseAttackerSlot();
         Current = State.Dead;
+        AudioManager.Play3D(AudioId.Corrupt_Death, transform.position, Champion ? 1.1f : 0.9f, 2f, 25f, Champion ? 0.02f : 0.1f);
+        CombatAudio.Death(transform.position);
         if (_agent.isOnNavMesh) _agent.ResetPath();
         _agent.enabled = false;
         SetEyes(Color.black);

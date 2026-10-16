@@ -23,11 +23,26 @@ public class FrostButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     private static readonly Color HoverFill = new Color(0.08f, 0.14f, 0.24f, 0.95f);
     private static readonly Color DangerFill = new Color(0.23f, 0.06f, 0.07f, 0.95f);
 
-    public void OnPointerEnter(PointerEventData e) { _hover = true; Refresh(); }
+    public void OnPointerEnter(PointerEventData e)
+    {
+        _hover = true;
+        Refresh();
+        if (button == null || button.interactable) AudioManager.PlayUI(AudioId.UI_Hover, 0.45f, 0.06f);
+    }
     public void OnPointerExit(PointerEventData e) { _hover = false; _down = false; Refresh(); }
-    public void OnPointerDown(PointerEventData e) { _down = true; Refresh(); }
+    public void OnPointerDown(PointerEventData e)
+    {
+        _down = true;
+        Refresh();
+        if (button == null || button.interactable) AudioManager.PlayUI(AudioId.UI_Click, 0.75f, 0.04f);
+    }
     public void OnPointerUp(PointerEventData e) { _down = false; Refresh(); }
-    public void OnSelect(BaseEventData e) { _focus = true; Refresh(); }
+    public void OnSelect(BaseEventData e)
+    {
+        _focus = true;
+        Refresh();
+        if (button == null || button.interactable) AudioManager.PlayUI(AudioId.UI_Hover, 0.4f, 0.06f);
+    }
     public void OnDeselect(BaseEventData e) { _focus = false; Refresh(); }
 
     void OnEnable() => Refresh();

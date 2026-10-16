@@ -29,6 +29,7 @@ public class DeathScreen : MonoBehaviour
 
     public static DeathScreen Show(UISkin skin, Action onRespawn, Action onTitle)
     {
+        AudioManager.PlayUI(AudioId.UI_DeathBell, 1f, 0f);
         var go = new GameObject("DeathScreen", typeof(RectTransform));
         var screen = go.AddComponent<DeathScreen>();
         screen._onRespawn = onRespawn;
