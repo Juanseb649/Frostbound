@@ -67,11 +67,15 @@ public class VillageWorldGenerator : MonoBehaviour
         for (int i = 0; i < Layout.bonfires.Count; i++)
             SpawnBonfire(root, Layout.bonfires[i], VillageLayout.BonfireId(i), "Hoguera");
 
+        PlanIgloos();
+        BuildIgloos(root);
+
         Transform forest = new GameObject("Bosque").transform;
         forest.SetParent(root, false);
         if (pinePrefab != null)
             foreach (VillageLayout.Spot s in Layout.pines)
             {
+                if (NearIgloos(s.position, 11f)) continue;
                 GameObject pine = Instantiate(pinePrefab, s.position, Quaternion.Euler(0f, s.yaw, 0f), forest);
                 pine.transform.localScale = Vector3.one * s.scale;
             }
@@ -83,6 +87,7 @@ public class VillageWorldGenerator : MonoBehaviour
         if (moundPrefab != null)
             foreach (VillageLayout.Spot s in Layout.mounds)
             {
+                if (NearIgloos(s.position, 9f)) continue;
                 GameObject mound = Instantiate(moundPrefab, s.position, Quaternion.Euler(0f, s.yaw, 0f), snow);
                 mound.transform.localScale = new Vector3(s.scale * 1.4f, s.scale * 0.6f, s.scale);
             }
@@ -97,6 +102,7 @@ public class VillageWorldGenerator : MonoBehaviour
         }
 
         FallenWarriors.Scatter(root, Seed, FallenSpots());
+        StartSkirmishes(root);
 
         var map = new GameObject("Mapa").AddComponent<MapSystem>();
         map.transform.SetParent(transform, false);
@@ -540,6 +546,90 @@ public class VillageWorldGenerator : MonoBehaviour
         inst.SetTextureScale("_BaseMap", Vector2.one * (meters / SnowMacroMeters));
         inst.SetTextureScale("_DetailAlbedoMap", Vector2.one * (meters / SnowDetailMeters));
         r.sharedMaterial = inst;
+    // ---------- Iglús del bosque ----------
+    public readonly List<Vector3> IglooSites = new List<Vector3>();
+    private readonly List<bool> _iglooFight = new List<bool>();
+    private readonly List<int> _iglooCount = new List<int>();
+
+    private bool NearIgloos(Vector3 p, float r)
+    {
+        foreach (Vector3 c in IglooSites) if ((new Vector2(c.x - p.x, c.z - p.z)).sqrMagnitude < r * r) return true;
+        return false;
+    }
+
+    // Claros con 1–3 iglús repartidos por el bosque, lejos de caminos, campamentos, hogueras y del castillo.
+    private void PlanIgloos()
+    {
+        IglooSites.Clear(); _iglooFight.Clear(); _iglooCount.Clear();
+        var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("iglus")));
+        float lim = VillageLayout.PlayableHalfSize - 16f;
+        Vector3 head = VillageLayout.Trailhead;
+        for (int tries = 0; tries < 600 && IglooSites.Count < 8; tries++)
+        {
+            Vector3 p = VillageLayout.Polar(rng.Range(0f, 360f), rng.Range(75f, 270f));
+            if (Mathf.Abs(p.x) > lim || Mathf.Abs(p.z) > lim) continue;
+            if (VillageLayout.OnRoad(p) || Mathf.Abs(p.x) < 14f) continue;
+            if (VillageLayout.DistanceToCastle(Layout.castle, p) < VillageLayout.CastleClearance + 18f) continue;
+            if ((p - VillageLayout.SteveClearing).magnitude < 30f) continue;
+            if (Mathf.Abs(p.x - TrailStartX) < 30f && p.z > head.z - 50f) continue;
+            bool bad = (p - Layout.castleBonfire.position).magnitude < 20f;
+            foreach (Vector3 c in Layout.camps) if ((p - c).magnitude < 28f) bad = true;
+            foreach (VillageLayout.Spot b in Layout.bonfires) if ((p - b.position).magnitude < 18f) bad = true;
+            foreach (Vector3 o in IglooSites) if ((p - o).magnitude < 50f) bad = true;
+            if (bad) continue;
+            IglooSites.Add(p);
+            _iglooFight.Add(IglooSites.Count % 2 == 1 || rng.Chance(0.3f));
+            _iglooCount.Add(rng.NextInt(1, 4));
+        }
+    }
+
+    private void BuildIgloos(Transform root)
+    {
+        var templates = new List<GameObject>();
+        foreach (string n in new[] { "Iglu_Familia_A", "Iglu_Familia_B", "Iglu_Familia_C", "Iglu_Anciano" })
+        {
+            GameObject g = GameObject.Find(n);
+            if (g != null) templates.Add(g);
+        }
+        if (templates.Count == 0) return;
+        var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("iglus_forma")));
+        Transform parent = new GameObject("Iglus_Bosque").transform;
+        parent.SetParent(root, false);
+        for (int k = 0; k < IglooSites.Count; k++)
+        {
+            Vector3 c = IglooSites[k];
+            int n = _iglooCount[k];
+            float a0 = rng.Range(0f, 360f);
+            for (int i = 0; i < n; i++)
+            {
+                float a = a0 + i * 360f / n + rng.Range(-20f, 20f);
+                Vector3 p = n == 1 ? c : c + VillageLayout.Polar(a, rng.Range(5.5f, 7f));
+                GameObject src = templates[rng.NextInt(0, templates.Count)];
+                Quaternion look = Quaternion.LookRotation((c - p).sqrMagnitude > 0.1f ? (c - p).normalized : Vector3.forward);
+                GameObject ig = Instantiate(src, p, look * Quaternion.Euler(0f, rng.Range(-25f, 25f), 0f), parent);
+                ig.name = "Iglu_Bosque_" + (k + 1) + "_" + (i + 1);
+                ig.transform.localScale = src.transform.lossyScale * rng.Range(0.85f, 1.1f);
+                foreach (NPCInteractable npc in ig.GetComponentsInChildren<NPCInteractable>(true)) Destroy(npc.gameObject);
+            }
+        }
+    }
+
+    private void StartSkirmishes(Transform root)
+    {
+        var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("iglus_aldeanos")));
+        for (int k = 0; k < IglooSites.Count; k++)
+        {
+            var go = new GameObject("Aldea_" + (k + 1));
+            go.transform.SetParent(root, false);
+            go.transform.position = IglooSites[k];
+            IglooSkirmish s = go.AddComponent<IglooSkirmish>();
+            s.id = "iglu_" + (k + 1);
+            s.fight = _iglooFight[k];
+            s.villagers = rng.NextInt(2, 5);
+            s.seed = SeedUtil.Combine(Seed, k + 1);
+        }
+    }
+
     }
 
     private static GameObject Block(Transform parent, string name, Vector3 pos, Vector3 size, Material mat, bool collide)

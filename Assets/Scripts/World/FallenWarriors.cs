@@ -46,7 +46,16 @@ public class FallenWarriors : MonoBehaviour
         foreach (PenguinRagdoll b in _bodies) if (b != null) b.Freeze();
     }
 
-    private static PenguinRagdoll Lay(EnemyBrain brain, string label, DeterministicRng rng)
+    public static PenguinRagdoll Lay(EnemyBrain brain, string label, DeterministicRng rng) => Lay(brain, label, RandomDir(rng));
+
+    private static Vector3 RandomDir(DeterministicRng rng)
+    {
+        float a = rng.Range(0f, Mathf.PI * 2f);
+        return new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
+    }
+
+    // Tumba al pingüino: sin IA ni golpes, ragdoll empujado hacia dir.
+    public static PenguinRagdoll Lay(EnemyBrain brain, string label, Vector3 dir)
     {
         GameObject go = brain.gameObject;
         go.name = label;
@@ -58,9 +67,17 @@ public class FallenWarriors : MonoBehaviour
         foreach (NameTag tag in go.GetComponentsInChildren<NameTag>(true)) tag.enabled = false;
         PenguinRagdoll ragdoll = go.GetComponent<PenguinRagdoll>();
         if (ragdoll == null) ragdoll = go.AddComponent<PenguinRagdoll>();
-        float a = rng.Range(0f, Mathf.PI * 2f);
-        Vector3 dir = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
+        dir.y = 0f;
+        dir = dir.sqrMagnitude > 0.01f ? dir.normalized : Vector3.forward;
         if (!ragdoll.Activate(dir * 1.5f, dir * 2.5f + Vector3.up * 0.5f)) return null;
         return ragdoll;
+    }
+
+    // Congela el cuerpo cuando ya se asentó: se queda donde cayó.
+    public static IEnumerator FreezeWhenSettled(PenguinRagdoll body, float maxSeconds = 5f)
+    {
+        float t = 0f;
+        while (body != null && t < maxSeconds && (t < 1.2f || !body.Sleeping)) { t += Time.deltaTime; yield return null; }
+        if (body != null) body.Freeze();
     }
 }
