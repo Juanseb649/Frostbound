@@ -402,6 +402,33 @@ public static class SmokeTest
         return "disolución lenta en marcha · fantasmas=" + Object.FindObjectsByType<UIDissolve>().Length;
     }
 
+    // Sonidos de UI que han sonado desde la última llamada (y vacía la lista).
+    public static string UISounds()
+    {
+        string s = AudioManager.RecentUI.Count == 0 ? "(ninguno)" : string.Join(", ", AudioManager.RecentUI);
+        AudioManager.RecentUI.Clear();
+        return s;
+    }
+
+    // Equipa el primer objeto equipable de la mochila desde la ventana (como un doble clic).
+    public static string EquipFirst()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        if (inv == null) return "sin InventoryScreen";
+        var eq = Object.FindAnyObjectByType<Equipment>();
+        for (int i = 0; eq != null && i < eq.Inventory.Capacity; i++)
+        {
+            var s = eq.Inventory.Get(i);
+            if (s == null || !s.item.IsEquippable) continue;
+            var cells = typeof(InventoryScreen).GetField("_cells", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(inv) as System.Collections.Generic.List<ItemSlotView>;
+            var view = cells?.Find(c => c.index == i);
+            if (view == null) return "sin casilla " + i;
+            typeof(InventoryScreen).GetMethod("DoAction", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(inv, new object[] { view });
+            return "equipado " + s.item.displayName;
+        }
+        return "nada equipable";
+    }
+
     // Abre y cierra la mochila (para capturar la ventana del héroe).
     public static string OpenInventory()
     {
