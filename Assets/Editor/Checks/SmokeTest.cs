@@ -338,6 +338,132 @@ public static class SmokeTest
         return "ok";
     }
 
+    // Pulsa el botón "Jugar" del título como lo haría el jugador.
+    public static string MenuPlayButton()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin FrostMenu";
+        var field = typeof(FrostMenu).GetField("_play", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var play = field != null ? field.GetValue(menu) as FrostButton : null;
+        if (play == null) return "sin botón Jugar";
+        play.button.onClick.Invoke();
+        return "jugar pulsado";
+    }
+
+    // Pasa el foco del título a "Opciones" (para ver el destello y la escarcha del marco).
+    public static string MenuFocusOptions()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin FrostMenu";
+        var field = typeof(FrostMenu).GetField("_options", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var b = field != null ? field.GetValue(menu) as FrostButton : null;
+        if (b == null || UnityEngine.EventSystems.EventSystem.current == null) return "sin botón";
+        UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(b.gameObject);
+        string mat = b.border.material != null ? b.border.material.shader.name : "-";
+        return "foco en Opciones · shader=" + mat;
+    }
+
+    // Valores del material de efectos del botón "Opciones" (destello y escarcha) en este instante.
+    public static string MenuFxState()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin FrostMenu";
+        var field = typeof(FrostMenu).GetField("_options", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var b = field != null ? field.GetValue(menu) as FrostButton : null;
+        Material m = b != null ? b.border.material : null;
+        if (m == null || !m.HasProperty("_SheenPos")) return "sin material de efectos";
+        Material shown = b.border.materialForRendering;
+        return "sheen=" + m.GetFloat("_SheenPos").ToString("0.00") + " frost=" + m.GetFloat("_Frost").ToString("0.00")
+            + " rect=" + m.GetVector("_Rect") + " t=" + Time.unscaledTime.ToString("0.00")
+            + " render=" + (shown != null ? shown.shader.name + (shown == m ? " (mismo)" : " (copia de máscara)") : "-");
+    }
+
+    // Congela el botón "Opciones" con el destello a mitad de recorrido (para capturarlo). Pasa false para soltarlo.
+    public static string MenuFreezeSheen()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        var field = typeof(FrostMenu).GetField("_options", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var b = menu != null && field != null ? field.GetValue(menu) as FrostButton : null;
+        if (b == null || b.border.material == null) return "sin botón";
+        b.enabled = false;
+        b.border.material.SetFloat("_SheenPos", 0.5f);
+        return "destello congelado en 0,5";
+    }
+
+    // Cierra la mochila con una disolución lenta (6 s) para poder capturarla a medio camino.
+    public static string SlowDissolveInventory()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        if (inv == null) return "sin InventoryScreen";
+        var field = typeof(InventoryScreen).GetField("_window", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var win = field != null ? field.GetValue(inv) as RectTransform : null;
+        UIDissolve.Ghost(win, 6f);
+        inv.Close();
+        return "disolución lenta en marcha · fantasmas=" + Object.FindObjectsByType<UIDissolve>().Length;
+    }
+
+    // Abre y cierra la mochila (para capturar la ventana del héroe).
+    public static string OpenInventory()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        if (inv == null) return "sin InventoryScreen";
+        inv.OpenTab(InventoryScreen.Tab.Inventory);
+        return "mochila abierta";
+    }
+
+    public static string OpenEquipment()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        if (inv == null) return "sin InventoryScreen";
+        inv.OpenTab(InventoryScreen.Tab.Equipment);
+        return "equipo abierto";
+    }
+
+    public static string OpenCharacter()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        if (inv == null) return "sin InventoryScreen";
+        inv.OpenTab(InventoryScreen.Tab.Character);
+        return "personaje abierto";
+    }
+
+    // Abre la tienda del mercader Tico (comprar) para revisar la ventana de comercio.
+    public static string OpenShop()
+    {
+        GameObject go = GameObject.Find("NPC_Mercader_Tico");
+        if (go == null) return "sin Tico";
+        TradeWindow.OpenShop(go.GetComponent<NPCInteractable>(), false);
+        return "tienda abierta";
+    }
+
+    // Abre el arcón de la taberna sin mover objetos (OpenStashAndStore sí guarda cosas).
+    public static string OpenStash()
+    {
+        GameObject go = GameObject.Find("NPC_Tabernera_Mora");
+        if (go == null) return "sin Tabernera";
+        TradeWindow.OpenStash(go.GetComponent<NPCInteractable>());
+        return "arcón abierto";
+    }
+
+    public static string CloseInventory()
+    {
+        var inv = Object.FindAnyObjectByType<InventoryScreen>();
+        if (inv != null) inv.Close();
+        return "mochila cerrada";
+    }
+
+    // Como pulsar "Jugar" en la pantalla de héroes: carga la partida seleccionada (no crea ninguna nueva).
+    public static string MenuPlaySelected()
+    {
+        var menu = Object.FindAnyObjectByType<FrostMenu>();
+        if (menu == null) return "sin FrostMenu";
+        var field = typeof(FrostMenu).GetField("_selectedSlot", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        int slot = field != null ? (int)field.GetValue(menu) : -1;
+        if (slot < 0) return "sin héroe seleccionado";
+        menu.LoadSlot(slot);
+        return "cargando ranura " + slot;
+    }
+
     public static string StartAdventure()
     {
         var menu = Object.FindAnyObjectByType<FrostMenu>();
