@@ -14,6 +14,7 @@ public class PauseMenu : MonoBehaviour
 
     private CanvasGroup _group, _confirm;
     private FrostButton _resume, _quit, _settings;
+    private RectTransform _panel;
     private RectTransform _legend;
     private TextMeshProUGUI _hero;
     private bool _leaving;
@@ -136,6 +137,7 @@ public class PauseMenu : MonoBehaviour
     public void Resume()
     {
         if (!IsPaused) return;
+        UIDissolve.Ghost(_panel);
         SetGroup(_confirm, false);
         SetGroup(_group, false);
         Unfreeze();
@@ -218,13 +220,13 @@ public class PauseMenu : MonoBehaviour
         dim.raycastTarget = true;
 
         Image panel = FrostUI.Panel(main, "Panel", out _, 18f);
+        _panel = panel.rectTransform;
         FrostUI.Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(640f, 640f));
         Transform p = panel.transform;
         TextMeshProUGUI kicker = FrostUI.Kicker(p, "Antetitulo", "Partida en pausa", 17f, FrostUI.Ice);
         kicker.alignment = TextAlignmentOptions.Center;
         FrostUI.Place(kicker.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(500f, 26f));
         TextMeshProUGUI title = FrostUI.Title(p, "Titulo", "PAUSA", 84f, TextAlignmentOptions.Center, 0.24f);
-        title.fontStyle = FontStyles.Italic;
         FrostUI.Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -58f), new Vector2(520f, 104f));
         _hero = FrostUI.Text(p, "Heroe", "", 20f, FrostUI.Secondary, TextAlignmentOptions.Center);
         FrostUI.Place(_hero.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -160f), new Vector2(520f, 30f));

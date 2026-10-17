@@ -113,7 +113,7 @@ public class LoadingScreen : MonoBehaviour
         _group.alpha = 0f;
         RectTransform root = (RectTransform)transform;
 
-        Image bg = FrostUI.Img(root, "Fondo", null, FrostUI.Hex("#050A14"));
+        Image bg = FrostUI.Img(root, "Fondo", null, FrostboundUI.LoadingBg);
         FrostUI.Stretch(bg.rectTransform);
         bg.raycastTarget = true;
         Image glow = FrostUI.Img(root, "Brillo", FrostUI.SoftFade, new Color(0.18f, 0.36f, 0.6f, 0.35f), false);
@@ -136,7 +136,6 @@ public class LoadingScreen : MonoBehaviour
         FrostUI.Place(kicker.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 150f), new Vector2(1000f, 36f));
         kicker.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         TextMeshProUGUI title = FrostUI.Title(root, "Titulo", SceneIds.Title(scene).ToUpperInvariant(), 130f, TextAlignmentOptions.Center, 0.24f);
-        title.fontStyle = FontStyles.Italic;
         FrostUI.Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 60f), new Vector2(1600f, 170f));
         title.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         TextMeshProUGUI sub = FrostUI.Text(root, "Subtitulo", SceneIds.Subtitle(scene), 26f, FrostUI.Secondary, TextAlignmentOptions.Center);
@@ -148,10 +147,11 @@ public class LoadingScreen : MonoBehaviour
         diamond.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         _spinner = diamond.rectTransform;
 
-        Image track = FrostUI.Img(root, "Barra", FrostUI.Skin != null ? FrostUI.Skin.pill : null, FrostUI.BorderDim);
+        // Barra recta de oro viejo sobre abismo (estilo /d2r-ui), sin bordes redondeados.
+        Image track = FrostUI.Img(root, "Barra", null, FrostboundUI.Abyss);
         FrostUI.Place(track.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 150f), new Vector2(720f, 10f));
         track.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        _fill = FrostUI.Img(track.transform, "Relleno", null, FrostUI.Ice, false);
+        _fill = FrostUI.Img(track.transform, "Relleno", null, FrostboundUI.OldGold, false);
         FrostUI.Stretch(_fill.rectTransform);
         _fill.type = Image.Type.Filled;
         _fill.fillMethod = Image.FillMethod.Horizontal;

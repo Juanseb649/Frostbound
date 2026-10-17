@@ -246,6 +246,7 @@ public class InventoryScreen : MonoBehaviour
         if (_group == null) return;
         if (open == IsOpen && _group.alpha == (open ? 1f : 0f)) return;
         bool wasOpen = IsOpen;
+        if (wasOpen && !open) UIDissolve.Ghost(_window);
         IsOpen = open;
         _group.alpha = open ? 1f : 0f;
         _group.interactable = open;
@@ -464,8 +465,8 @@ public class InventoryScreen : MonoBehaviour
         {
             bool on = tab.filter == _filter;
             tab.fill.color = on ? FrostboundUI.SurfaceSelected : FrostboundUI.Surface;
-            tab.border.GetComponent<UIButtonFx>().normalBorder = on ? FrostboundUI.Ice : FrostUI.BorderDim;
-            tab.label.color = on ? FrostboundUI.Ice : FrostboundUI.Muted;
+            tab.border.GetComponent<UIButtonFx>().normalBorder = on ? FrostboundUI.OldGoldLight : FrostUI.BorderDim;
+            tab.label.color = on ? FrostboundUI.OldGoldLight : FrostboundUI.Muted;
         }
 
         if (_selected != null && !_selected.IsEquipmentSlot && (_selected.index < 0 || _inventory.Get(_selected.index) == null)) Select(null);
@@ -917,7 +918,7 @@ public class InventoryScreen : MonoBehaviour
 
     private RectTransform Panel(string name, float x, float y, float w, float h, string title)
     {
-        Image frame = FrostUI.Panel(_window, name, out _, 16f, FrostUI.BorderDim, FrostUI.Hex("#08101D"));
+        Image frame = FrostUI.Panel(_window, name, out _, 16f, FrostUI.BorderDim, FrostboundUI.WindowBg);
         frame.raycastTarget = true;
         UIFactory.TopLeft(frame.rectTransform, x, y, w, h);
         if (!string.IsNullOrEmpty(title)) SectionLabel(frame.rectTransform, title, 24f, 20f);
@@ -970,7 +971,12 @@ public class InventoryScreen : MonoBehaviour
             TextMeshProUGUI name = UIFactory.Text(row.transform, "Name", StatBlock.DisplayName(type), skin.nunito800, 16f, FrostboundUI.Text);
             UIFactory.TopLeft(name.rectTransform, 54f, 8f, 150f, 22f);
             TextMeshProUGUI effect = UIFactory.Text(row.transform, "Effect", _stats.EffectDescription(type), skin.nunito700, 11f, FrostboundUI.Muted);
-            UIFactory.TopLeft(effect.rectTransform, 54f, 32f, 180f, 16f);
+            // Termina antes del valor (x=190): la descripción larga de Agilidad se montaba sobre el número.
+            UIFactory.TopLeft(effect.rectTransform, 54f, 32f, 134f, 16f);
+            effect.enableAutoSizing = true;
+            effect.fontSizeMin = 8f;
+            effect.fontSizeMax = 11f;
+            effect.overflowMode = TextOverflowModes.Ellipsis;
 
             var r = new AttrRow();
             r.value = UIFactory.Text(row.transform, "Value", "", DisplayFont, 22f, FrostboundUI.Title, TextAlignmentOptions.Right);
@@ -982,7 +988,7 @@ public class InventoryScreen : MonoBehaviour
             var fx = plus.gameObject.AddComponent<UIButtonFx>();
             fx.border = plus;
             fx.normalBorder = FrostUI.BorderDim;
-            fx.activeBorder = FrostboundUI.White;
+            fx.activeBorder = FrostboundUI.OldGoldLight;
             r.plusLabel = UIFactory.Text(plus.transform, "Label", "+", DisplayFont, 24f, FrostboundUI.Bg, TextAlignmentOptions.Center);
             UIFactory.Stretch(r.plusLabel.rectTransform);
             r.plus.onClick.AddListener(() => OnPlus(type));

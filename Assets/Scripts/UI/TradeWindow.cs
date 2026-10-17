@@ -18,6 +18,7 @@ public class TradeWindow : MonoBehaviour
     private bool _open;
     private UISkin _skin;
     private CanvasGroup _group;
+    private RectTransform _window;
     private RectTransform _leftGrid, _rightGrid;
     private TextMeshProUGUI _title, _leftLabel, _leftCoins, _rightCoins, _infoName, _infoText;
     private RectTransform _coinButtons;
@@ -116,6 +117,7 @@ public class TradeWindow : MonoBehaviour
     private void Close()
     {
         if (!_open) return;
+        UIDissolve.Ghost(_window);
         _open = false;
         _group.alpha = 0f;
         _group.blocksRaycasts = false;
@@ -323,14 +325,14 @@ public class TradeWindow : MonoBehaviour
 
         float panelW = Cols * Cell + (Cols - 1) * Gap + 40f, panelH = 6 * Cell + 5 * Gap + 110f;
         float w = panelW * 2f + 60f, h = panelH + 170f;
-        RectTransform win = UIFactory.Node(transform, "Ventana");
+        RectTransform win = _window = UIFactory.Node(transform, "Ventana");
         UIFactory.Anchored(win, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(w, h));
         win.pivot = new Vector2(0.5f, 0.5f);
         Image frame = UIFactory.Frame(win, "Marco", Round(20), FrostboundUI.Bg, FrostboundUI.Border, out _);
         UIFactory.Stretch(frame.rectTransform);
         frame.raycastTarget = true;
 
-        _title = UIFactory.Text(win, "Titulo", "", Font(0), 28f, FrostboundUI.Title, TextAlignmentOptions.TopLeft, 3f);
+        _title = UIFactory.Text(win, "Titulo", "", Font(0), 28f, FrostboundUI.OldGoldLight, TextAlignmentOptions.TopLeft, 3f);
         UIFactory.TopLeft(_title.rectTransform, 28f, 18f, 700f, 40f);
         Button close = UIFactory.FramedButton(win, "Cerrar", _skin, Round(10), "Cerrar  ·  Esc", 14f, FrostboundUI.Surface, FrostboundUI.Border, FrostboundUI.Text, out _, out _);
         UIFactory.TopLeft((RectTransform)close.transform, w - 28f - 160f, 18f, 160f, 40f);

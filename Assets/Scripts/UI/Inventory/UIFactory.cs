@@ -55,14 +55,17 @@ public static class UIFactory
         return img;
     }
 
-    // Caja con borde de 2 px: la raíz es el borde y "Fill" el relleno.
+    // Caja con borde: la raíz es el borde y "Fill" el relleno. Las formas redondeadas o en píldora se dibujan con el
+    // marco fino de plata del kit /d2r-ui (se tiñe con el color del borde) y una placa de piedra; los círculos y las
+    // formas sin 9-slice se quedan como estaban.
     public static Image Frame(Transform parent, string name, Sprite round, Color fill, Color border, out Image fillImage)
     {
-        Image b = Img(parent, name, round, border);
+        bool kit = round != null && round.border != Vector4.zero;
+        Image b = Img(parent, name, kit ? FrostFrames.SlotSilver : round, border);
         b.preserveAspect = false;
-        fillImage = Img(b.transform, "Fill", round, fill);
+        fillImage = Img(b.transform, "Fill", kit ? FrostFrames.Plate : round, fill);
         fillImage.preserveAspect = false;
-        Stretch(fillImage.rectTransform, 2f);
+        Stretch(fillImage.rectTransform, kit ? 4f : 2f);
         return b;
     }
 
@@ -105,7 +108,7 @@ public static class UIFactory
         var fx = frame.gameObject.AddComponent<UIButtonFx>();
         fx.border = frame;
         fx.normalBorder = border;
-        fx.activeBorder = FrostboundUI.Ice;
+        fx.activeBorder = FrostboundUI.OldGoldLight;
         return b;
     }
 

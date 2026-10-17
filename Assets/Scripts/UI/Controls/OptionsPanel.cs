@@ -42,6 +42,7 @@ public class OptionsPanel : MonoBehaviour
 
     // Mientras está abierta, los botones de detrás no se pueden elegir (la cruceta no se escapa del panel).
     private readonly List<Selectable> _muted = new List<Selectable>();
+    private RectTransform _panel;
 
     void Awake()
     {
@@ -64,6 +65,7 @@ public class OptionsPanel : MonoBehaviour
     public void Close()
     {
         Action cb = _onClose;
+        UIDissolve.Ghost(_panel);
         foreach (Selectable sel in _muted) if (sel != null) sel.interactable = true;
         _muted.Clear();
         Destroy(gameObject);
@@ -97,6 +99,7 @@ public class OptionsPanel : MonoBehaviour
         dim.raycastTarget = true;
 
         Image panel = FrostUI.Panel(root, "Panel", out _, 18f);
+        _panel = panel.rectTransform;
         FrostUI.Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440f, 940f));
         panel.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         Transform p = panel.transform;
@@ -317,7 +320,10 @@ public class OptionsPanel : MonoBehaviour
             actions.Add(a);
         }
         int perColumn = Mathf.CeilToInt(actions.Count / 2f);
-        float rowH = 50f, gap = 6f, colW = 650f;
+        // La altura de fila se ajusta al hueco de la lista: con 19 acciones las de 50 px se metían bajo los botones.
+        Canvas.ForceUpdateCanvases();
+        float space = _grid.rect.height > 1f ? _grid.rect.height : 452f;
+        float gap = 4f, rowH = Mathf.Min(50f, space / perColumn - gap), colW = 650f;
         for (int i = 0; i < actions.Count; i++)
         {
             GameAction a = actions[i];

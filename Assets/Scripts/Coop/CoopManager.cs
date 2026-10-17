@@ -641,7 +641,7 @@ public class CoopManager : MonoBehaviour
         FrostUI.Stretch(_picker);
         Image dim = FrostUI.Img(_picker, "Velo", null, new Color(0.02f, 0.04f, 0.08f, 0.78f));
         FrostUI.Stretch(dim.rectTransform);
-        TextMeshProUGUI title = FrostUI.Text(_picker, "Titulo", "JUGADOR 2", 46f, FrostboundUI.Title, TextAlignmentOptions.Center, FrostUI.Display);
+        TextMeshProUGUI title = FrostUI.Title(_picker, "Titulo", "JUGADOR 2", 46f);
         FrostUI.Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 200f), new Vector2(800f, 60f));
         title.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         _pickerSub = FrostUI.Text(_picker, "Sub", help, 18f, FrostboundUI.Muted, TextAlignmentOptions.Center);
@@ -653,11 +653,13 @@ public class CoopManager : MonoBehaviour
         float scale = Mathf.Min(1f, 1300f / Mathf.Max(1f, total));
         for (int i = 0; i < _options.Count; i++)
         {
-            Image frame = FrostUI.Img(_picker, "Opcion_" + i, null, FrostboundUI.Border);
+            // Tarjeta con marco de hierro del kit /d2r-ui; la elegida se tiñe de oro (RefreshPicker).
+            Image frame = FrostUI.Img(_picker, "Opcion_" + i, FrostFrames.Panel, Color.white);
             FrostUI.Place(frame.rectTransform, new Vector2(0.5f, 0.5f), new Vector2((-total / 2f + w / 2f + i * (w + gap)) * scale, 10f), new Vector2(w, 190f));
             frame.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            Image fill = FrostUI.Img(frame.transform, "Fondo", null, FrostboundUI.Surface);
-            FrostUI.Stretch(fill.rectTransform, 3f);
+            Image fill = FrostUI.Img(frame.transform, "Fondo", FrostFrames.Plate, FrostUI.PanelColor);
+            FrostUI.Stretch(fill.rectTransform, 11f);
+            fill.transform.SetAsFirstSibling();
             TextMeshProUGUI t = FrostUI.Text(frame.transform, "Tipo", _options[i].title, 15f, FrostboundUI.Gold, TextAlignmentOptions.Center);
             FrostUI.Place(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(w - 20f, 26f));
             TextMeshProUGUI d = FrostUI.Text(frame.transform, "Detalle", _options[i].detail, 21f, FrostboundUI.Text, TextAlignmentOptions.Center);
@@ -674,8 +676,8 @@ public class CoopManager : MonoBehaviour
         for (int i = 0; i < _cards.Count; i++)
         {
             bool on = i == _pick;
-            _cards[i].frame.color = on ? FrostboundUI.Ice : FrostboundUI.Border;
-            _cards[i].frame.rectTransform.localScale = Vector3.one * (on ? 1.08f : 1f);
+            _cards[i].frame.color = on ? FrostboundUI.OldGoldLight : Color.white;
+            _cards[i].frame.rectTransform.localScale = Vector3.one * (on ? 1.03f : 1f);
             _cards[i].detail.color = on ? FrostboundUI.Title : FrostboundUI.Muted;
         }
     }

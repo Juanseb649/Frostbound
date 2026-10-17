@@ -129,7 +129,7 @@ public class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         if (Item != null && Item.rarity == ItemRarity.Common) b = FrostboundUI.Border;
         if (Item != null && _stack != null && _stack.item == Item && _stack.quality > LootQuality.Normal) b = _stack.DisplayColor;
         if (Selected) b = FrostboundUI.Ice;
-        else if (_hover) b = Color.Lerp(b, FrostboundUI.Ice, 0.6f);
+        else if (_hover) b = Color.Lerp(b, FrostboundUI.OldGoldLight, 0.6f);
         border.color = b;
         fill.color = Selected ? FrostboundUI.SurfaceSelected : (Item != null ? FrostboundUI.Surface : FrostboundUI.Bg);
     }

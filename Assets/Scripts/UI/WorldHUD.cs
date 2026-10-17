@@ -253,11 +253,12 @@ public class WorldHUD : MonoBehaviour
         _menu.pivot = new Vector2(0f, 0.5f);
         _menu.sizeDelta = new Vector2(240f, 100f);
 
-        Image border = Img(_menu, "Borde", roundSprite, FrostboundUI.Border);
-        Stretch(border.rectTransform, 0f);
-        Image fill = Img(_menu, "Fondo", roundSprite, new Color(FrostboundUI.Bg.r, FrostboundUI.Bg.g, FrostboundUI.Bg.b, 0.96f));
-        Stretch(fill.rectTransform, 1.5f);
+        // Placa de piedra con marco de hierro del kit /d2r-ui (la placa va detrás del marco hueco).
+        Image fill = Img(_menu, "Fondo", FrostFrames.Plate, new Color(FrostboundUI.Bg.r, FrostboundUI.Bg.g, FrostboundUI.Bg.b, 0.97f));
+        Stretch(fill.rectTransform, 6f);
         fill.raycastTarget = true;
+        Image border = Img(_menu, "Borde", FrostFrames.Button(FrostFrames.Metal.Iron), Color.white);
+        Stretch(border.rectTransform, 0f);
 
         RectTransform content = Rect("Contenido", _menu);
         Stretch(content, 0f);
@@ -269,9 +270,9 @@ public class WorldHUD : MonoBehaviour
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
-        _menuName = Text(content, "Nombre", nameFont, 20f, FrostboundUI.Title, TextAlignmentOptions.Left);
+        _menuName = Text(content, "Nombre", skin.cinzel800 != null ? skin.cinzel800 : nameFont, 20f, FrostboundUI.OldGoldLight, TextAlignmentOptions.Left);
         _menuName.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
-        _menuRole = Text(content, "Oficio", subFont, 13f, FrostboundUI.Gold, TextAlignmentOptions.Left);
+        _menuRole = Text(content, "Oficio", subFont, 13f, FrostboundUI.Ash, TextAlignmentOptions.Left);
         _menuRole.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
         _menuRole.characterSpacing = FrostboundUI.Tracking(1f, 13f);
 
@@ -382,11 +383,12 @@ public class WorldHUD : MonoBehaviour
 
     private GameObject MenuButton(int number, string label, System.Action action)
     {
-        Image border = Img(_menuButtons, "Opcion_" + label, roundSprite, FrostboundUI.Border);
+        // Marco fino de plata del kit /d2r-ui: se tiñe (hierro en reposo, oro al enfocar) con UIButtonFx.
+        Image border = Img(_menuButtons, "Opcion_" + label, FrostFrames.SlotSilver, FrostboundUI.Border);
         border.raycastTarget = true;
         border.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
-        Image fill = Img(border.transform, "Fondo", roundSprite, FrostboundUI.Surface);
-        Stretch(fill.rectTransform, 1.5f);
+        Image fill = Img(border.transform, "Fondo", FrostFrames.Plate, FrostboundUI.Surface);
+        Stretch(fill.rectTransform, 4f);
 
         TextMeshProUGUI text = Text(border.transform, "Texto", textFont, 16f, FrostboundUI.Text, TextAlignmentOptions.Left);
         Stretch(text.rectTransform, 0f);
@@ -408,8 +410,8 @@ public class WorldHUD : MonoBehaviour
         button.onClick.AddListener(() => action());
         var fx = border.gameObject.AddComponent<UIButtonFx>();
         fx.border = border;
-        fx.normalBorder = FrostboundUI.Border;
-        fx.activeBorder = FrostboundUI.Ice;
+        fx.normalBorder = FrostboundUI.IronLight;
+        fx.activeBorder = FrostboundUI.OldGoldLight;
         _menuActions.Add(action);
         _menuBorders.Add(border);
         return border.gameObject;
@@ -681,7 +683,7 @@ public class WorldHUD : MonoBehaviour
             {
                 _menuPick = _menuPick < 0 ? (move > 0 ? 0 : _menuActions.Count - 1) : (_menuPick + move + _menuActions.Count) % _menuActions.Count;
                 for (int i = 0; i < _menuBorders.Count; i++)
-                    if (_menuBorders[i] != null) _menuBorders[i].color = i == _menuPick ? FrostboundUI.Ice : FrostboundUI.Border;
+                    if (_menuBorders[i] != null) _menuBorders[i].color = i == _menuPick ? FrostboundUI.OldGoldLight : FrostboundUI.IronLight;
             }
             else if (pad.buttonSouth.wasPressedThisFrame && _menuPick >= 0 && _menuPick < _menuActions.Count)
             {

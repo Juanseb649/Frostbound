@@ -366,15 +366,18 @@ public class GameHUD : MonoBehaviour
         }
 
         BuildAbility(bar);
-        _xpFill = UIFactory.Bar(bar, "Experiencia", skin.pill, new Color(0.03f, 0.04f, 0.05f, 1f), FrostboundUI.XpBar, out RectTransform xp);
-        Anchor(xp, 709f, 192f, 1211f, 202f);
-        _levelText = UIFactory.Text(bar, "Nivel", "1", skin.cinzel800, 14f, FrostboundUI.ChipGoldText, TextAlignmentOptions.Center);
+        // Experiencia: una línea recta de oro viejo sobre abismo, como la de D2R (sin bordes redondeados).
+        _xpFill = UIFactory.Bar(bar, "Experiencia", null, FrostboundUI.Abyss, FrostboundUI.OldGold, out RectTransform xp);
+        Anchor(xp, 709f, 194f, 1211f, 200f);
+        _levelText = UIFactory.Text(bar, "Nivel", "1", skin.cinzel800, 14f, FrostboundUI.OldGoldLight, TextAlignmentOptions.Center);
         Anchor(_levelText.rectTransform, 670f, 186f, 706f, 208f);
         _xpText = UIFactory.Text(bar, "ExperienciaTexto", "", skin.nunito800, 9f, FrostboundUI.Muted, TextAlignmentOptions.Center, 1.5f);
         Anchor(_xpText.rectTransform, 1214f, 186f, 1300f, 208f);
         _xpText.alignment = TextAlignmentOptions.Left;
 
-        Image chip = UIFactory.Frame(bar, "PointsChip", skin.pill, FrostboundUI.ChipGoldBg, FrostboundUI.Gold, out _);
+        Image chip = UIFactory.Img(bar, "PointsChip", FrostFrames.Slot, FrostboundUI.OldGoldLight);
+        Image chipPlate = UIFactory.Img(chip.transform, "Placa", FrostFrames.Plate, FrostboundUI.ChipGoldBg);
+        UIFactory.Stretch(chipPlate.rectTransform, 4f);
         _pointsChip = chip.rectTransform;
         _pointsChip.anchorMin = _pointsChip.anchorMax = new Vector2(0.5f, 1f);
         _pointsChip.pivot = new Vector2(0.5f, 0f);
@@ -390,7 +393,10 @@ public class GameHUD : MonoBehaviour
     private void BuildAbility(RectTransform bar)
     {
         if (_ability == null) return;
-        Image frame = UIFactory.Frame(bar, "Habilidad", skin.round16 != null ? skin.round16 : skin.pill, new Color(0.03f, 0.05f, 0.1f, 0.92f), FrostboundUI.Border, out _);
+        // Marco de hierro biselado (kit /d2r-ui) con placa de piedra; se tiñe de oro cuando la habilidad está lista.
+        Image frame = UIFactory.Img(bar, "Habilidad", FrostFrames.Button(FrostFrames.Metal.Iron), Color.white);
+        Image plate = UIFactory.Img(frame.transform, "Placa", FrostFrames.Plate, new Color(0.03f, 0.05f, 0.1f, 0.95f));
+        UIFactory.Stretch(plate.rectTransform, 7f);
         _abilityFrame = frame;
         Anchor(frame.rectTransform, 709f, -96f, 789f, -16f);
         _abilityIcon = UIFactory.Img(frame.transform, "Icono", FrostUI.Icon(_ability.Data.icon), new Color(0.75f, 0.92f, 1f));
@@ -410,13 +416,14 @@ public class GameHUD : MonoBehaviour
         _abilityCost = UIFactory.Text(frame.transform, "Coste", "", skin.nunito800, 11f, new Color(0.55f, 0.75f, 1f), TextAlignmentOptions.BottomRight);
         UIFactory.Stretch(_abilityCost.rectTransform, 5f);
         _abilityCost.outlineWidth = 0.25f; _abilityCost.outlineColor = new Color32(5, 6, 8, 255);
-        TextMeshProUGUI name = _abilityName = UIFactory.Text(frame.transform, "Nombre", _ability.Data.name, skin.nunito800, 11f, FrostboundUI.Muted, TextAlignmentOptions.Left);
+        TextMeshProUGUI name = _abilityName = UIFactory.Text(frame.transform, "Nombre", _ability.Data.name, skin.cinzel600, 14f, FrostboundUI.Bone, TextAlignmentOptions.Left, 1f, true);
         name.rectTransform.anchorMin = new Vector2(1f, 0f);
         name.rectTransform.anchorMax = new Vector2(1f, 1f);
         name.rectTransform.pivot = new Vector2(0f, 0.5f);
         name.rectTransform.anchoredPosition = new Vector2(8f, 0f);
         name.rectTransform.sizeDelta = new Vector2(160f, 0f);
-        name.outlineWidth = 0.25f; name.outlineColor = new Color32(5, 6, 8, 255);
+        // Contorno noche de los menús: el nombre queda sobre la nieve, que es muy clara.
+        if (name.font != null) name.fontSharedMaterial = FrostUI.BodyMaterial(name.font);
     }
 
     // Teclas del cinturón y de la habilidad según Configuración → Control: texto con teclado, iconos de Xbox con mando.
@@ -469,6 +476,7 @@ public class GameHUD : MonoBehaviour
         _abilityTimer.text = left > 0f ? Mathf.CeilToInt(left).ToString() : "";
         bool ready = left <= 0f && _ability.CanAfford;
         _abilityIcon.color = ready ? new Color(0.75f, 0.92f, 1f) : new Color(0.4f, 0.48f, 0.58f);
+        if (_abilityFrame != null) _abilityFrame.color = ready ? FrostboundUI.OldGoldLight : Color.white;
         _abilityCost.text = Mathf.CeilToInt(_ability.Data.cost).ToString();
         _abilityCost.color = _ability.CanAfford ? new Color(0.55f, 0.75f, 1f) : FrostboundUI.Negative;
     }
@@ -534,7 +542,7 @@ public class GameHUD : MonoBehaviour
         _toast = toast.gameObject.AddComponent<CanvasGroup>();
         _toast.alpha = 0f;
         _toast.blocksRaycasts = false;
-        _toastTitle = UIFactory.Text(toast, "Title", "", skin.cinzel800, 52f, FrostboundUI.Title, TextAlignmentOptions.Center, 4f);
+        _toastTitle = UIFactory.Text(toast, "Title", "", skin.cinzel800, 52f, FrostboundUI.OldGoldLight, TextAlignmentOptions.Center, 4f);
         UIFactory.TopLeft(_toastTitle.rectTransform, 0f, 0f, 900f, 64f);
         _toastTitle.outlineWidth = 0.15f;
         _toastTitle.outlineColor = new Color32(10, 18, 34, 255);

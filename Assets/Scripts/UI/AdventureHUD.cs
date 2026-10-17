@@ -70,10 +70,10 @@ public class AdventureHUD : MonoBehaviour
 
         _poison = UIFactory.Text(transform, "Veneno", "", _skin != null ? _skin.nunito800 : null, 15f, PlayerAfflictions.PoisonColor, TextAlignmentOptions.Center, 1.5f, true);
         UIFactory.Anchored(_poison.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 236f), new Vector2(300f, 22f));
-        _coins = UIFactory.Text(transform, "Monedas", "", _skin != null ? _skin.nunito800 : null, 17f, new Color(1f, 0.82f, 0.32f), TextAlignmentOptions.BottomLeft, 1f);
+        _coins = UIFactory.Text(transform, "Monedas", "", _skin != null ? _skin.cinzel600 : null, 18f, FrostboundUI.OldGoldLight, TextAlignmentOptions.BottomLeft, 1f);
         UIFactory.Anchored(_coins.rectTransform, new Vector2(0f, 0f), new Vector2(26f, 196f), new Vector2(260f, 24f));
-        _coins.outlineWidth = 0.22f;
-        _coins.outlineColor = new Color32(20, 12, 0, 220);
+        // Contorno noche de los menús: Cinzel pequeño sobre la nieve no se leía con un contorno fino.
+        if (_coins.font != null) _coins.fontSharedMaterial = FrostUI.BodyMaterial(_coins.font);
         _poison.outlineWidth = 0.2f;
         _poison.outlineColor = new Color32(0, 0, 0, 200);
     }
