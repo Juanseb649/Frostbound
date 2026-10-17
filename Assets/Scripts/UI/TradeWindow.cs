@@ -90,7 +90,11 @@ public class TradeWindow : MonoBehaviour
         _player.Inventory.Changed += MarkDirty;
         _wallet.Changed += OnCoins;
         Stash.Changed += MarkDirty;
-        if (!_open) GameplayInput.Block();
+        if (!_open)
+        {
+            GameplayInput.Block();
+            AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.7f);
+        }
         _open = true;
         _group.alpha = 1f;
         _group.blocksRaycasts = true;
@@ -228,7 +232,13 @@ public class TradeWindow : MonoBehaviour
         SetInfo(NameOf(v), text, color);
     }
 
-    private void Toast(string text, Color color) => Notifications.Show(text, color);
+    // Aviso de la tienda con su sonido: comprar, vender o guardar suenan a metal; un fallo (sin dinero, sin sitio), a error.
+    private void Toast(string text, Color color)
+    {
+        Notifications.Show(text, color);
+        if (color == FrostboundUI.Negative) AudioManager.PlayUI(AudioId.UI_Error, 0.7f);
+        else if (color == FrostboundUI.Positive) AudioManager.PlayUI(AudioId.UI_Equip, 0.75f);
+    }
 
     private void Coins(bool deposit, int amount)
     {

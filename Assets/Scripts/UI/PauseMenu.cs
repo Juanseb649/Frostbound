@@ -101,6 +101,7 @@ public class PauseMenu : MonoBehaviour
         string level = stats != null ? "Nivel " + stats.level : "";
         _hero.text = string.Join(" · ", new[] { name, level, SceneIds.Title(SceneManager.GetActiveScene().name) }).Trim(' ', '·');
         BuildLegend();
+        AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.7f);
         SetGroup(_group, true);
         Select(_resume.button);
     }

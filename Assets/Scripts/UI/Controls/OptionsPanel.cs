@@ -50,6 +50,7 @@ public class OptionsPanel : MonoBehaviour
             if (sel != null && sel.interactable) { sel.interactable = false; _muted.Add(sel); }
         Build();
         ShowTab(Tab.Control);
+        AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.6f);
         InputMap.Changed += OnMapChanged;
     }
 

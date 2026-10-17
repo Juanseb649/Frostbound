@@ -3,7 +3,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // Hover y foco: el borde pasa a oro viejo y el botón crece apenas (HoverScale) en 0,1 s (ratón, teclado y mando).
-public class UIButtonFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
+// También suena al pulsar (clic o A/Intro en el mando y el teclado).
+public class UIButtonFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler, IPointerClickHandler, ISubmitHandler
 {
     public Graphic border;
     public Color normalBorder = new Color(0.165f, 0.239f, 0.361f);
@@ -40,6 +41,13 @@ public class UIButtonFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         if (_selectable == null || _selectable.IsInteractable()) AudioManager.PlayUI(AudioId.UI_Hover, 0.4f, 0.06f);
     }
     public void OnDeselect(BaseEventData e) => _selected = false;
+    public void OnPointerClick(PointerEventData e) => Pressed();
+    public void OnSubmit(BaseEventData e) => Pressed();
+
+    private void Pressed()
+    {
+        if (_selectable == null || _selectable.IsInteractable()) AudioManager.PlayUI(AudioId.UI_Click, 0.65f, 0.04f);
+    }
 
     void Update()
     {

@@ -20,6 +20,8 @@ public class UIDissolve : MonoBehaviour
     public static void Ghost(RectTransform source, float seconds = DefaultSeconds)
     {
         if (source == null || !source.gameObject.activeInHierarchy) return;
+        // Toda ventana que se disuelve se está cerrando: suena aquí, aunque falte el shader.
+        AudioManager.PlayUI(AudioId.UI_CloseMenu, 0.7f);
         if (_shader == null) _shader = Resources.Load<Shader>("Shaders/UIFrostFrame");
         if (_shader == null) return;
         Canvas layer = Layer();

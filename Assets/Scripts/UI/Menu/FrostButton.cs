@@ -6,7 +6,7 @@ using UnityEngine.UI;
 // Botón de los menús con el kit "gótico de escarcha" (FrostFrames). Estados: normal (marco de hierro, texto hueso),
 // al pasar o enfocar (el hierro se tiñe de oro, brillo dorado y texto oro claro), pulsado (se hunde y oscurece) y
 // desactivado (apagado). El principal lleva marco de oro viejo, como "Jugar"; el de peligro, marco de sangre.
-public class FrostButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, ISelectHandler, IDeselectHandler
+public class FrostButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, ISelectHandler, IDeselectHandler, ISubmitHandler
 {
     public enum Style { Normal, Primary, Danger }
 
@@ -44,6 +44,11 @@ public class FrostButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         if (button == null || button.interactable) AudioManager.PlayUI(AudioId.UI_Hover, 0.4f, 0.06f);
     }
     public void OnDeselect(BaseEventData e) { _focus = false; Refresh(); }
+    // Con mando o teclado no hay "pointer down": el clic suena al confirmar.
+    public void OnSubmit(BaseEventData e)
+    {
+        if (button == null || button.interactable) AudioManager.PlayUI(AudioId.UI_Click, 0.75f, 0.04f);
+    }
 
     void OnEnable() => Refresh();
 

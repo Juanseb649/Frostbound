@@ -148,6 +148,7 @@ public class MapUI : MonoBehaviour
         if (FullOpen || _fullRoot == null) return;
         FullOpen = true;
         _fullRoot.gameObject.SetActive(true);
+        AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.6f);
     }
 
     public void Close()
@@ -155,6 +156,7 @@ public class MapUI : MonoBehaviour
         if (!FullOpen) return;
         FullOpen = false;
         _fullRoot.gameObject.SetActive(false);
+        AudioManager.PlayUI(AudioId.UI_CloseMenu, 0.6f);
     }
 
     void Update()

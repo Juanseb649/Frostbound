@@ -247,6 +247,7 @@ public class InventoryScreen : MonoBehaviour
         if (open == IsOpen && _group.alpha == (open ? 1f : 0f)) return;
         bool wasOpen = IsOpen;
         if (wasOpen && !open) UIDissolve.Ghost(_window);
+        if (open && !wasOpen) AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.7f);
         IsOpen = open;
         _group.alpha = open ? 1f : 0f;
         _group.interactable = open;
@@ -735,6 +736,9 @@ public class InventoryScreen : MonoBehaviour
             }
         }
         if (!ok) Notifications.Show(message, FrostboundUI.Negative);
+        // Equipar o quitar suena a metal; las pociones ya tienen su sonido al beberse.
+        if (!ok) AudioManager.PlayUI(AudioId.UI_Error, 0.7f);
+        else if (v.IsEquipmentSlot || item.IsEquippable || item.IsRune) AudioManager.PlayUI(AudioId.UI_Equip, 0.8f);
         _dirty = true;
     }
 
