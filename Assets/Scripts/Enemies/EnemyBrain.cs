@@ -34,6 +34,7 @@ public class EnemyBrain : MonoBehaviour
     [System.NonSerialized] public bool paused;
     public event System.Action<EnemyBrain> Killed;
     public event System.Action<CharacterStats> HitPlayerEvent;
+    public event System.Action<EnemyProjectile> Shot;
     private float LeashDistance => leashOverride > 0f ? leashOverride : Leash;
 
     private static readonly List<EnemyBrain> Active = new List<EnemyBrain>();
@@ -93,6 +94,10 @@ public class EnemyBrain : MonoBehaviour
     // El héroe que persigue ahora mismo (puede ser el jugador 2).
     public Transform Target => FindPlayer() ? _player : null;
 
+    // De 0 a 1 mientras prepara el golpe (para avisos en el suelo).
+    public float WindupProgress => Current == State.Windup && _windupLength > 0f ? (Time.time - _windupStart) / _windupLength : 0f;
+    private float _windupStart, _windupLength;
+
     // Teletransporte (el ninja maldito aparece a la espalda del héroe).
     public void Blink(Vector3 to)
     {
@@ -149,6 +154,7 @@ public class EnemyBrain : MonoBehaviour
             NameTag tag = GetComponent<NameTag>();
             if (tag != null) tag.displayName = "Campeón " + def.displayName.ToLowerInvariant();
         }
+        ForestCreature.Attach(this, def);
     }
 
     // Arquero corrupto: el arco y la flecha del equipo se cambian por un arco de verdad en la aleta,
@@ -415,6 +421,8 @@ public class EnemyBrain : MonoBehaviour
         Current = State.Windup;
         float windup = definition.windup / Mathf.Max(0.5f, speedMult);
         _stateUntil = Time.time + windup;
+        _windupStart = Time.time;
+        _windupLength = windup;
         _hitsLeft = definition.hitsPerAttack;
         _struck = false;
         if (!definition.ranged && _rig != null) _rig.PlayBruteWindup(windup);
@@ -517,8 +525,9 @@ public class EnemyBrain : MonoBehaviour
             v.y = 0f;
             aim += v * Mathf.Clamp((aim - origin).magnitude / definition.projectileSpeed, 0f, 0.6f) * 0.6f;
         }
-        EnemyProjectile.Launch(origin, aim - origin, definition.projectileSpeed, definition.attackRange + 4f,
+        EnemyProjectile shot = EnemyProjectile.Launch(origin, aim - origin, definition.projectileSpeed, definition.attackRange + 4f,
             RollDamage(), definition.projectileMaterial, gameObject, _archery != null ? _arrowModel : null);
+        Shot?.Invoke(shot);
     }
 
     private void ReleaseAttackerSlot()

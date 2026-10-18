@@ -109,4 +109,34 @@ public static class ForestChecks
         GameObject p = Players.PrimaryObject;
         return UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + " héroe=" + (p != null ? p.transform.position.ToString("0") : "-");
     }
+
+    // Los tres corruptos del bosque delante del héroe (en el primer campamento).
+    public static string Bestiary()
+    {
+        EnemyCamp camp = Object.FindAnyObjectByType<EnemyCamp>();
+        GameObject p = Players.PrimaryObject;
+        if (camp == null || p == null || GameDatabase.Instance == null) return "sin campamento o héroe";
+        var sb = new StringBuilder();
+        int i = 0;
+        foreach (string id in ForestGenerator.ForestEnemies)
+        {
+            EnemyDefinition def = GameDatabase.Instance.FindEnemy(id);
+            if (def == null) { sb.Append(id).Append("=¡falta! "); continue; }
+            Vector3 at = p.transform.position + p.transform.forward * 7f + p.transform.right * (i++ - 1) * 3f;
+            EnemyBrain b = camp.SpawnMember(def, at, 9, Color.gray);
+            ForestCreature fc = b != null ? b.GetComponent<ForestCreature>() : null;
+            sb.Append(def.displayName).Append(fc != null ? "(" + fc.kind + ") " : "(sin conducta) ");
+            if (b != null) b.Alert();
+        }
+        return sb.ToString();
+    }
+
+    public static string Puddles() => "charcos de veneno=" + Object.FindObjectsByType<PoisonPuddle>().Length
+        + " envenenado=" + (Players.Primary != null && Players.Primary.GetComponent<PlayerAfflictions>() != null && Players.Primary.GetComponent<PlayerAfflictions>().Poisoned);
+
+    public static string Invulnerable()
+    {
+        if (Players.Primary != null && Players.Primary.Stats != null) Players.Primary.Stats.invulnerable = true;
+        return "invulnerable";
+    }
 }
