@@ -2350,6 +2350,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
   - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
   - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  meleeVariants: []
+  variantChance: 0.35
+  ignoreCurseGate: 0
   groupSize: {x: 4, y: 6}
   rangedFraction: 0.3
   eliteChance: 0.25
@@ -34449,6 +34452,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
   - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
   - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  meleeVariants: []
+  variantChance: 0.35
+  ignoreCurseGate: 0
   groupSize: {x: 4, y: 6}
   rangedFraction: 0.3
   eliteChance: 0.25
@@ -34818,7 +34824,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!4 &538399908
 Transform:
@@ -53538,7 +53544,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!4 &892559180
 Transform:
@@ -56859,8 +56865,8 @@ MonoBehaviour:
   pointsAvailable: 0
   pointsPerLevel: 5
   maxLevel: 50
-  xpBase: 100
-  xpGrowth: 1.5
+  levelXpBase: 100
+  levelXpGrowth: 1.3
   baseStats:
     strength: 0
     mana: 0
@@ -56875,7 +56881,8 @@ MonoBehaviour:
   currentMana: 70
   healthPerPoint: 8
   manaPerPoint: 5
-  agilitySpeedPerPoint: 0.35
+  agilitySpeedCap: 2
+  agilitySpeedScale: 40
   strengthDamagePerPoint: 2
   baseMaxHealth: 40
   baseMaxMana: 20
@@ -56892,6 +56899,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e5b8a1bc3a733cd40975f66ff18cee1e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  playerIndex: 0
   moveSpeed: 6
   rotationSpeed: 12
   clickToMove: 1
@@ -57579,6 +57587,17 @@ MonoBehaviour:
   lootSpriteMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   wearPerMeleeHit: 1
   wearPerShot: 0.5
+  magicRange: 11
+  orbSpeed: 17
+  poleDamage:
+  - 1.05
+  - 1.1
+  - 1.6
+  poleTiming:
+  - 0.9
+  - 0.95
+  - 1.3
+  poleComboWindow: 0.5
 --- !u!114 &952827403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -57612,6 +57631,7 @@ MonoBehaviour:
   respawnPoint: {fileID: 0}
   screenDelay: 1.2
   durabilityLoss: 0.1
+  coopReviveSeconds: 10
 --- !u!114 &952827405
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -61068,6 +61088,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
   - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
   - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  meleeVariants: []
+  variantChance: 0.35
+  ignoreCurseGate: 0
   groupSize: {x: 4, y: 5}
   rangedFraction: 0.3
   eliteChance: 0.1
@@ -63828,6 +63851,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
   - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
   - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  meleeVariants: []
+  variantChance: 0.35
+  ignoreCurseGate: 0
   groupSize: {x: 4, y: 6}
   rangedFraction: 0.3
   eliteChance: 0.15
@@ -70990,6 +71016,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
   - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
   - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  meleeVariants: []
+  variantChance: 0.35
+  ignoreCurseGate: 0
   groupSize: {x: 5, y: 7}
   rangedFraction: 0.3
   eliteChance: 0.3
@@ -82743,7 +82772,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!4 &1413158599
 Transform:
@@ -85334,7 +85363,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!4 &1444726036
 Transform:
@@ -89615,7 +89644,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!4 &1520268705
 Transform:
@@ -97970,7 +97999,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!4 &1666379853
 Transform:
@@ -101717,6 +101746,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
   - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
   - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  meleeVariants: []
+  variantChance: 0.35
+  ignoreCurseGate: 0
   groupSize: {x: 4, y: 6}
   rangedFraction: 0.3
   eliteChance: 0.25
@@ -108845,6 +108877,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9fb2544c19052745a5b16f787e45ea9, type: 2}
   - {fileID: 11400000, guid: d5304f4ba77507f47be4058f3ea0336e, type: 2}
   - {fileID: 11400000, guid: 3ed951fb367e61640b247df950e96634, type: 2}
+  meleeVariants: []
+  variantChance: 0.35
+  ignoreCurseGate: 0
   groupSize: {x: 4, y: 6}
   rangedFraction: 0.3
   eliteChance: 0.15
@@ -119960,7 +119995,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!4 &2046431645
 Transform:
