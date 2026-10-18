@@ -14,6 +14,8 @@ public class QuestMarker : MonoBehaviour
     [Tooltip("Nombre y botón al acercarse (solo Interactuar).")]
     public string displayName = "Pista";
     public string actionLabel = "Examinar";
+    [Tooltip("Lo que se dice si se usa antes de tiempo.")]
+    public string notYetMessage = "Aún no sabes qué hacer con esto.";
 
     // Al usarlo (para la animación del objeto: la raíz se seca, el altar se enciende...).
     public event Action Activated;
@@ -57,7 +59,7 @@ public class QuestMarker : MonoBehaviour
         if (Used) return false;
         if (!Relevant)
         {
-            if (WorldHUD.Instance != null) WorldHUD.Instance.Say(transform, 1.2f, "Aún no sabes qué hacer con esto.", 3f);
+            if (WorldHUD.Instance != null) WorldHUD.Instance.Say(transform, 1.2f, notYetMessage, 3.5f);
             return true;
         }
         Trigger();

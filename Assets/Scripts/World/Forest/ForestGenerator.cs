@@ -13,6 +13,8 @@ public class ForestGenerator : MonoBehaviour
     [Header("Piezas")]
     public GameObject pinePrefab;
     public GameObject bonfirePrefab;
+    [Tooltip("Pingüino con esqueleto para los NPC de la zona (Pipo).")]
+    public GameObject npcPrefab;
 
     [Header("Materiales")]
     public Material snowMaterial;
@@ -24,6 +26,7 @@ public class ForestGenerator : MonoBehaviour
     public int Seed { get; private set; }
     public ForestLayout.Result Layout { get; private set; }
     public Transform HeartCenter { get; private set; }
+    public MadreSaviaEncounter Encounter { get; private set; }
     public bool Built { get; private set; }
 
     public const string EntryMarker = "bosque_entrada";
@@ -553,6 +556,16 @@ public class ForestGenerator : MonoBehaviour
         tcol.height = 14f;
         tcol.center = new Vector3(0f, 7f, 0f);
         GlowLight(heart, mother + Vector3.up * 4f + Vector3.back * 3f, new Color(0.45f, 1f, 0.4f), 26f, 3.2f, true);
+
+        // La Madre Savia y el capullo de Pipo, a un lado del árbol madre.
+        var enc = new GameObject("Encuentro_Madre_Savia");
+        enc.transform.SetParent(heart, false);
+        enc.transform.position = ground + new Vector3(0f, 0f, 2f);
+        Encounter = enc.AddComponent<MadreSaviaEncounter>();
+        Encounter.npcPrefab = npcPrefab;
+        Vector3 cocoon = mother + new Vector3(3.6f, 0f, -3.2f);
+        Encounter.cocoonAt = Layout.Ground(cocoon.x, cocoon.z);
+        Encounter.exitAt = ground + new Vector3(0f, 0f, -c.radius);
     }
 
     private void Gates()

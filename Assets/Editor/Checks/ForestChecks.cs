@@ -139,4 +139,52 @@ public static class ForestChecks
         if (Players.Primary != null && Players.Primary.Stats != null) Players.Primary.Stats.invulnerable = true;
         return "invulnerable";
     }
+
+    // Capítulo II hasta el claro de la Madre Savia (etapa 2: aparece).
+    public static string ToBoss()
+    {
+        QuestLog.SetStage(QuestLog.Citadel, QuestLog.CitadelDone);
+        QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentRocco);
+        QuestLog.SetStage("rastro_de_pipo", 3);
+        QuestLog.SetStage("savia_negra", 2);
+        QuestLog.SetStage(MadreSaviaEncounter.Quest, MadreSaviaEncounter.StageFight);
+        var e = Gen.Encounter;
+        return "jefa=" + (e != null && e.Boss != null ? e.Boss.title : "no") + " pipo=" + (e != null && e.Pipo != null);
+    }
+
+    // Deja a la jefa al 40 % (fase de raíces) o al 20 % (lluvia).
+    public static string BossTo40() => BossTo(0.4f);
+    public static string BossTo20() => BossTo(0.2f);
+
+    private static string BossTo(float k)
+    {
+        var b = Gen.Encounter != null ? Gen.Encounter.Boss : null;
+        if (b == null) return "sin jefa";
+        b.Health.TakeHit(new DamageInfo { amount = b.Health.Health - b.Health.maxHealth * k, type = DamageType.Physical, source = Players.PrimaryObject });
+        return "vida=" + Mathf.RoundToInt(b.Health.Health) + "/" + Mathf.RoundToInt(b.Health.maxHealth) + " avisos=" + Object.FindObjectsByType<GroundWarning>().Length;
+    }
+
+    public static string KillBoss()
+    {
+        var b = Gen.Encounter != null ? Gen.Encounter.Boss : null;
+        if (b == null) return "sin jefa";
+        b.Health.healthFloor = 0f;
+        b.Health.TakeHit(new DamageInfo { amount = b.Health.Health + 10f, type = DamageType.Physical, source = Players.PrimaryObject });
+        string t = QuestLog.Tracked();
+        return "muerta=" + b.Health.IsDead + " → " + t + "@" + QuestLog.Stage(t) + " '" + QuestLog.Objective(t, QuestLog.Stage(t)) + "'";
+    }
+
+    public static string FreePipo()
+    {
+        foreach (QuestMarker m in Gen.GetComponentsInChildren<QuestMarker>())
+            if (m.id == MadreSaviaEncounter.CocoonMarker)
+            {
+                bool ok = m.Use();
+                string t = QuestLog.Tracked();
+                return "capullo usado=" + ok + " marca=" + m.Used + " → " + t + "@" + QuestLog.Stage(t) + " '" + QuestLog.Objective(t, QuestLog.Stage(t)) + "'";
+            }
+        return "sin capullo";
+    }
+
+    public static string GoCocoon() => Go(Gen.Encounter.cocoonAt + Vector3.back * 3f);
 }

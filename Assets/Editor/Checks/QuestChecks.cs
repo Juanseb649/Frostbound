@@ -90,4 +90,26 @@ public static class QuestChecks
         steve.GetComponent<NPCInteractable>().Choose(NPCOption.Hablar);
         return sb.ToString();
     }
+
+    // Pipo ya rescatado: aparece junto a Steve; hablar con Steve cumple "la_madre_savia".
+    public static string PipoHome()
+    {
+        foreach (QuestDefinition q in QuestLog.All) QuestLog.SetStage(q.id, 0);
+        QuestLog.SetStage(QuestLog.Citadel, QuestLog.CitadelDone);
+        QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentRocco);
+        QuestLog.SetStage("rastro_de_pipo", 3);
+        QuestLog.SetStage("savia_negra", 2);
+        QuestLog.SetStage(MadreSaviaEncounter.Quest, MadreSaviaEncounter.StageHome);
+        return "etapa=" + QuestLog.Stage(MadreSaviaEncounter.Quest);
+    }
+
+    public static string PipoState()
+    {
+        GameObject pipo = GameObject.Find("NPC_Pipo");
+        var steve = GameObject.Find(MapSystem.SteveName);
+        string s = "pipo=" + (pipo != null) + (pipo != null && steve != null ? " a " + Vector3.Distance(pipo.transform.position, steve.transform.position).ToString("0.0") + " m de Steve" : "");
+        if (steve != null) steve.GetComponent<NPCInteractable>().Choose(NPCOption.Hablar);
+        string t = QuestLog.Tracked();
+        return s + " | tras hablar con Steve: " + MadreSaviaEncounter.Quest + "@" + QuestLog.Stage(MadreSaviaEncounter.Quest) + " sigue=" + t + "@" + QuestLog.Stage(t);
+    }
 }

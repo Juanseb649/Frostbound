@@ -124,6 +124,7 @@ public class VillageWorldGenerator : MonoBehaviour
 
         GameObject steve = GameObject.Find(MapSystem.SteveName);
         if (steve != null && steve.GetComponent<NPCInteractable>() != null && steve.GetComponent<QuestGiver>() == null) steve.AddComponent<QuestGiver>();
+        PipoAtHome.Ensure(steve);
     }
 
     // Puerta sellada, interior (se genera al entrar), asedio de la ciudadela y la guardia del poblado en ruinas.

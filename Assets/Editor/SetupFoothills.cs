@@ -38,6 +38,7 @@ public static class SetupFoothills
     {
         ForestGenerator fg = go.AddComponent<ForestGenerator>();
         fg.pinePrefab = pine; fg.bonfirePrefab = bonfire; fg.snowMaterial = snow; fg.stoneMaterial = stone;
+        fg.npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SetupPenguinWardrobe.PrefabPath);
         return ForestLayout.Generate(fg.fallbackSeed).entry + Vector3.up * 0.1f;
     }, "Generador_Bosque");
 
