@@ -57,7 +57,16 @@ public class CastleInterior : MonoBehaviour
         public float sunIntensity;
         public Color sunColor;
         public Light sun;
+        public Color skyColor, equatorColor, groundColor;
+        public CameraClearFlags clear;
+        public Color background;
+        public Camera camera;
     }
+
+    // Volumen del interior: gana al del exterior (que enfría todo) y da contraste sin teñir de azul.
+    private UnityEngine.Rendering.Volume _interiorVolume;
+    private readonly List<(UnityEngine.Rendering.Volume v, float w)> _outsideVolumes = new List<(UnityEngine.Rendering.Volume, float)>();
+    public static readonly Color VoidColor = new Color(0.012f, 0.014f, 0.022f);
 
     void Awake() => Instance = this;
     void OnDestroy()
@@ -101,7 +110,18 @@ public class CastleInterior : MonoBehaviour
             inward.y = 0f;
             if (inward.sqrMagnitude > 0.01f)
             {
+                // Lo bastante dentro para que el muro de la entrada quede detrás de la cámara (si no, lo tapa).
                 to = _portal + inward.normalized * 3.5f;
+                foreach (float d in new[] { 10f, 8f, 6f })
+                {
+                    Vector3 c = _portal + inward.normalized * d;
+                    if (UnityEngine.AI.NavMesh.SamplePosition(c, out UnityEngine.AI.NavMeshHit hit, 0.6f, UnityEngine.AI.NavMesh.AllAreas)
+                        && !Physics.CheckSphere(c + Vector3.up * 1f, 0.5f, ~0, QueryTriggerInteraction.Ignore))
+                    {
+                        to = hit.position;
+                        break;
+                    }
+                }
                 rot = Quaternion.LookRotation(inward.normalized);
             }
         }
@@ -149,18 +169,31 @@ public class CastleInterior : MonoBehaviour
         {
             _outside = Capture();
             _ambienceInside = true;
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.17f, 0.19f, 0.27f);
+            // Antes todo quedaba azul claro: la cámara seguía dibujando el cielo diurno en el vacío alrededor de la
+            // catedral (no tiene techo y la cámara mira hacia abajo) y se sumaban tres tintes fríos (ambiente azul,
+            // sol azul y el volumen frío del exterior). Ahora: vacío casi negro, ambiente de tres tonos neutro y
+            // oscuro, sol frío pero tenue, y las antorchas cálidas dan el contraste.
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.2f, 0.21f, 0.26f);
+            RenderSettings.ambientEquatorColor = new Color(0.14f, 0.14f, 0.16f);
+            RenderSettings.ambientGroundColor = new Color(0.07f, 0.07f, 0.08f);
+            RenderSettings.ambientLight = RenderSettings.ambientSkyColor;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.02f, 0.03f, 0.06f);
-            RenderSettings.fogStartDistance = 24f;
-            RenderSettings.fogEndDistance = 75f;
+            RenderSettings.fogColor = VoidColor;
+            RenderSettings.fogStartDistance = 26f;
+            RenderSettings.fogEndDistance = 80f;
             if (_outside.sun != null)
             {
-                _outside.sun.intensity = _outside.sunIntensity * 0.3f;
-                _outside.sun.color = new Color(0.55f, 0.65f, 0.95f);
+                _outside.sun.intensity = _outside.sunIntensity * 0.32f;
+                _outside.sun.color = new Color(0.72f, 0.77f, 0.9f);
             }
+            if (_outside.camera != null)
+            {
+                _outside.camera.clearFlags = CameraClearFlags.SolidColor;
+                _outside.camera.backgroundColor = VoidColor;
+            }
+            InteriorVolume(true);
         }
         else ApplyOutside();
     }
@@ -176,7 +209,11 @@ public class CastleInterior : MonoBehaviour
             ambient = RenderSettings.ambientLight, mode = RenderSettings.ambientMode, fog = RenderSettings.fog,
             fogColor = RenderSettings.fogColor, fogDensity = RenderSettings.fogDensity, fogMode = RenderSettings.fogMode,
             fogStart = RenderSettings.fogStartDistance, fogEnd = RenderSettings.fogEndDistance,
-            sun = sun, sunIntensity = sun != null ? sun.intensity : 1f, sunColor = sun != null ? sun.color : Color.white
+            sun = sun, sunIntensity = sun != null ? sun.intensity : 1f, sunColor = sun != null ? sun.color : Color.white,
+            skyColor = RenderSettings.ambientSkyColor, equatorColor = RenderSettings.ambientEquatorColor, groundColor = RenderSettings.ambientGroundColor,
+            camera = Camera.main,
+            clear = Camera.main != null ? Camera.main.clearFlags : CameraClearFlags.Skybox,
+            background = Camera.main != null ? Camera.main.backgroundColor : Color.black
         };
     }
 
@@ -196,6 +233,58 @@ public class CastleInterior : MonoBehaviour
             _outside.sun.intensity = _outside.sunIntensity;
             _outside.sun.color = _outside.sunColor;
         }
+        RenderSettings.ambientSkyColor = _outside.skyColor;
+        RenderSettings.ambientEquatorColor = _outside.equatorColor;
+        RenderSettings.ambientGroundColor = _outside.groundColor;
+        if (_outside.camera != null)
+        {
+            _outside.camera.clearFlags = _outside.clear;
+            _outside.camera.backgroundColor = _outside.background;
+        }
+        InteriorVolume(false);
+    }
+
+    // Dentro: los volúmenes globales del exterior se apagan y entra el del interior; fuera, al revés.
+    private void InteriorVolume(bool inside)
+    {
+        if (inside)
+        {
+            _outsideVolumes.Clear();
+            foreach (var v in FindObjectsByType<UnityEngine.Rendering.Volume>())
+                if (v != _interiorVolume && v.isGlobal && v.GetComponent<VillageAtmosphere>() != null)
+                {
+                    _outsideVolumes.Add((v, v.weight));
+                    v.weight = 0f;
+                }
+            if (_interiorVolume == null)
+            {
+                var go = new GameObject("Posprocesado_Catedral");
+                go.transform.SetParent(transform, false);
+                _interiorVolume = go.AddComponent<UnityEngine.Rendering.Volume>();
+                _interiorVolume.isGlobal = true;
+                _interiorVolume.priority = 8f;
+                var p = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+                p.name = "Posprocesado de la catedral";
+                var ca = p.Add<UnityEngine.Rendering.Universal.ColorAdjustments>(true);
+                ca.contrast.Override(18f);
+                ca.saturation.Override(4f);
+                ca.postExposure.Override(0.25f);
+                var wb = p.Add<UnityEngine.Rendering.Universal.WhiteBalance>(true);
+                wb.temperature.Override(6f);
+                var bloom = p.Add<UnityEngine.Rendering.Universal.Bloom>(true);
+                bloom.intensity.Override(0.5f);
+                bloom.threshold.Override(1f);
+                var vig = p.Add<UnityEngine.Rendering.Universal.Vignette>(true);
+                vig.intensity.Override(0.28f);
+                vig.color.Override(Color.black);
+                _interiorVolume.sharedProfile = p;
+            }
+            _interiorVolume.enabled = true;
+            return;
+        }
+        if (_interiorVolume != null) _interiorVolume.enabled = false;
+        foreach (var (v, w) in _outsideVolumes) if (v != null) v.weight = w;
+        _outsideVolumes.Clear();
     }
 
     // ---------- Construcción ----------
