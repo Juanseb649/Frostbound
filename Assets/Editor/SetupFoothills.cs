@@ -51,6 +51,23 @@ public static class SetupFoothills
         return "bosque creado; build=" + BuildList();
     }
 
+    [MenuItem("Tools/Frostbound/Cumbre/Crear escena de la Cumbre")]
+    public static void RunSummit() => Create(SceneIds.SummitPath, (go, pine, mound, bonfire, snow, stone) =>
+    {
+        SummitGenerator sg = go.AddComponent<SummitGenerator>();
+        sg.bonfirePrefab = bonfire; sg.snowMaterial = snow; sg.stoneMaterial = stone;
+        sg.npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SetupPenguinWardrobe.PrefabPath);
+        return SummitLayout.Generate(sg.fallbackSeed).entry + Vector3.up * 0.1f;
+    }, "Generador_Cumbre");
+
+    public static string CreateSummit()
+    {
+        string back = EditorSceneManager.GetActiveScene().path;
+        RunSummit();
+        if (!string.IsNullOrEmpty(back)) EditorSceneManager.OpenScene(back, OpenSceneMode.Single);
+        return "cumbre creada; build=" + BuildList();
+    }
+
     // Chamán corrupto: parte del mago corrupto; se une a las hordas tras la caída de Rocco.
     public static string Shaman()
     {
