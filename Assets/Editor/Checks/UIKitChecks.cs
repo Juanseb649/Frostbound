@@ -173,4 +173,38 @@ public static class UIKitChecks
         Renderer r = tip.GetComponent<Renderer>();
         return "cristal en " + v.ToString("F2") + " mundo=" + tip.transform.position.ToString("F0") + " visible=" + (r != null && r.isVisible);
     }
+
+    // Pantalla de nueva partida con la dificultad elegida (0 fácil, 1 normal, 2 difícil).
+    public static string CreateHard() => Create(2);
+    public static string CreateEasy() => Create(0);
+
+    private static string Create(int level)
+    {
+        FrostMenu m = Object.FindAnyObjectByType<FrostMenu>();
+        if (m == null) return "sin menú";
+        m.ShowCreate();
+        m.PickDifficulty(level);
+        return "nueva partida · dificultad " + Difficulty.Name((Difficulty.Level)m.SelectedDifficulty);
+    }
+
+    // Guardado y lectura de la dificultad, en una carpeta temporal (nunca en las partidas del jugador).
+    public static string DifficultyOfNewSave()
+    {
+        FrostMenu m = Object.FindAnyObjectByType<FrostMenu>();
+        var db = GameDatabase.Instance;
+        string tmp = Path.Combine(Path.GetTempPath(), "frostbound_prueba_dificultad");
+        SaveSystem.UseFolderForTests(tmp);
+        try
+        {
+            var s = GameSession.Ensure();
+            s.StartNewGame(0, db.classes[0], db.palette.entries[0].id, "Prueba", m.SelectedDifficulty);
+            string r = "partida nueva: dificultad=" + s.Current.difficulty + " (" + Difficulty.Current + ")";
+            SaveData back = SaveSystem.Load(0);
+            r += " · leída del disco=" + (back != null ? back.difficulty.ToString() : "-");
+            s.EndGame();
+            SaveSystem.Delete(0);
+            return r;
+        }
+        finally { SaveSystem.UseFolderForTests(null); }
+    }
 }

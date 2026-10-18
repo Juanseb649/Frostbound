@@ -60,6 +60,10 @@ public class FrostMenu : MonoBehaviour
     private readonly List<(Button button, Image ring, Image halo)> _swatches = new List<(Button, Image, Image)>();
     private TMP_InputField _nameField;
     private int _classIndex, _plumageIndex, _targetSlot = -1;
+    // Dificultad de la partida nueva (Difficulty.Level), con sus tres botones y la explicación.
+    private int _difficulty = (int)Difficulty.Level.Normal;
+    private readonly List<FrostButton> _difficultyButtons = new List<FrostButton>();
+    private TextMeshProUGUI _difficultyText, _difficultyKicker;
 
     private GameDatabase Db => GameDatabase.Instance;
 
@@ -547,7 +551,8 @@ public class FrostMenu : MonoBehaviour
         _playHero.button.interactable = sel != null;
         _newHero.button.interactable = FirstFree() >= 0;
         _heroName.text = sel != null ? sel.heroName : "";
-        _heroDetail.text = sel != null ? ClassDisplay(sel) + " · Nivel " + sel.level + " · " + SceneIds.Title(ZoneTravel.ZoneOf(sel)) : "No tienes héroes todavía";
+        _heroDetail.text = sel != null ? ClassDisplay(sel) + " · Nivel " + sel.level + " · " + SceneIds.Title(ZoneTravel.ZoneOf(sel))
+            + " · " + Difficulty.Name((Difficulty.Level)Mathf.Clamp(sel.difficulty, 0, Difficulty.Count - 1)) : "No tienes héroes todavía";
         Summary(sel);
         if (_actor != null) _actor.SetActive(sel != null && _screen != Screen.Create);
         if (sel != null)
@@ -722,8 +727,23 @@ public class FrostMenu : MonoBehaviour
         TopLeft(nk.rectTransform, 30f, 570f, 400f, 22f);
         _nameField = InputField(p, 30f, 602f, 392f, 58f);
 
-        FrostButton start = FrostButton.Create(p, "Comenzar", "Comenzar aventura", new Vector2(392f, 70f), FrostButton.Style.Primary, 30f);
-        TopLeft((RectTransform)start.transform, 30f, 748f, 392f, 70f);
+        // Dificultad: tres botones y una línea que explica qué cambia.
+        _difficultyKicker = FrostUI.Kicker(p, "DificultadEtiqueta", "Dificultad", 15f);
+        TopLeft(_difficultyKicker.rectTransform, 30f, 672f, 400f, 22f);
+        for (int i = 0; i < Difficulty.Count; i++)
+        {
+            int level = i;
+            FrostButton b = FrostButton.Create(p, "Dificultad_" + i, Difficulty.Name((Difficulty.Level)i), new Vector2(124f, 42f), FrostButton.Style.Normal, 19f);
+            TopLeft((RectTransform)b.transform, 30f + i * 134f, 700f, 124f, 42f);
+            b.button.onClick.AddListener(() => SelectDifficulty(level));
+            _difficultyButtons.Add(b);
+        }
+        _difficultyText = FrostUI.Text(p, "DificultadTexto", "", 15f, FrostUI.Ice, TextAlignmentOptions.TopLeft, FrostUI.BodyLight);
+        _difficultyText.textWrappingMode = TextWrappingModes.Normal;
+        TopLeft(_difficultyText.rectTransform, 30f, 748f, 396f, 40f);
+
+        FrostButton start = FrostButton.Create(p, "Comenzar", "Comenzar aventura", new Vector2(392f, 54f), FrostButton.Style.Primary, 28f);
+        TopLeft((RectTransform)start.transform, 30f, 786f, 392f, 54f);
         start.button.onClick.AddListener(StartAdventure);
 
         RectTransform hint = FrostUI.Node(root, "Pista");
@@ -782,7 +802,24 @@ public class FrostMenu : MonoBehaviour
         if (_targetSlot < 0) _targetSlot = FirstFree();
         if (_nameField != null) _nameField.text = "";
         SelectClass(_classIndex);
+        SelectDifficulty(_difficulty);
     }
+
+    private void SelectDifficulty(int level)
+    {
+        _difficulty = Mathf.Clamp(level, 0, Difficulty.Count - 1);
+        for (int i = 0; i < _difficultyButtons.Count; i++)
+        {
+            _difficultyButtons[i].selectedLook = i == _difficulty;
+            _difficultyButtons[i].Refresh();
+        }
+        Difficulty.Tuning t = Difficulty.Of((Difficulty.Level)_difficulty);
+        if (_difficultyKicker != null) _difficultyKicker.text = ("Dificultad · " + t.name).ToUpperInvariant();
+        if (_difficultyText != null) _difficultyText.text = t.summary;
+    }
+
+    public int SelectedDifficulty => _difficulty;
+    public void PickDifficulty(int level) => SelectDifficulty(level);
 
     private void SelectClass(int index)
     {
@@ -847,14 +884,14 @@ public class FrostMenu : MonoBehaviour
         int slot = _targetSlot >= 0 && !SaveSystem.Exists(_targetSlot) ? _targetSlot : FirstFree();
         if (slot >= 0)
         {
-            GameSession.Ensure().StartNewGame(slot, cls, plumage, heroName);
+            GameSession.Ensure().StartNewGame(slot, cls, plumage, heroName, _difficulty);
             StartCoroutine(FadeAndLoad());
             return;
         }
         // Las cuatro ranuras están llenas: hay que elegir cuál sobrescribir.
         SaveSlotsPanel.Open(SaveSlotsPanel.Mode.New, s =>
         {
-            GameSession.Ensure().StartNewGame(s, cls, plumage, heroName);
+            GameSession.Ensure().StartNewGame(s, cls, plumage, heroName, _difficulty);
             StartCoroutine(FadeAndLoad());
         }, null);
     }

@@ -49,7 +49,7 @@ public class GameSession : MonoBehaviour
     private Equipment _player;
     private float _playSeconds;
 
-    public void StartNewGame(int slot, CharacterClass cls, string plumageId, string heroName)
+    public void StartNewGame(int slot, CharacterClass cls, string plumageId, string heroName, int difficulty = (int)Difficulty.Level.Normal)
     {
         SetHero(cls, plumageId, heroName);
         NewGame();
@@ -60,7 +60,8 @@ public class GameSession : MonoBehaviour
             heroName = heroName,
             classId = cls != null ? cls.name : "",
             plumageId = plumageId,
-            lastBonfire = ""
+            lastBonfire = "",
+            difficulty = difficulty
         };
         _playSeconds = 0f;
         PendingRestore = false;

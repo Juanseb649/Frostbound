@@ -14,6 +14,8 @@ public class SaveData
 
     public int worldSeed;
     public string heroName = "";
+    // Dificultad elegida al crear el héroe (Difficulty.Level: 0 fácil, 1 normal, 2 difícil). Las partidas viejas, normal.
+    public int difficulty = 1;
     public string classId = "";
     public string plumageId = "";
 
