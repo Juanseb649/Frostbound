@@ -249,4 +249,36 @@ public static class VillageChecks
         string c = FrostboundBridge.CamShot("r_aereo", new Vector3(L.castle.Gate.x * 0.4f, 90f, L.castle.Gate.z * 0.4f - 50f), new Vector3(L.castle.Gate.x * 0.45f, 0f, L.castle.Gate.z * 0.45f + 10f), 60f);
         return a + " | " + b + " | " + c;
     }
+
+    // ---------- Rendimiento: apagar por partes para ver qué cuesta ----------
+
+    public static string AtmosphereOff()
+    {
+        var a = Object.FindAnyObjectByType<VillageAtmosphere>();
+        if (a == null) return "sin ambiente";
+        var v = a.GetComponent<UnityEngine.Rendering.Volume>();
+        if (v != null) v.enabled = false;
+        return "volumen del ambiente apagado";
+    }
+
+    public static string RoadOff()
+    {
+        GameObject r = GameObject.Find("Camino_Ciudadela");
+        if (r != null) r.SetActive(false);
+        return "camino apagado";
+    }
+
+    // Cuenta lo que dibuja la cámara: renderers visibles con el sombreador triplanar y en total.
+    public static string RenderStats()
+    {
+        int vis = 0, tri = 0, lights = 0;
+        foreach (Renderer r in Object.FindObjectsByType<Renderer>())
+        {
+            if (!r.isVisible) continue;
+            vis++;
+            if (r.sharedMaterial != null && r.sharedMaterial.shader.name == "Frostbound/WorldTriplanarLit") tri++;
+        }
+        foreach (Light l in Object.FindObjectsByType<Light>()) if (l.isActiveAndEnabled && l.type != LightType.Directional) lights++;
+        return "visibles=" + vis + " triplanar=" + tri + " luces puntuales activas=" + lights;
+    }
 }

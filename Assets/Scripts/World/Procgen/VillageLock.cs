@@ -168,6 +168,8 @@ public class VillageLock : MonoBehaviour
             ring.Add(p);
         }
         StakeLine(root, ring);
+        // Cientos de estacas que no se mueven: en lotes estáticos (las colisiones son cajas aparte).
+        StaticBatchingUtility.Combine(root.gameObject);
     }
 
     // Una fila de estacas con colisión continua entre cada par.

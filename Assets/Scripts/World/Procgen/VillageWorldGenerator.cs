@@ -111,6 +111,8 @@ public class VillageWorldGenerator : MonoBehaviour
         StartSkirmishes(root);
         SnowSurface.BuildDunes(root, VillageLayout.PlayableHalfSize + 12f, DuneMask, Seed, SnowSurface.For(1f, "Nieve del poblado (dunas)"));
 
+        VillageAtmosphere.Build(root);
+
         var map = new GameObject("Mapa").AddComponent<MapSystem>();
         map.transform.SetParent(transform, false);
         map.Setup(Layout);
@@ -387,6 +389,8 @@ public class VillageWorldGenerator : MonoBehaviour
             }
         }
 
+        // El decorado del camino no se mueve: en lotes estáticos (los campamentos se crean después, fuera del lote).
+        StaticBatchingUtility.Combine(t.gameObject);
         RoadEncounters(t);
     }
 
