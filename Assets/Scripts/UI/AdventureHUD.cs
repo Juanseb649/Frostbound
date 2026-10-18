@@ -153,7 +153,13 @@ public class AdventureHUD : MonoBehaviour
             {
                 Vector3 d = siege.transform.position - hero.position;
                 d.y = 0f;
-                detail = d.magnitude > 16f ? "A " + Mathf.RoundToInt(d.magnitude) + " m · sigue los mojones rojos" : "";
+                CitadelGate gate = CitadelGate.Instance;
+                if (gate != null && !CitadelGate.CitadelOpen)
+                {
+                    objective = "Derrota a los corruptos del camino de la Ciudadela Caída";
+                    detail = "Grupos derrotados: " + gate.Cleared + "/" + gate.Required + " · el hielo sella la ciudadela";
+                }
+                else detail = d.magnitude > 16f ? "A " + Mathf.RoundToInt(d.magnitude) + " m · sigue los mojones rojos" : "";
             }
             if (siege.Current == CitadelSiege.Phase.Waves) { objective = "Resiste el asedio en la plaza"; detail = "Oleada " + Mathf.Max(1, siege.Wave) + "/" + siege.WaveCount + " · quedan " + siege.Remaining; }
             else if (siege.Current == CitadelSiege.Phase.Boss) { objective = "Derrota a Gorvald, el bárbaro corrupto"; detail = "Cuidado: su hacha envenena"; }

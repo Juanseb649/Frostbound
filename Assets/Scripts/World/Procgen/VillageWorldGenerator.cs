@@ -392,6 +392,8 @@ public class VillageWorldGenerator : MonoBehaviour
         // El decorado del camino no se mueve: en lotes estáticos (los campamentos se crean después, fuera del lote).
         StaticBatchingUtility.Combine(t.gameObject);
         RoadEncounters(t);
+        // Encuentros obligatorios: hasta que caigan los grupos del camino, el hielo sella la ciudadela.
+        CitadelGate.Build(root, Layout, RoadCamps, castle.ice);
     }
 
     // Grupos de corruptos a un lado del camino (nunca encima): tramo inicial suave, intermedio y fuerte.
