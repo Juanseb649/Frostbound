@@ -65,7 +65,7 @@ public class StairsGenerator : MonoBehaviour
         _wood = MenuRuins.Lit("Madera del reino", new Color(0.45f, 0.3f, 0.2f), 0.1f);
         _roof = MenuRuins.Lit("Tejados del reino", new Color(0.32f, 0.42f, 0.62f), 0.15f);
         _window = MenuRuins.Lit("Ventanas encendidas", new Color(1f, 0.8f, 0.45f), 0.3f, 0f, new Color(2.2f, 1.5f, 0.6f));
-        _crystal = MenuRuins.Lit("Cristal del Frost", new Color(0.32f, 0.62f, 0.95f), 0.9f, 0f, new Color(0.25f, 0.7f, 1.6f));
+        _crystal = QuartzMaterial.Get();
     }
 
     // ---------- Terrazas ----------

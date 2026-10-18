@@ -173,7 +173,7 @@ public class MountainGenerator : MonoBehaviour
         _path = MenuRuins.Lit("Sendero pisado", new Color(0.74f, 0.79f, 0.86f), 0.12f);
         _rock = MenuRuins.Lit("Roca de la montaña", new Color(0.33f, 0.37f, 0.45f), 0.15f);
         _stone = stoneMaterial != null ? stoneMaterial : MenuRuins.Lit("Piedra", new Color(0.5f, 0.52f, 0.56f), 0.1f);
-        _crystal = MenuRuins.Lit("Cristal del Frost", new Color(0.32f, 0.62f, 0.95f, 1f), 0.9f, 0f, new Color(0.25f, 0.7f, 1.6f));
+        _crystal = QuartzMaterial.Get();
         _clothRed = MenuRuins.Lit("Banderín rojo", new Color(0.62f, 0.16f, 0.18f), 0.1f);
         _clothBlue = MenuRuins.Lit("Banderín azul", new Color(0.18f, 0.32f, 0.62f), 0.1f);
         _clothRed.SetFloat("_Cull", 0f);

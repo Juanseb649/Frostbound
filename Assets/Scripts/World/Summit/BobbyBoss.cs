@@ -75,7 +75,7 @@ public class BobbyBoss : MonoBehaviour
 
     private void Spike(Vector3 at)
     {
-        if (_crystal == null) _crystal = MenuRuins.Lit("Cristal del Frost", new Color(0.32f, 0.62f, 0.95f), 0.9f, 0f, new Color(0.25f, 0.7f, 1.6f));
+        if (_crystal == null) _crystal = QuartzMaterial.Get();
         var go = new GameObject("Lanza_Escarcha");
         go.transform.position = at;
         var spike = new GameObject("Pincho");
@@ -124,7 +124,7 @@ public class BobbyBoss : MonoBehaviour
     // Medio cristal: esquirlas en la espalda y en un brazo.
     private void Crystals()
     {
-        if (_crystal == null) _crystal = MenuRuins.Lit("Cristal del Frost", new Color(0.32f, 0.62f, 0.95f), 0.9f, 0f, new Color(0.25f, 0.7f, 1.6f));
+        if (_crystal == null) _crystal = QuartzMaterial.Get();
         PenguinRigAnimator rig = GetComponentInChildren<PenguinRigAnimator>();
         Transform anchor = rig != null ? rig.transform : transform;
         Mesh octa = MenuRuins.Octahedron();

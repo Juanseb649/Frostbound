@@ -52,7 +52,7 @@ public class SummitCreature : MonoBehaviour
     // Cristales que brotan de la espalda.
     private void Shards(int count)
     {
-        if (_crystal == null) _crystal = MenuRuins.Lit("Cristal del Frost", new Color(0.32f, 0.62f, 0.95f), 0.9f, 0f, new Color(0.25f, 0.7f, 1.6f));
+        if (_crystal == null) _crystal = QuartzMaterial.Get();
         PenguinRigAnimator rig = GetComponentInChildren<PenguinRigAnimator>();
         Transform anchor = rig != null ? rig.transform : transform;
         Transform spine = null;

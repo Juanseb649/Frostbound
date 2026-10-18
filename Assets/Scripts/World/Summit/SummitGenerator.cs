@@ -147,7 +147,7 @@ public class SummitGenerator : MonoBehaviour
         _path = MenuRuins.Lit("Hielo pisado", new Color(0.7f, 0.8f, 0.92f), 0.4f);
         _ice = MenuRuins.Lit("Pared de hielo", new Color(0.42f, 0.62f, 0.85f), 0.85f);
         _iceDeep = MenuRuins.Lit("Hielo profundo", new Color(0.25f, 0.42f, 0.72f), 0.9f, 0f, new Color(0.03f, 0.08f, 0.18f));
-        _crystal = MenuRuins.Lit("Cristal del Frost", new Color(0.32f, 0.62f, 0.95f), 0.9f, 0f, new Color(0.25f, 0.7f, 1.6f));
+        _crystal = QuartzMaterial.Get();
         _stone = stoneMaterial != null ? stoneMaterial : MenuRuins.Lit("Piedra", new Color(0.5f, 0.52f, 0.58f), 0.1f);
         _rune = MenuRuins.Lit("Runa del sello", new Color(0.5f, 0.75f, 1f), 0.6f, 0f, new Color(0.4f, 1f, 2.4f));
         _fire = MenuRuins.Lit("Fuego azul", new Color(0.55f, 0.85f, 1f), 0.4f, 0f, new Color(0.8f, 1.8f, 3f));
