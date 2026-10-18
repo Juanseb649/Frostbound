@@ -64,4 +64,33 @@ public static class SummitChecks
         if (f != null) { cam.transform.position = at + f.offset; cam.transform.LookAt(at + Vector3.up * f.lookHeight); }
         return "héroe en " + at.ToString("0");
     }
+
+    // Cristalizado (resiste lo físico, débil al fuego) e Hijo del Frost (se parte en dos al morir).
+    public static string Bestiary()
+    {
+        EnemyCamp camp = Object.FindAnyObjectByType<EnemyCamp>();
+        GameObject p = Players.PrimaryObject;
+        GameDatabase db = GameDatabase.Instance;
+        if (camp == null || p == null || db == null) return "sin campamento o héroe";
+        var sb = new StringBuilder();
+        EnemyDefinition crys = db.FindEnemy(SummitCreature.CrystallizedId), spawn = db.FindEnemy(SummitCreature.FrostSpawnId);
+        if (crys == null || spawn == null) return "faltan definiciones";
+        EnemyBrain c = camp.SpawnMember(crys, p.transform.position + p.transform.forward * 6f - p.transform.right * 2f, 15, Color.gray);
+        EnemyBrain h = camp.SpawnMember(spawn, p.transform.position + p.transform.forward * 6f + p.transform.right * 2f, 15, Color.gray);
+        Damageable cd = c.GetComponent<Damageable>();
+        float h0 = cd.Health;
+        cd.TakeHit(new DamageInfo { amount = 100f, type = DamageType.Physical, source = p });
+        float physical = h0 - cd.Health;
+        h0 = cd.Health;
+        cd.TakeHit(new DamageInfo { amount = 100f, type = DamageType.Fire, source = p });
+        float fire = h0 - cd.Health;
+        sb.Append("cristalizado: 100 físico→").Append(physical.ToString("0")).Append(" 100 fuego→").Append(fire.ToString("0"));
+        int before = camp.Members.Count;
+        h.GetComponent<Damageable>().TakeHit(new DamageInfo { amount = 99999f, type = DamageType.Physical, source = p });
+        sb.Append(" | hijo del Frost muerto: miembros ").Append(before).Append("→").Append(camp.Members.Count);
+        int shards = 0;
+        foreach (EnemyBrain b in camp.Members) if (b != null && b.definition != null && b.definition.id == SummitCreature.ShardId) shards++;
+        sb.Append(" esquirlas=").Append(shards);
+        return sb.ToString();
+    }
 }

@@ -155,6 +155,7 @@ public class EnemyBrain : MonoBehaviour
             if (tag != null) tag.displayName = "Campeón " + def.displayName.ToLowerInvariant();
         }
         ForestCreature.Attach(this, def);
+        SummitCreature.Attach(this, def);
     }
 
     // Arquero corrupto: el arco y la flecha del equipo se cambian por un arco de verdad en la aleta,

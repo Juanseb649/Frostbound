@@ -1,7 +1,8 @@
 using UnityEditor;
 using UnityEngine;
 
-// Corruptos del Bosque (capítulo II): leñador (del vikingo), escupesavia (del mago) y acechador (del ninja).
+// Corruptos del Bosque (capítulo II): leñador (del vikingo), escupesavia (del mago) y acechador (del ninja);
+// y de la Cumbre (capítulo III): cristalizado (del caballero) e hijo del Frost (del vikingo).
 // Crea o actualiza sus EnemyDefinition en Assets/Data/Enemies y los añade al GameDatabase. Se puede ejecutar varias veces.
 public static class SetupForestEnemies
 {
@@ -36,11 +37,27 @@ public static class SetupForestEnemies
             def.hitsPerAttack = 1; def.sightRange = 12f; def.lootPicks = 1;
         });
 
-        foreach (EnemyDefinition d in new[] { wood, spit, stalk })
+        // Cumbre (capítulo III).
+        EnemyDefinition crys = Make(SummitCreature.CrystallizedId, "Corrupt_Knight", "Cristalizado", def =>
+        {
+            def.maxHealth = 130f; def.damage = new Vector2(7f, 10f); def.moveSpeed = 2.9f; def.experience = 30;
+            def.ranged = false; def.attackRange = 1.8f; def.areaRadius = 0f; def.windup = 0.6f; def.cooldown = 1.9f;
+            def.hitsPerAttack = 1; def.sightRange = 11f; def.lootPicks = 1;
+        });
+        EnemyDefinition spawn = Make(SummitCreature.FrostSpawnId, "Corrupt_Viking", "Hijo del Frost", def =>
+        {
+            def.elite = true;
+            def.maxHealth = 170f; def.damage = new Vector2(9f, 13f); def.moveSpeed = 3.3f; def.experience = 48;
+            def.ranged = false; def.attackRange = 2.2f; def.areaRadius = 2.4f; def.windup = 0.8f; def.cooldown = 2.4f;
+            def.hitsPerAttack = 1; def.sightRange = 12f; def.lootPicks = 2;
+        });
+
+        foreach (EnemyDefinition d in new[] { wood, spit, stalk, crys, spawn })
             if (d != null && !db.enemies.Contains(d)) db.enemies.Add(d);
         EditorUtility.SetDirty(db);
         AssetDatabase.SaveAssets();
-        return "enemigos del bosque: " + (wood != null) + "/" + (spit != null) + "/" + (stalk != null) + " · base de datos=" + db.enemies.Count;
+        return "enemigos del bosque: " + (wood != null) + "/" + (spit != null) + "/" + (stalk != null)
+            + " · cumbre: " + (crys != null) + "/" + (spawn != null) + " · base de datos=" + db.enemies.Count;
     }
 
     private static EnemyDefinition Make(string id, string fromId, string displayName, System.Action<EnemyDefinition> tune)
@@ -60,7 +77,7 @@ public static class SetupForestEnemies
         def.displayName = displayName;
         def.prefab = from.prefab;
         def.gear = from.gear;
-        def.elite = false;
+        def.elite = false;   // el hijo del Frost lo vuelve a marcar en su ajuste
         def.projectileMaterial = from.projectileMaterial;
         tune(def);
         EditorUtility.SetDirty(def);
