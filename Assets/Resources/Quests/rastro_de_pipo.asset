@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ab13e3148463ba40aac3b2106f78791, type: 3}
+  m_Name: rastro_de_pipo
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
+  id: rastro_de_pipo
+  title: El rastro de Pipo
+  chapter: 2
+  order: 1
+  giver: 
+  speaker: steve
+  requiresQuest: ascenso_frostspire
+  requiresStage: 4
+  offerLines: []
+  stages:
+  - objective: Cruza el Camino del Bosque Corrupto
+    type: 2
+    target: bosque_entrada
+    count: 1
+    giverLines:
+    - "Pasada la Escalinata est\xE1 el camino del bosque. Los pinos negros no dejan
+      ver el cielo."
+    - "Pipo es peque\xF1o y curioso: si pas\xF3 por ah\xED, habr\xE1 dejado huellas."
+    onReach: 
+  - objective: Sigue el rastro de Pipo por el bosque
+    type: 6
+    target: pista
+    count: 3
+    giverLines:
+    - Huellas, una bufanda, dibujos en la nieve... Pipo sabe que alguien lo busca.
+    - No te separes del rastro. El bosque cambia de sitio cuando no lo miras.
+    onReach: Has llegado al Bosque Corrupto
+  - objective: 
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "Si las pistas se hunden en la savia, Pipo est\xE1 en el coraz\xF3n del bosque."
+    onReach: 
+  experience: 300
+  coins: 120

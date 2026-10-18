@@ -135,7 +135,7 @@ public class AdventureHUD : MonoBehaviour
         string objective = QuestLog.Objective(quest, stage);
         _questTitle.text = QuestLog.Title(quest);
         CitadelSiege siege = CitadelSiege.Instance;
-        string detail = "";
+        string detail = QuestLog.Detail(quest);
         if (quest == QuestLog.Citadel && stage == QuestLog.CitadelTalked && siege != null)
         {
             if (siege.Current == CitadelSiege.Phase.Waves) { objective = "Resiste el asedio en la plaza"; detail = "Oleada " + Mathf.Max(1, siege.Wave) + "/" + siege.WaveCount + " · quedan " + siege.Remaining; }

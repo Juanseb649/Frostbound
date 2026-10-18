@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ab13e3148463ba40aac3b2106f78791, type: 3}
+  m_Name: epilogo
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
+  id: epilogo
+  title: De vuelta a casa
+  chapter: 3
+  order: 3
+  giver: 
+  speaker: steve
+  requiresQuest: el_sello
+  requiresStage: 5
+  offerLines: []
+  stages:
+  - objective: Vuelve al poblado y habla con Steve
+    type: 1
+    target: steve
+    count: 1
+    giverLines:
+    - "Te est\xE1bamos esperando, h\xE9roe."
+    onReach: El sello vuelve a estar en pie
+  - objective: 
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "Pipo no para de contar tu historia. Bobby se qued\xF3 a ayudar a reconstruir
+      la ciudadela."
+    - "Gracias, h\xE9roe. La monta\xF1a ya no late. Descansa: te lo has ganado."
+    onReach: 
+  experience: 0
+  coins: 0

@@ -610,6 +610,9 @@ public class EnemyBrain : MonoBehaviour
                 if (b != this && (b.transform.position - transform.position).sqrMagnitude < 36f) b.Frenzy();
 
         Killed?.Invoke(this);
+        QuestLog.Report(QuestObjective.Matar, definition.id);
+        BossController bossCtl = GetComponent<BossController>();
+        if (bossCtl != null) QuestLog.Report(QuestObjective.Jefe, bossCtl.title);
         if (GetComponent<BossController>() == null) Corpses.Add(new Corpse { def = definition, level = Level, position = transform.position, plumage = _plumage, camp = Camp, time = Time.time, body = gameObject });
         Vector3 center = transform.position + Vector3.up * 0.6f;
         EnemyLoot.Drop(this, center);

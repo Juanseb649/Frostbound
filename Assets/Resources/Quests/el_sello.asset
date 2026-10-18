@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ab13e3148463ba40aac3b2106f78791, type: 3}
+  m_Name: el_sello
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
+  id: el_sello
+  title: El sello
+  chapter: 3
+  order: 2
+  giver: 
+  speaker: steve
+  requiresQuest: el_ascenso_final
+  requiresStage: 3
+  offerLines: []
+  stages:
+  - objective: "Entra a la c\xE1mara del sello"
+    type: 2
+    target: camara_sello
+    count: 1
+    giverLines:
+    - "Bobby estar\xE1 donde estaba el sello. No dejes que te hable mucho rato."
+    onReach: 
+  - objective: "Det\xE9n a Bobby"
+    type: 4
+    target: Bobby
+    count: 1
+    giverLines:
+    - "Bobby no es malo. Algo habla por \xE9l. Si puedes, no lo mates."
+    onReach: 
+  - objective: "Destruye el Coraz\xF3n del Frost"
+    type: 4
+    target: "Coraz\xF3n del Frost"
+    count: 1
+    giverLines:
+    - "Lo que late bajo la monta\xF1a est\xE1 despierto. Rompe lo que lo alimenta."
+    onReach: "Bobby se rinde... y el Coraz\xF3n despierta"
+  - objective: Rehaz el sello con Bobby
+    type: 6
+    target: sello
+    count: 1
+    giverLines:
+    - 'Los fragmentos de Gorvald, el ninja y Rocco: con ellos se hizo el sello la
+      primera vez.'
+    onReach: "El Coraz\xF3n del Frost se apaga"
+  - objective: 
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - El sello aguanta. La ventisca para por primera vez en lunas.
+    onReach: 
+  experience: 1500
+  coins: 800

@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ab13e3148463ba40aac3b2106f78791, type: 3}
+  m_Name: el_ascenso_final
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
+  id: el_ascenso_final
+  title: La cumbre
+  chapter: 3
+  order: 1
+  giver: 
+  speaker: steve
+  requiresQuest: la_madre_savia
+  requiresStage: 5
+  offerLines: []
+  stages:
+  - objective: Sube a la cumbre del Frostspire
+    type: 2
+    target: cumbre_entrada
+    count: 1
+    giverLines:
+    - "La cumbre se alcanza por las grietas de hielo detr\xE1s del bosque. Abr\xEDgate."
+    onReach: 
+  - objective: Enciende los tres altares del sello
+    type: 6
+    target: altar
+    count: 3
+    giverLines:
+    - "Los antiguos encend\xEDan tres altares para que el sello aguantara. Enci\xE9ndelos
+      y ver\xE1s el camino."
+    onReach: Has llegado a la cumbre del Frostspire
+  - objective: 
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "Los altares arden. La c\xE1mara del sello est\xE1 abierta."
+    onReach: 
+  experience: 700
+  coins: 300

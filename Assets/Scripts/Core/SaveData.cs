@@ -72,6 +72,7 @@ public class SavedQuest
 {
     public string id = "";
     public int stage;
+    public int progress;   // Cuánto lleva del objetivo de la etapa (enemigos, pistas...).
 }
 
 // Niebla de guerra de un mapa: bits de las celdas exploradas, en base64.
