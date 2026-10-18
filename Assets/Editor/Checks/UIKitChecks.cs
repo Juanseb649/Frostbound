@@ -91,7 +91,7 @@ public static class UIKitChecks
         }
         var vela = m.transform.Find("Mansion_Vela");
         string candle = vela != null ? vela.GetComponent<Renderer>().bounds.center.ToString("F1") : "-";
-        return "renderers=" + renderers + " min=" + b.min.ToString("F1") + " max=" + b.max.ToString("F1") + " vela=" + candle + " (esperado ≈ 9.4, 5.6, 16.4)";
+        return "renderers=" + renderers + " min=" + b.min.ToString("F1") + " max=" + b.max.ToString("F1") + " vela=" + candle + " (esperado ≈ 6.8, 4.1, 15.3 con la casa a escala " + HauntedManor.ManorScale + ")";
     }
 
     // Guarda la textura de marcos en FrostboundBridge/ui_atlas.png y resume el alfa de la placa.
@@ -104,4 +104,59 @@ public static class UIKitChecks
         Color center = tex.GetPixel((int)r.center.x, (int)r.center.y);
         return file + " placa_centro=" + center;
     }
+
+    // Cordillera del menú: cuántos picos se ven en la cámara y cuántos asoman por encima del tejado de la casa.
+    public static string MountainsVisible()
+    {
+        Camera cam = Camera.main;
+        GameObject house = GameObject.Find("Mansión_Escala");
+        GameObject range = GameObject.Find("Cordillera");
+        if (cam == null || house == null || range == null) return "falta cámara, casa o cordillera";
+        Bounds b = default;
+        bool first = true;
+        foreach (Renderer r in house.GetComponentsInChildren<Renderer>())
+        {
+            if (first) { b = r.bounds; first = false; } else b.Encapsulate(r.bounds);
+        }
+        float roof = cam.WorldToViewportPoint(new Vector3(b.center.x, b.max.y, b.center.z)).y;
+        int seen = 0, above = 0, total = 0;
+        foreach (Renderer r in range.GetComponentsInChildren<Renderer>())
+        {
+            total++;
+            Vector3 top = cam.WorldToViewportPoint(new Vector3(r.bounds.center.x, r.bounds.max.y, r.bounds.center.z));
+            if (top.z <= 0f || top.x < 0f || top.x > 1f || top.y > 1f) continue;
+            seen++;
+            if (top.y > roof) above++;
+        }
+        return "picos=" + total + " en cámara=" + seen + " por encima del tejado=" + above + " tejado a " + Mathf.RoundToInt(roof * 100f) + "% de la altura";
+    }
+
+    // Renderiza solo la escena 3D (sin la UI) a otra proporción: FrostboundBridge/<nombre>.png.
+    public static string WideShot(string name, int w, int h)
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return "sin cámara";
+        var rt = new RenderTexture(w, h, 24);
+        RenderTexture prev = cam.targetTexture;
+        float aspect = cam.aspect;
+        cam.targetTexture = rt;
+        cam.aspect = w / (float)h;
+        cam.Render();
+        RenderTexture.active = rt;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        tex.Apply();
+        RenderTexture.active = null;
+        cam.targetTexture = prev;
+        cam.aspect = aspect;
+        cam.ResetAspect();
+        string file = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "FrostboundBridge", name + ".png");
+        File.WriteAllBytes(file, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+        rt.Release();
+        return file;
+    }
+
+    public static string Wide21x9() => WideShot("mt_21x9", 1920, 822);
+    public static string Wide32x9() => WideShot("mt_32x9", 1920, 540);
 }

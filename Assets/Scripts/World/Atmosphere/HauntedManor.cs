@@ -20,6 +20,11 @@ public class HauntedManor : MonoBehaviour
     public static readonly Vector3 HeroCamLook = new Vector3(0.2f, 1.3f, 8f);
     public const float HeroFov = 34f;
 
+    // La casa se encoge sin deformarse (escala uniforme) anclada al pie de la fachada: el porche, el portón y el camino
+    // no se mueven y por encima del tejado queda cielo para la cordillera del fondo.
+    public const float ManorScale = 0.72f;
+    public static readonly Vector3 ManorAnchor = new Vector3(0f, 0f, 12.4f);
+
     private const float FogDensity = 0.017f;
     private static readonly Color FlashFog = new Color(0.12f, 0.26f, 0.48f);
     private static readonly Color FlashMist = new Color(0.45f, 0.75f, 1f, 0.24f);
@@ -27,7 +32,8 @@ public class HauntedManor : MonoBehaviour
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private static Mesh _cube, _cyl, _sphere, _prism, _cone;
 
-    private MeshKit _kit;
+    private MeshKit _kit, _manorKit;
+    private Transform _manorPivot;
     private Material _stone, _stoneDark, _trim, _roof, _wood, _bark, _path, _snow, _iron, _ice, _crystal, _winDark, _winCandle, _lamp, _moon, _mistMat;
     private readonly Material[] _winFrost = new Material[3];
     private readonly Color[] _winFrostBase = new Color[3];
@@ -90,15 +96,24 @@ public class HauntedManor : MonoBehaviour
         Meshes();
         Materials();
         _kit = new MeshKit(transform, _cone, _prism, _stone);
+        _manorPivot = new GameObject("Mansión_Escala").transform;
+        _manorPivot.SetParent(transform, false);
+        _manorPivot.localScale = Vector3.one * ManorScale;
+        _manorPivot.localPosition = ManorAnchor * (1f - ManorScale);
+        _manorKit = new MeshKit(_manorPivot, _cone, _prism, _stone);
         Ground();
         // Fase 2: la mansión modelada en Blender (Resources/Models/Mansion). Sin ella, la de primitivas.
         GameObject model = Resources.Load<GameObject>("Models/Mansion");
         if (model != null) PlaceModel(model);
         else
         {
+            // La de primitivas también va dentro del pivote de la casa.
+            MeshKit main = _kit;
+            _kit = _manorKit;
             Manor();
             Porch();
             Windows();
+            _kit = main;
         }
         Corruption();
         FenceAndGate();
@@ -106,9 +121,11 @@ public class HauntedManor : MonoBehaviour
         Graveyard();
         Trees();
         Lantern();
-        Backdrop();
+        Cordillera();
         _kit.Combine("Mansión");
-        ProjectSurfaceUVs();
+        _manorKit.Combine("Casa");
+        ProjectSurfaceUVs(_kit);
+        ProjectSurfaceUVs(_manorKit);
         Moon();
         Curtain();
         Lights();
@@ -173,9 +190,9 @@ public class HauntedManor : MonoBehaviour
     }
 
     // Las mallas combinadas con textura reciben UVs proyectadas en el mundo.
-    private void ProjectSurfaceUVs()
+    private void ProjectSurfaceUVs(MeshKit kit)
     {
-        foreach (MeshFilter mf in _kit.visual.GetComponentsInChildren<MeshFilter>())
+        foreach (MeshFilter mf in kit.visual.GetComponentsInChildren<MeshFilter>())
         {
             float meters = TilingOf(mf.GetComponent<MeshRenderer>().sharedMaterial);
             if (meters > 0f) ProceduralSurfaces.ProjectUVs(mf.sharedMesh, meters);
@@ -186,7 +203,7 @@ public class HauntedManor : MonoBehaviour
     // por el de la escena, y una copia propia de la malla con UVs proyectadas como el resto del decorado.
     private void PlaceModel(GameObject prefab)
     {
-        GameObject go = Instantiate(prefab, transform, false);
+        GameObject go = Instantiate(prefab, _manorPivot, false);
         go.name = "Mansión modelada";
         foreach (MeshRenderer mr in go.GetComponentsInChildren<MeshRenderer>())
         {
@@ -423,7 +440,8 @@ public class HauntedManor : MonoBehaviour
             float h = R(0.5f, 1.3f) * size;
             Vector3 dir = (normal + new Vector3(R(-0.6f, 0.6f), R(-0.6f, 0.6f), R(-0.6f, 0.6f))).normalized;
             Vector3 jitter = Vector3.ProjectOnPlane(new Vector3(R(-0.4f, 0.4f), R(-0.4f, 0.4f), R(-0.4f, 0.4f)), normal) * size;
-            _kit.Mesh(MenuRuins.Octahedron(), p + jitter + dir * h * 0.25f, Quaternion.FromToRotation(Vector3.up, dir).eulerAngles,
+            MeshKit kit = p.z >= ManorAnchor.z - 0.5f ? _manorKit : _kit;
+            kit.Mesh(MenuRuins.Octahedron(), p + jitter + dir * h * 0.25f, Quaternion.FromToRotation(Vector3.up, dir).eulerAngles,
                 new Vector3(h * 0.28f, h, h * 0.28f), _crystal);
         }
     }
@@ -434,7 +452,7 @@ public class HauntedManor : MonoBehaviour
         for (float d = R(0.1f, 0.3f); d < len; d += R(0.22f, 0.5f))
         {
             float l = R(0.2f, 1.1f);
-            _kit.Mesh(MenuRuins.Octahedron(), Vector3.Lerp(a, b, d / len) + Vector3.down * l * 0.42f, new Vector3(0f, R(0f, 90f), 0f), new Vector3(0.11f, l, 0.11f), _ice);
+            _manorKit.Mesh(MenuRuins.Octahedron(), Vector3.Lerp(a, b, d / len) + Vector3.down * l * 0.42f, new Vector3(0f, R(0f, 90f), 0f), new Vector3(0.11f, l, 0.11f), _ice);
         }
     }
 
@@ -593,13 +611,67 @@ public class HauntedManor : MonoBehaviour
         PointLight("Luz del farol", lamp + new Vector3(0f, -0.05f, -0.05f), new Color(1f, 0.68f, 0.38f), 7f, 3.2f, true);
     }
 
-    // Montañas en la niebla y la silueta del Frostspire con su punta de cristal.
-    private void Backdrop()
+    // Cordillera nevada detrás de la mansión, en dos capas (media y lejana) y con el Frostspire y su punta de cristal.
+    // Va con su propio sombreador (Resources/Shaders/MountainBackdrop): la niebla del menú la borraría a esta
+    // distancia. No se combina ni proyecta sombras.
+    private void Cordillera()
     {
-        _kit.Cone(new Vector3(20f, -1f, 88f), 38f, 46f, _stoneDark, new Vector3(0f, 10f, 0f));
-        _kit.Cone(new Vector3(-6f, -1f, 100f), 50f, 30f, _stoneDark);
-        _kit.Cone(new Vector3(38f, -1f, 95f), 34f, 26f, _stoneDark);
-        _kit.Mesh(MenuRuins.Octahedron(), new Vector3(20f, 47f, 88f), Vector3.zero, new Vector3(3f, 14f, 3f), _crystal);
+        var root = new GameObject("Cordillera").transform;
+        root.SetParent(transform, false);
+        Shader sh = Resources.Load<Shader>("Shaders/MountainBackdrop");
+        if (sh == null) return;
+        Material near = new Material(sh) { name = "Cordillera media" };
+        near.SetFloat("_Haze", 0.18f);
+        near.SetFloat("_Top", 55f);
+        Material far = new Material(sh) { name = "Cordillera lejana" };
+        far.SetFloat("_Haze", 0.38f);
+        far.SetFloat("_Top", 80f);
+        far.SetColor("_Snow", new Color(0.72f, 0.8f, 0.96f));
+
+        var rng = new System.Random(4207);
+        float Rr(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+        // Capa lejana: picos altos y anchos, repartidos de lado a lado (también para 21:9 y 32:9).
+        int seed = 0;
+        for (float x = -260f; x <= 260f; x += Rr(26f, 40f))
+            Peak(root, new Vector3(x, -2f, Rr(195f, 230f)), Rr(48f, 72f), Rr(1.4f, 1.9f), far, seed++);
+        // Capa media: más bajos y más cerca, sin tapar el centro (detrás de la casa queda la capa lejana y el Frostspire).
+        for (float x = -230f; x <= 230f; x += Rr(22f, 34f))
+        {
+            if (Mathf.Abs(x) < 18f) continue;
+            Peak(root, new Vector3(x, -2f, Rr(130f, 160f)), Rr(26f, 42f), Rr(1.5f, 2.1f), near, seed++);
+        }
+        // El Frostspire: a la derecha detrás de la casa (sin quedar tapado por el logo), con su punta de cristal.
+        const float spireHeight = 62f;
+        Vector3 spire = new Vector3(45f, -2f, 185f);
+        Peak(root, spire, spireHeight, 1.1f, far, 99);
+        Material tip = new Material(sh) { name = "Punta del Frostspire" };
+        tip.SetColor("_Snow", new Color(0.35f, 0.6f, 1f));
+        tip.SetColor("_Rock", new Color(0.25f, 0.45f, 0.9f));
+        tip.SetColor("_Emission", new Color(0.25f, 0.55f, 1.4f));
+        tip.SetFloat("_Haze", 0.15f);
+        tip.SetFloat("_Top", 120f);
+        var crystal = new GameObject("Punta de cristal", typeof(MeshFilter), typeof(MeshRenderer));
+        crystal.transform.SetParent(root, false);
+        crystal.transform.localPosition = spire + new Vector3(0f, spireHeight * 1.04f + 5f, 0f);
+        crystal.transform.localScale = new Vector3(3.5f, 13f, 3.5f);
+        crystal.GetComponent<MeshFilter>().sharedMesh = MenuRuins.Octahedron();
+        var cr = crystal.GetComponent<MeshRenderer>();
+        cr.sharedMaterial = tip;
+        cr.shadowCastingMode = ShadowCastingMode.Off;
+    }
+
+    private void Peak(Transform parent, Vector3 basePos, float height, float widthRatio, Material mat, int seed)
+    {
+        var go = new GameObject("Pico", typeof(MeshFilter), typeof(MeshRenderer));
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = basePos;
+        go.transform.localRotation = Quaternion.Euler(0f, seed * 47f, 0f);
+        go.transform.localScale = new Vector3(height * widthRatio, height, height * widthRatio);
+        go.GetComponent<MeshFilter>().sharedMesh = MountainMeshes.Peak(SeedUtil.Combine(1931, seed));
+        var mr = go.GetComponent<MeshRenderer>();
+        mr.sharedMaterial = mat;
+        mr.shadowCastingMode = ShadowCastingMode.Off;
+        mr.receiveShadows = false;
     }
 
     // ---------- Piezas sueltas (no se combinan) ----------
@@ -621,7 +693,7 @@ public class HauntedManor : MonoBehaviour
     private void Curtain()
     {
         var pivot = new GameObject("Cortina").transform;
-        pivot.SetParent(transform, false);
+        pivot.SetParent(_manorPivot, false);
         pivot.localPosition = new Vector3(9.15f, 6.15f, 16.5f - 0.145f);
         var cloth = new GameObject("Tela", typeof(MeshFilter), typeof(MeshRenderer));
         cloth.transform.SetParent(pivot, false);
@@ -637,23 +709,24 @@ public class HauntedManor : MonoBehaviour
     // Luces: con la luna y el relleno de NightFrostAtmosphere suman 8; solo la luna proyecta sombras.
     private void Lights()
     {
-        PointLight("Luz de la vela", new Vector3(9.4f, 5.2f, 15.8f), new Color(1f, 0.66f, 0.36f), 5.5f, 2.2f, true);
-        FrostLight(new Vector3(-3.4f, 5.2f, 13.2f), 9f, 2.2f);
-        FrostLight(new Vector3(3.2f, 9.5f, 14.5f), 10f, 2.4f);
-        FrostLight(new Vector3(-8.6f, 3.6f, 14.6f), 8f, 1.8f);
+        // Las de la casa se encogen con ella (posición y alcance).
+        PointLight("Luz de la vela", new Vector3(9.4f, 5.2f, 15.8f), new Color(1f, 0.66f, 0.36f), 5.5f * ManorScale, 2.2f, true, _manorPivot);
+        FrostLight(new Vector3(-3.4f, 5.2f, 13.2f), 9f * ManorScale, 2.2f, _manorPivot);
+        FrostLight(new Vector3(3.2f, 9.5f, 14.5f), 10f * ManorScale, 2.4f, _manorPivot);
+        FrostLight(new Vector3(-8.6f, 3.6f, 14.6f), 8f * ManorScale, 1.8f, _manorPivot);
         FrostLight(new Vector3(1.2f, 1.2f, 6f), 7f, 1.6f);
     }
 
-    private void FrostLight(Vector3 p, float range, float intensity)
+    private void FrostLight(Vector3 p, float range, float intensity, Transform parent = null)
     {
-        _frostLights.Add(PointLight("Luz del Frost", p, new Color(0.35f, 0.6f, 1f), range, intensity, false));
+        _frostLights.Add(PointLight("Luz del Frost", p, new Color(0.35f, 0.6f, 1f), range, intensity, false, parent));
         _frostLightBase.Add(intensity);
     }
 
-    private Light PointLight(string name, Vector3 local, Color color, float range, float intensity, bool flicker)
+    private Light PointLight(string name, Vector3 local, Color color, float range, float intensity, bool flicker, Transform parent = null)
     {
         var go = new GameObject(name);
-        go.transform.SetParent(transform, false);
+        go.transform.SetParent(parent != null ? parent : transform, false);
         go.transform.localPosition = local;
         Light l = go.AddComponent<Light>();
         l.type = LightType.Point;
