@@ -80,6 +80,8 @@ public static class VillageLayout
         public readonly List<Spot> pines = new List<Spot>();
         public readonly List<Spot> mounds = new List<Spot>();
         public readonly List<Spot> border = new List<Spot>();
+        // Camino de la Ciudadela Caída: de la calle del norte a la puerta del poblado en ruinas (un punto cada 2 m).
+        public readonly List<Vector3> citadelRoad = new List<Vector3>();
     }
 
     public const float WallRadius = 32f;
@@ -110,6 +112,7 @@ public static class VillageLayout
         var r = new Result();
         PlaceCastle(r, Stream(seed, "castillo"));
         PlaceTown(r, Stream(seed, "ciudadela"));
+        PlaceCitadelRoad(r);
         PlaceCamps(r, Stream(seed, "campamentos"), campAnchors);
         PlaceBonfires(r, Stream(seed, "hogueras"));
         PlacePines(r, Stream(seed, "bosque"));
@@ -223,6 +226,73 @@ public static class VillageLayout
         r.town = t;
     }
 
+    // ---------- Camino de la Ciudadela Caída ----------
+
+    public const float CitadelRoadHalfWidth = 3f;
+    // Pasillo libre a cada lado del camino (sin pinos, montones ni hogueras) para que se vea el castillo al fondo.
+    public const float CitadelRoadClearance = 7f;
+    public const float CitadelRoadStartZ = 55f;
+
+    // El camino de la partida actual (lo usan OnRoad y los generadores; se rehace con cada seed).
+    private static readonly List<Vector3> _citadelRoad = new List<Vector3>();
+    private static Vector2 _roadMin, _roadMax;
+    public static IReadOnlyList<Vector3> CitadelRoad => _citadelRoad;
+
+    // Sale de la calle del norte, pasada la puerta, y se abre en curva hacia la puerta del poblado en ruinas.
+    private static void PlaceCitadelRoad(Result r)
+    {
+        Vector3 start = new Vector3(0f, 0f, CitadelRoadStartZ);
+        Vector3 gate = r.castle.Gate;
+        Vector3 toVillage = new Vector3(-gate.x, 0f, -gate.z).normalized;
+        Vector3 end = new Vector3(gate.x, 0f, gate.z) + toVillage * 7f;
+        // Control: primero sigue un poco hacia el norte y luego gira hacia el castillo.
+        Vector3 ctrl = new Vector3(end.x * 0.35f, 0f, Mathf.Max(start.z, end.z) + 22f);
+        float approx = Vector3.Distance(start, ctrl) + Vector3.Distance(ctrl, end);
+        int n = Mathf.Max(8, Mathf.CeilToInt(approx / 2f));
+        for (int i = 0; i <= n; i++)
+        {
+            float t = i / (float)n;
+            r.citadelRoad.Add(Vector3.Lerp(Vector3.Lerp(start, ctrl, t), Vector3.Lerp(ctrl, end, t), t));
+        }
+        _citadelRoad.Clear();
+        _citadelRoad.AddRange(r.citadelRoad);
+        _roadMin = new Vector2(float.MaxValue, float.MaxValue);
+        _roadMax = new Vector2(float.MinValue, float.MinValue);
+        foreach (Vector3 q in _citadelRoad)
+        {
+            _roadMin = Vector2.Min(_roadMin, new Vector2(q.x, q.z));
+            _roadMax = Vector2.Max(_roadMax, new Vector2(q.x, q.z));
+        }
+    }
+
+    // Distancia (en planta) al camino de la ciudadela; muy grande si no hay camino o se está lejos de su caja.
+    public static float DistanceToCitadelRoad(Vector3 p, float within = float.MaxValue)
+    {
+        if (_citadelRoad.Count == 0) return float.MaxValue;
+        if (within < float.MaxValue && (p.x < _roadMin.x - within || p.x > _roadMax.x + within || p.z < _roadMin.y - within || p.z > _roadMax.y + within))
+            return float.MaxValue;
+        float best = float.MaxValue;
+        for (int i = 1; i < _citadelRoad.Count; i++)
+        {
+            Vector3 a = _citadelRoad[i - 1], b = _citadelRoad[i];
+            Vector2 ab = new Vector2(b.x - a.x, b.z - a.z), ap = new Vector2(p.x - a.x, p.z - a.z);
+            float t = Mathf.Clamp01(Vector2.Dot(ap, ab) / Mathf.Max(0.0001f, ab.sqrMagnitude));
+            best = Mathf.Min(best, (ap - ab * t).magnitude);
+        }
+        return best;
+    }
+
+    // Punto del camino a una fracción de su recorrido (0 = la calle del norte, 1 = la ciudadela) y su dirección.
+    public static Vector3 CitadelRoadPoint(Result r, float t, out Vector3 dir)
+    {
+        int n = r.citadelRoad.Count - 1;
+        float f = Mathf.Clamp01(t) * n;
+        int i = Mathf.Min(n - 1, Mathf.FloorToInt(f));
+        Vector3 a = r.citadelRoad[i], b = r.citadelRoad[i + 1];
+        dir = new Vector3(b.x - a.x, 0f, b.z - a.z).normalized;
+        return Vector3.Lerp(a, b, f - i);
+    }
+
     public static float DistanceToCastle(CastleDesign c, Vector3 p)
     {
         Vector3 a = c.Gate, b = c.Back;
@@ -257,6 +327,7 @@ public static class VillageLayout
         if (Flat(p).magnitude < MinCampDistance) return false;
         if (Dist(p, SteveClearing) < MinCampFromSteve) return false;
         if (Mathf.Abs(p.x) < 7f && p.z > 0f) return false;
+        if (DistanceToCitadelRoad(p, 16f) < 16f) return false;
         foreach (Vector3 c in r.camps) if (Dist(p, c) < 18f) return false;
         if (DistanceToCastle(r.castle, p) < CastleClearance + CampRadius + 4f) return false;
         if (Mathf.Abs(p.x) > PlayableHalfSize - 10f || Mathf.Abs(p.z) > PlayableHalfSize - 10f) return false;
@@ -355,6 +426,7 @@ public static class VillageLayout
     public static bool OnRoad(Vector3 p)
     {
         if (Mathf.Abs(p.x) < 5f && p.z > 0f) return true;
+        if (DistanceToCitadelRoad(p, CitadelRoadClearance) < CitadelRoadClearance) return true;
         if (Mathf.Abs(p.x) < 4f && p.z < 0f && p.z > -WallRadius - 4f) return true;
         Vector3 start = Polar(180f, WallRadius + 2f);
         Vector3 end = SteveClearing + new Vector3(3f, 0f, 3f);

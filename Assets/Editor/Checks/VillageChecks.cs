@@ -137,4 +137,116 @@ public static class VillageChecks
         foreach (Vector3 c in path.corners) sb.Append(c.ToString("0")).Append(' ');
         return sb.ToString();
     }
+
+    // ---------- Camino de la Ciudadela Caída ----------
+
+    private static VillageWorldGenerator Gen => Object.FindAnyObjectByType<VillageWorldGenerator>();
+
+    // Que el camino exista, sea transitable de la plaza a la ciudadela y tenga el pasillo libre.
+    public static string RoadInfo()
+    {
+        var L = Layout;
+        if (L == null || L.citadelRoad.Count == 0) return "sin camino";
+        float len = 0f;
+        for (int i = 1; i < L.citadelRoad.Count; i++) len += Vector3.Distance(L.citadelRoad[i - 1], L.citadelRoad[i]);
+        var sb = new StringBuilder("camino=" + Mathf.RoundToInt(len) + " m (" + L.citadelRoad.Count + " puntos)");
+        // ¿Andando de la plaza a la plaza de la ciudadela?
+        var path = new NavMeshPath();
+        NavMesh.SamplePosition(new Vector3(0f, 0f, -6f), out NavMeshHit a, 3f, NavMesh.AllAreas);
+        NavMesh.SamplePosition(L.castle.TownCenter, out NavMeshHit b, 6f, NavMesh.AllAreas);
+        NavMesh.CalculatePath(a.position, b.position, NavMesh.AllAreas, path);
+        float pathLen = 0f;
+        for (int i = 1; i < path.corners.Length; i++) pathLen += Vector3.Distance(path.corners[i - 1], path.corners[i]);
+        sb.Append(" | plaza→ciudadela=").Append(path.status).Append(' ').Append(Mathf.RoundToInt(pathLen)).Append(" m");
+        // Cada punto del camino, ¿en el NavMesh?
+        int off = 0;
+        string firstOff = "";
+        foreach (Vector3 q in L.citadelRoad)
+            if (!NavMesh.SamplePosition(q, out NavMeshHit nh, 2f, NavMesh.AllAreas))
+            {
+                off++;
+                if (firstOff.Length == 0)
+                {
+                    NavMesh.SamplePosition(q, out NavMeshHit far, 10f, NavMesh.AllAreas);
+                    float ground = Physics.Raycast(q + Vector3.up * 20f, Vector3.down, out RaycastHit rh, 40f, ~0, QueryTriggerInteraction.Ignore) ? rh.point.y : -99f;
+                    firstOff = q.ToString("0") + " suelo=" + ground.ToString("0.0") + " navmesh más cerca=" + far.position.ToString("0.0") + (rh.collider != null ? " (" + rh.collider.name + ")" : "");
+                }
+            }
+        sb.Append(" | puntos fuera del NavMesh=").Append(off).Append(' ').Append(firstOff);
+        // Obstáculos cerca del centro del camino.
+        int pines = 0, mounds = 0, fires = 0;
+        foreach (VillageLayout.Spot p in L.pines) if (VillageLayout.DistanceToCitadelRoad(p.position) < 5f) pines++;
+        foreach (VillageLayout.Spot p in L.mounds) if (VillageLayout.DistanceToCitadelRoad(p.position) < 5f) mounds++;
+        foreach (VillageLayout.Spot p in L.bonfires) if (VillageLayout.DistanceToCitadelRoad(p.position) < 5f) fires++;
+        sb.Append(" | a <5 m: pinos=").Append(pines).Append(" montones=").Append(mounds).Append(" hogueras=").Append(fires);
+        // Colisionadores que corten el camino (a la altura del pecho).
+        int blocked = 0;
+        foreach (Vector3 q in L.citadelRoad)
+            foreach (Collider c in Physics.OverlapSphere(q + Vector3.up * 1f, 1.2f, ~0, QueryTriggerInteraction.Ignore))
+                if (c.GetComponentInParent<PlayerController>() == null && c.GetComponentInParent<EnemyBrain>() == null && !(c is TerrainCollider) && c.bounds.size.y > 0.6f) { blocked++; break; }
+        sb.Append(" | puntos con choque=").Append(blocked);
+        return sb.ToString();
+    }
+
+    public static string Camps()
+    {
+        var g = Gen;
+        if (g == null) return "sin generador";
+        var L = Layout;
+        var sb = new StringBuilder();
+        Vector3 prev = Vector3.positiveInfinity;
+        foreach (EnemyCamp c in g.RoadCamps)
+        {
+            Vector3 p = c.transform.position;
+            bool nav = NavMesh.SamplePosition(p, out NavMeshHit h, 2f, NavMesh.AllAreas);
+            sb.Append(c.campId).Append(": a ").Append(VillageLayout.DistanceToCitadelRoad(p).ToString("0.0")).Append(" m del camino")
+              .Append(" navmesh=").Append(nav).Append(" zona segura=").Append(SafeZone.Contains(p))
+              .Append(" grupo=").Append(c.groupSize).Append(" nivel=").Append(c.monsterLevel);
+            if (!float.IsInfinity(prev.x)) sb.Append(" sep=").Append(Vector3.Distance(prev, p).ToString("0"));
+            sb.Append(" | ");
+            prev = p;
+        }
+        sb.Append("ciudadela a ").Append(Vector3.Distance(prev, L.castle.ToWorld(L.town.camp[0])).ToString("0")).Append(" m del último");
+        return sb.ToString();
+    }
+
+    // Recorre el camino por tramos (teletransporte): cuenta los corruptos despiertos alrededor de cada punto.
+    private static int _walkStep;
+    public static string WalkRoadStep()
+    {
+        var L = Layout;
+        float[] ts = { 0.05f, 0.3f, 0.55f, 0.8f, 1f };
+        if (_walkStep >= ts.Length) _walkStep = 0;
+        float t = ts[_walkStep++];
+        Vector3 p = VillageLayout.CitadelRoadPoint(L, t, out Vector3 dir);
+        Teleport(p + Vector3.up * 0.1f, Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg);
+        int near = 0;
+        foreach (EnemyBrain b in Object.FindObjectsByType<EnemyBrain>())
+            if (b.Current != EnemyBrain.State.Dead && Vector3.Distance(b.transform.position, p) < 30f) near++;
+        string siege = CitadelSiege.Instance != null ? CitadelSiege.Instance.Current.ToString() : "-";
+        return "tramo " + t.ToString("0.00") + " en " + p.ToString("0") + " corruptos a <30 m=" + near + " asedio=" + siege + " etapa=" + QuestLog.Stage(QuestLog.Citadel);
+    }
+
+    public static string ResetWalk() { _walkStep = 0; return "ok"; }
+
+    // Al llegar a la plaza de la ciudadela (para ver si el asedio arranca solo con la misión activa).
+    public static string GoCitadelSquare()
+    {
+        var L = Layout;
+        Teleport(L.castle.TownCenter + Vector3.up * 0.1f);
+        return "en la plaza de la ciudadela";
+    }
+
+    public static string SiegeState() => "asedio=" + (CitadelSiege.Instance != null ? CitadelSiege.Instance.Current.ToString() : "-") + " etapa=" + QuestLog.Stage(QuestLog.Citadel);
+
+    public static string RoadShot()
+    {
+        var L = Layout;
+        Vector3 p = VillageLayout.CitadelRoadPoint(L, 0.12f, out Vector3 dir);
+        string a = FrostboundBridge.CamShot("r_desvio", p - dir * 10f + Vector3.up * 6f, VillageLayout.CitadelRoadPoint(L, 0.4f, out _) + Vector3.up * 2f, 55f);
+        Vector3 q = VillageLayout.CitadelRoadPoint(L, 0.6f, out Vector3 d2);
+        string b = FrostboundBridge.CamShot("r_medio", q - d2 * 8f + Vector3.up * 5f, L.castle.TownCenter + Vector3.up * 10f, 55f);
+        string c = FrostboundBridge.CamShot("r_aereo", new Vector3(L.castle.Gate.x * 0.4f, 90f, L.castle.Gate.z * 0.4f - 50f), new Vector3(L.castle.Gate.x * 0.45f, 0f, L.castle.Gate.z * 0.45f + 10f), 60f);
+        return a + " | " + b + " | " + c;
+    }
 }

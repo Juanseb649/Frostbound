@@ -61,6 +61,7 @@ public class VillageWorldGenerator : MonoBehaviour
             castle.Build(Layout.castle, Layout.town);
             BuildCastleGameplay(root, castle);
             BuildTrailhead(root, castle.stone);
+            BuildCitadelRoad(root, castle);
         }
 
         SpawnBonfire(root, Layout.castleBonfire, Bonfire.CastleId, "Hoguera del castillo");
@@ -214,22 +215,7 @@ public class VillageWorldGenerator : MonoBehaviour
         for (float z = 48f; z < VillageLayout.Trailhead.z - TrailRun - 6f; z += rng.Range(24f, 34f))
         {
             float side = rng.Chance(0.5f) ? 1f : -1f;
-            var cairn = new GameObject("Mojon");
-            cairn.transform.SetParent(t, false);
-            cairn.transform.position = new Vector3(side * 5.6f, 0f, z);
-            float y = 0f;
-            for (int i = 0; i < 3; i++)
-            {
-                float size = 0.75f - i * 0.18f;
-                var piece = new GameObject("Piedra");
-                piece.transform.SetParent(cairn.transform, false);
-                piece.transform.localPosition = new Vector3(0f, y + size * 0.3f, 0f);
-                piece.transform.localRotation = Quaternion.Euler(0f, i * 47f + z, 0f);
-                piece.transform.localScale = new Vector3(size * 1.3f, size * 0.75f, size * 1.1f);
-                piece.AddComponent<MeshFilter>().sharedMesh = rock;
-                piece.AddComponent<MeshRenderer>().sharedMaterial = stone;
-                y += size * 0.55f;
-            }
+            Cairn(t, new Vector3(side * 5.6f, 0f, z), rock, stone, z, null);
         }
 
         Material snow = ground != null && ground.GetComponent<Renderer>() != null ? ground.GetComponent<Renderer>().sharedMaterial : null;
@@ -263,6 +249,181 @@ public class VillageWorldGenerator : MonoBehaviour
         }
     }
 
+    // Mojón de tres piedras apiladas (con banderín si se da tela).
+    private static void Cairn(Transform parent, Vector3 at, Mesh rock, Material stone, float seed, Material cloth)
+    {
+        var cairn = new GameObject("Mojon");
+        cairn.transform.SetParent(parent, false);
+        cairn.transform.position = at;
+        float y = 0f;
+        for (int i = 0; i < 3; i++)
+        {
+            float size = 0.75f - i * 0.18f;
+            var piece = new GameObject("Piedra");
+            piece.transform.SetParent(cairn.transform, false);
+            piece.transform.localPosition = new Vector3(0f, y + size * 0.3f, 0f);
+            piece.transform.localRotation = Quaternion.Euler(0f, i * 47f + seed, 0f);
+            piece.transform.localScale = new Vector3(size * 1.3f, size * 0.75f, size * 1.1f);
+            piece.AddComponent<MeshFilter>().sharedMesh = rock;
+            piece.AddComponent<MeshRenderer>().sharedMaterial = stone;
+            y += size * 0.55f;
+        }
+        if (cloth == null) return;
+        Block(cairn.transform, "Palo", at + Vector3.up * (y + 0.55f), new Vector3(0.06f, 1.1f, 0.06f), stone, false);
+        Block(cairn.transform, "Banderin", at + new Vector3(0.24f, y + 0.95f, 0f), new Vector3(0.45f, 0.3f, 0.02f), cloth, false);
+    }
+
+    // ---------- Camino de la Ciudadela Caída ----------
+
+    public readonly List<EnemyCamp> RoadCamps = new List<EnemyCamp>();
+
+    // Huellas de nieve pisada de la calle del norte a la ciudadela, un cartel en el desvío, mojones con banderín,
+    // farolillos (la mitad encendidos) y, en el último tramo, más hielo del Frost y un carro volcado.
+    // Tres grupos de corruptos a un lado del camino, cada vez más numerosos.
+    private void BuildCitadelRoad(Transform root, CastleBuilder castle)
+    {
+        Transform t = new GameObject("Camino_Ciudadela").transform;
+        t.SetParent(root, false);
+        var rng = new DeterministicRng(SeedUtil.Combine(Seed, SeedUtil.FromString("camino_ciudadela")));
+        Material path = SceneMaterial("SnowPath", new Color(0.82f, 0.86f, 0.92f));
+        Material wood = SceneMaterial("Wood", new Color(0.42f, 0.28f, 0.18f));
+        Material woodDark = SceneMaterial("WoodDark", new Color(0.26f, 0.17f, 0.11f));
+        Material glow = SceneMaterial("WindowGlow", new Color(1f, 0.8f, 0.45f));
+        Material cloth = SceneMaterial("ClothRed", new Color(0.62f, 0.16f, 0.18f));
+        Material stone = castle.stone;
+        var road = Layout.citadelRoad;
+
+        // Huellas pisadas, una cada ~1,6 m, algo desordenadas.
+        float acc = 0f;
+        for (int i = 1; i < road.Count; i++)
+        {
+            Vector3 a = road[i - 1], b = road[i];
+            acc += Vector3.Distance(a, b);
+            if (acc < 1.6f) continue;
+            acc = 0f;
+            Vector3 dir = (b - a).normalized;
+            Vector3 side = new Vector3(dir.z, 0f, -dir.x);
+            var step = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Destroy(step.GetComponent<Collider>());
+            step.name = "Huella";
+            step.transform.SetParent(t, false);
+            step.transform.position = b + side * rng.Range(-0.5f, 0.5f) + Vector3.up * 0.012f;
+            step.transform.rotation = Quaternion.LookRotation(dir);
+            step.transform.localScale = new Vector3(2.6f + rng.Range(-0.3f, 0.3f), 0.01f, 2.1f);
+            step.GetComponent<Renderer>().sharedMaterial = path;
+        }
+
+        // Cartel en el desvío, apuntando al castillo.
+        Vector3 fork = VillageLayout.CitadelRoadPoint(Layout, 0.04f, out Vector3 forkDir);
+        Vector3 forkSide = new Vector3(forkDir.z, 0f, -forkDir.x);
+        Vector3 post = fork - forkSide * 4f;
+        Block(t, "Cartel_Poste", post + Vector3.up * 1f, new Vector3(0.14f, 2f, 0.14f), wood, true);
+        GameObject sign = Block(t, "Cartel_Ciudadela", post + Vector3.up * 1.75f + forkDir * 0.5f, new Vector3(0.08f, 0.4f, 1.3f), woodDark, false);
+        sign.transform.rotation = Quaternion.LookRotation(forkDir);
+
+        Mesh rock = MountainMeshes.Rock(SeedUtil.Combine(Seed, 91), 0.6f);
+        int lamp = 0;
+        for (float d = 0.1f; d < 0.95f; d += 0.12f + rng.Range(-0.02f, 0.02f))
+        {
+            Vector3 p = VillageLayout.CitadelRoadPoint(Layout, d, out Vector3 dir);
+            Vector3 side = new Vector3(dir.z, 0f, -dir.x) * (rng.Chance(0.5f) ? 1f : -1f);
+            Cairn(t, p + side * (VillageLayout.CitadelRoadHalfWidth + 1.4f), rock, stone, d * 100f, cloth);
+            // Farolillo al otro lado; con luz uno de cada dos.
+            Vector3 lp = p - side * (VillageLayout.CitadelRoadHalfWidth + 1.2f);
+            Block(t, "Farol_Poste", lp + Vector3.up * 1.1f, new Vector3(0.12f, 2.2f, 0.12f), woodDark, true);
+            Block(t, "Farol", lp + Vector3.up * 2.3f, new Vector3(0.35f, 0.4f, 0.35f), glow, false);
+            if ((lamp++ & 1) == 0)
+            {
+                var lg = new GameObject("Luz_Farol");
+                lg.transform.SetParent(t, false);
+                lg.transform.position = lp + Vector3.up * 2.3f;
+                Light l = lg.AddComponent<Light>();
+                l.type = LightType.Point;
+                l.color = new Color(1f, 0.72f, 0.4f);
+                l.range = 9f;
+                l.intensity = 1.8f;
+                l.shadows = LightShadows.None;
+            }
+        }
+
+        // Último tramo: el hielo del Frost brota a los lados y hay un carro volcado.
+        Mesh octa = MenuRuins.Octahedron();
+        for (int k = 0; k < 9; k++)
+        {
+            float d = rng.Range(0.68f, 0.97f);
+            Vector3 p = VillageLayout.CitadelRoadPoint(Layout, d, out Vector3 dir);
+            Vector3 side = new Vector3(dir.z, 0f, -dir.x) * (rng.Chance(0.5f) ? 1f : -1f);
+            Vector3 c = p + side * rng.Range(4.5f, 7f);
+            for (int j = 0; j < 3; j++)
+            {
+                var shard = new GameObject("Cristal_Camino", typeof(MeshFilter), typeof(MeshRenderer));
+                shard.transform.SetParent(t, false);
+                float h = rng.Range(0.8f, 2f) * (j == 0 ? 1.4f : 1f);
+                shard.transform.position = c + new Vector3(rng.Range(-0.6f, 0.6f), h * 0.35f, rng.Range(-0.6f, 0.6f));
+                shard.transform.rotation = Quaternion.Euler(rng.Range(-20f, 20f), rng.Range(0f, 360f), rng.Range(-20f, 20f));
+                shard.transform.localScale = new Vector3(0.35f, h, 0.35f);
+                shard.GetComponent<MeshFilter>().sharedMesh = octa;
+                shard.GetComponent<MeshRenderer>().sharedMaterial = castle.ice;
+            }
+        }
+        {
+            Vector3 p = VillageLayout.CitadelRoadPoint(Layout, 0.74f, out Vector3 dir);
+            Vector3 side = new Vector3(dir.z, 0f, -dir.x);
+            Transform cart = new GameObject("Carro_Volcado").transform;
+            cart.SetParent(t, false);
+            cart.position = p + side * 5f;
+            cart.rotation = Quaternion.LookRotation(dir) * Quaternion.Euler(0f, 0f, 72f);
+            GameObject bed = Block(cart, "Caja", cart.position + Vector3.up * 0.8f, new Vector3(1.8f, 0.6f, 3f), wood, true);
+            bed.transform.rotation = cart.rotation;
+            foreach (float z in new[] { -1f, 1f })
+            {
+                var wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Destroy(wheel.GetComponent<Collider>());
+                wheel.transform.SetParent(cart, false);
+                wheel.transform.position = cart.position + cart.rotation * new Vector3(0.95f, 0.8f, z);
+                wheel.transform.rotation = cart.rotation * Quaternion.Euler(0f, 0f, 90f);
+                wheel.transform.localScale = new Vector3(0.9f, 0.08f, 0.9f);
+                wheel.GetComponent<Renderer>().sharedMaterial = woodDark;
+            }
+        }
+
+        RoadEncounters(t);
+    }
+
+    // Grupos de corruptos a un lado del camino (nunca encima): tramo inicial suave, intermedio y fuerte.
+    private void RoadEncounters(Transform parent)
+    {
+        GameDatabase db = GameDatabase.Instance;
+        if (db == null) return;
+        float[] at = { 0.3f, 0.55f, 0.8f };
+        Vector2Int[] size = { new Vector2Int(3, 4), new Vector2Int(4, 6), new Vector2Int(5, 7) };
+        Vector2Int[] level = { new Vector2Int(1, 2), new Vector2Int(2, 2), new Vector2Int(2, 3) };
+        float[] ranged = { 0f, 0.3f, 0.35f };
+        float[] champion = { 0f, 0.05f, 0.15f };
+        float[] activate = { 28f, 30f, 32f };
+        RoadCamps.Clear();
+        for (int i = 0; i < at.Length; i++)
+        {
+            Vector3 p = VillageLayout.CitadelRoadPoint(Layout, at[i], out Vector3 dir);
+            Vector3 side = new Vector3(dir.z, 0f, -dir.x) * (i % 2 == 0 ? 1f : -1f);
+            var go = new GameObject("Campamento_Camino_" + (i + 1));
+            go.transform.SetParent(parent, false);
+            go.transform.position = p + side * 10.5f;
+            EnemyCamp camp = go.AddComponent<EnemyCamp>();
+            camp.campId = "camino_ciudadela_" + (i + 1);
+            camp.melee = db.FindEnemy("Corrupt_Melee");
+            camp.ranged = ranged[i] > 0f ? db.FindEnemy("Corrupt_Ranged") : null;
+            camp.rangedFraction = ranged[i];
+            camp.palette = db.palette;
+            camp.groupSize = size[i];
+            camp.monsterLevel = level[i];
+            camp.championChance = champion[i];
+            camp.radius = 4.5f;
+            camp.activateDistance = activate[i];
+            RoadCamps.Add(camp);
+        }
+    }
+
     // Dónde yacen los guerreros caídos: al pie de la escalera del Frostspire y en su rellano, ante el castillo,
     // junto a algunas hogueras y repartidos por el bosque.
     private List<Vector3> FallenSpots()
@@ -275,6 +436,12 @@ public class VillageWorldGenerator : MonoBehaviour
         Vector3 castle = Layout.castle.Foot;
         Vector3 toVillage = (-castle).normalized;
         for (int i = 0; i < 3; i++) spots.Add(castle + toVillage * rng.Range(6f, 14f) + new Vector3(rng.Range(-6f, 6f), 0f, rng.Range(-6f, 6f)));
+        // Por el último tramo del camino de la ciudadela, a un lado.
+        for (int i = 0; i < 3; i++)
+        {
+            Vector3 p = VillageLayout.CitadelRoadPoint(Layout, rng.Range(0.62f, 0.92f), out Vector3 dir);
+            spots.Add(p + new Vector3(dir.z, 0f, -dir.x) * (rng.Chance(0.5f) ? 3.8f : -3.8f));
+        }
         foreach (VillageLayout.Spot b in Layout.bonfires)
             if (rng.Chance(0.6f)) spots.Add(b.position + new Vector3(rng.Range(-5f, 5f), 0f, rng.Range(-5f, 5f)));
         for (int tries = 0, added = 0; tries < 200 && added < 6; tries++)
@@ -589,6 +756,7 @@ public class VillageWorldGenerator : MonoBehaviour
             Vector3 p = VillageLayout.Polar(rng.Range(0f, 360f), rng.Range(75f, 270f));
             if (Mathf.Abs(p.x) > lim || Mathf.Abs(p.z) > lim) continue;
             if (VillageLayout.OnRoad(p) || Mathf.Abs(p.x) < 14f) continue;
+            if (VillageLayout.DistanceToCitadelRoad(p, 24f) < 24f) continue;
             if (VillageLayout.DistanceToCastle(Layout.castle, p) < VillageLayout.CastleClearance + 18f) continue;
             if ((p - VillageLayout.SteveClearing).magnitude < 30f) continue;
             if (Mathf.Abs(p.x - TrailStartX) < 30f && p.z > head.z - 50f) continue;

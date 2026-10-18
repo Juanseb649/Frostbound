@@ -83,8 +83,8 @@ public static class SetupQuests
                 "Los mandaba un ninja. Dicen que corrompió a los guardias y que ellos mismos atacaron su poblado.",
                 "Su capitán, Gorvald, sigue rondando la plaza. Si alguien puede romper ese sello del castillo... eres tú."
             },
-            S("Limpia el poblado al pie del castillo de corruptos", QuestObjective.Ninguno, "", 1, "",
-                "La ciudadela está al pie del castillo. Ten cuidado con la plaza: ahí se juntan.",
+            S("Sigue el camino del norte hasta la Ciudadela Caída y límpiala de corruptos", QuestObjective.Ninguno, "", 1, "",
+                "Sal por la puerta norte y toma el camino de los mojones rojos: lleva a la ciudadela. Ten cuidado con la plaza: ahí se juntan.",
                 "Si ves a Gorvald, no dejes que te alcance su hacha. Dicen que ahora gotea veneno."),
             S("Entra al castillo y derrota al ninja maldito", QuestObjective.Ninguno, "", 1, "",
                 "¿Gorvald habló antes de caer? Entonces es verdad: el ninja está dentro del castillo.",

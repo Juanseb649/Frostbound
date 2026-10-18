@@ -147,6 +147,14 @@ public class AdventureHUD : MonoBehaviour
         string detail = QuestLog.Detail(quest);
         if (quest == QuestLog.Citadel && stage == QuestLog.CitadelTalked && siege != null)
         {
+            // Camino de la ciudadela: cuánto falta hasta la plaza mientras no empieza el asedio.
+            Transform hero = Players.Primary != null ? Players.Primary.transform : null;
+            if (siege.Current == CitadelSiege.Phase.Idle && hero != null)
+            {
+                Vector3 d = siege.transform.position - hero.position;
+                d.y = 0f;
+                detail = d.magnitude > 16f ? "A " + Mathf.RoundToInt(d.magnitude) + " m · sigue los mojones rojos" : "";
+            }
             if (siege.Current == CitadelSiege.Phase.Waves) { objective = "Resiste el asedio en la plaza"; detail = "Oleada " + Mathf.Max(1, siege.Wave) + "/" + siege.WaveCount + " · quedan " + siege.Remaining; }
             else if (siege.Current == CitadelSiege.Phase.Boss) { objective = "Derrota a Gorvald, el bárbaro corrupto"; detail = "Cuidado: su hacha envenena"; }
         }

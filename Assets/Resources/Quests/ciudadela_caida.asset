@@ -32,13 +32,14 @@ MonoBehaviour:
   - "Su capit\xE1n, Gorvald, sigue rondando la plaza. Si alguien puede romper ese
     sello del castillo... eres t\xFA."
   stages:
-  - objective: Limpia el poblado al pie del castillo de corruptos
+  - objective: "Sigue el camino del norte hasta la Ciudadela Ca\xEDda y l\xEDmpiala
+      de corruptos"
     type: 0
     target: 
     count: 1
     giverLines:
-    - "La ciudadela est\xE1 al pie del castillo. Ten cuidado con la plaza: ah\xED
-      se juntan."
+    - "Sal por la puerta norte y toma el camino de los mojones rojos: lleva a la
+      ciudadela. Ten cuidado con la plaza: ah\xED se juntan."
     - Si ves a Gorvald, no dejes que te alcance su hacha. Dicen que ahora gotea veneno.
     onReach: 
   - objective: Entra al castillo y derrota al ninja maldito
