@@ -53,6 +53,29 @@ public static class UIKitChecks
     public static string TextLarge() { AccessibilitySettings.TextStep = 2; return "texto " + AccessibilitySettings.TextScale; }
     public static string TextNormal() { AccessibilitySettings.TextStep = 0; return "texto " + AccessibilitySettings.TextScale; }
 
+    // Rendimiento de la UI: exec UIKitChecks.PerfStart → esperar → exec UIKitChecks.PerfResult.
+    public static string PerfStart() { UIPerfProbe.Begin(120); return "sonda en marcha (120 fotogramas)"; }
+    public static string PerfResult() => UIPerfProbe.Running ? "aún midiendo" : UIPerfProbe.Last;
+
+    // Imágenes y textos que reciben clics sin necesitarlo (sin Selectable ni manejador en ellos ni en sus padres).
+    public static string RaycastAudit()
+    {
+        int total = 0, needless = 0;
+        var sample = new System.Collections.Generic.List<string>();
+        foreach (var g in Object.FindObjectsByType<UnityEngine.UI.Graphic>(FindObjectsInactive.Exclude))
+        {
+            if (!g.raycastTarget) continue;
+            total++;
+            bool useful = g.GetComponentInParent<UnityEngine.UI.Selectable>() != null
+                || g.GetComponentInParent<UnityEngine.EventSystems.IEventSystemHandler>() != null
+                || g.GetComponent<UnityEngine.UI.Image>() is var img && img != null && img.color.a > 0.3f && g.rectTransform.rect.width > 1000f;
+            if (useful) continue;
+            needless++;
+            if (sample.Count < 8) sample.Add(g.transform.parent != null ? g.transform.parent.name + "/" + g.name : g.name);
+        }
+        return "raycast activos=" + total + " innecesarios=" + needless + " ej: " + string.Join(", ", sample);
+    }
+
     // Guarda la textura de marcos en FrostboundBridge/ui_atlas.png y resume el alfa de la placa.
     public static string DumpAtlas()
     {
