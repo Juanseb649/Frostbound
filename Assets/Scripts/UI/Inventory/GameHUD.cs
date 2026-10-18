@@ -190,8 +190,8 @@ public class GameHUD : MonoBehaviour
     public void ShowMessage(string message, Color color)
     {
         if (_feed == null) return;
-        TextMeshProUGUI t = UIFactory.Text(_feed, "Line", message, skin.nunito800, 16f, color, TextAlignmentOptions.Right);
-        t.rectTransform.sizeDelta = new Vector2(420f, 24f);
+        TextMeshProUGUI t = UIFactory.Text(_feed, "Line", message, skin.nunito800, 16f * AccessibilitySettings.TextScale, color, TextAlignmentOptions.Right);
+        t.rectTransform.sizeDelta = new Vector2(420f, 24f * AccessibilitySettings.TextScale);
         t.outlineWidth = 0.18f;
         t.outlineColor = new Color32(10, 18, 34, 255);
         _feedLines.Add((t, Time.unscaledTime));

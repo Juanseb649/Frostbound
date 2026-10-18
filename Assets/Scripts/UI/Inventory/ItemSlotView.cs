@@ -128,10 +128,54 @@ public class ItemSlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         Color b = Item != null ? FrostboundUI.Rarity(Item.rarity) : FrostboundUI.Border;
         if (Item != null && Item.rarity == ItemRarity.Common) b = FrostboundUI.Border;
         if (Item != null && _stack != null && _stack.item == Item && _stack.quality > LootQuality.Normal) b = _stack.DisplayColor;
-        if (Selected) b = FrostboundUI.Ice;
+        RefreshShape(b);
+        if (Selected) b = FrostboundUI.OldGoldLight;
         else if (_hover) b = Color.Lerp(b, FrostboundUI.OldGoldLight, 0.6f);
         border.color = b;
         fill.color = Selected ? FrostboundUI.SurfaceSelected : (Item != null ? FrostboundUI.Surface : FrostboundUI.Bg);
+    }
+
+    // Forma por rareza (accesibilidad): círculo, rombo, cruz o estrella en la esquina, del mismo color que el marco,
+    // para distinguir la rareza sin depender del color. La calidad del botín manda sobre la rareza del objeto.
+    private Image _shape;
+
+    private void RefreshShape(Color color)
+    {
+        Sprite sprite = AccessibilitySettings.RarityShapes ? ShapeFor() : null;
+        if (sprite == null)
+        {
+            if (_shape != null) _shape.gameObject.SetActive(false);
+            return;
+        }
+        if (_shape == null)
+        {
+            _shape = NewImage("Forma de rareza", Color.white);
+            var rt = _shape.rectTransform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
+            rt.anchoredPosition = new Vector2(-6f, -6f);
+            rt.sizeDelta = new Vector2(11f, 11f);
+        }
+        _shape.gameObject.SetActive(true);
+        _shape.sprite = sprite;
+        _shape.color = color;
+    }
+
+    private Sprite ShapeFor()
+    {
+        if (Item == null) return null;
+        int level;
+        if (_stack != null && _stack.item == Item && _stack.quality > LootQuality.Superior)
+            level = _stack.quality == LootQuality.Magic ? 1 : _stack.quality == LootQuality.Rare ? 2 : _stack.quality == LootQuality.Set ? 3 : 4;
+        else
+            level = (int)Item.rarity;
+        switch (level)
+        {
+            case 1: return FrostUI.Skin != null ? FrostUI.Skin.circle : null;
+            case 2: return FrostUI.Diamond(true);
+            case 3: return FrostUI.Icon("Plus");
+            case 4: return FrostUI.Icon("Ninja");
+            default: return null;
+        }
     }
 
     void Update()

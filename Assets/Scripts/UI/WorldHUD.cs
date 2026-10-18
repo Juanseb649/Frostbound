@@ -123,9 +123,33 @@ public class WorldHUD : MonoBehaviour
         BuildMenu();
     }
 
+    void OnEnable()
+    {
+        _textScale = AccessibilitySettings.TextScale;
+        AccessibilitySettings.Changed += OnAccessibility;
+    }
+
+    void OnDisable() => AccessibilitySettings.Changed -= OnAccessibility;
+
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
+    }
+
+    // Cambió el tamaño del texto en Configuración: los textos ya creados se reescalan (los nuevos nacen con él).
+    private float _textScale = 1f;
+
+    private void OnAccessibility()
+    {
+        float k = AccessibilitySettings.TextScale / Mathf.Max(0.01f, _textScale);
+        _textScale = AccessibilitySettings.TextScale;
+        if (Mathf.Approximately(k, 1f)) return;
+        foreach (TextMeshProUGUI t in GetComponentsInChildren<TextMeshProUGUI>(true))
+        {
+            t.fontSize *= k;
+            t.fontSizeMin *= k;
+            t.fontSizeMax *= k;
+        }
     }
 
     // ---------- Construcción ----------
@@ -172,7 +196,7 @@ public class WorldHUD : MonoBehaviour
         RectTransform rt = Rect(objName, parent);
         var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
         if (font != null) t.font = font;
-        t.fontSize = size;
+        t.fontSize = size * AccessibilitySettings.TextScale;
         t.color = color;
         t.alignment = align;
         t.raycastTarget = false;
