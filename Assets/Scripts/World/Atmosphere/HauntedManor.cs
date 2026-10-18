@@ -72,6 +72,13 @@ public class HauntedManor : MonoBehaviour
         // La niebla de la noche helada se aclara un poco para que la mansión y la luna se lean desde la cámara.
         RenderSettings.fogDensity = FogDensity;
         _fogBase = RenderSettings.fogColor;
+        // Cielo HDRI nocturno (Poly Haven) en lugar del degradado procedural, si está preparado.
+        Material sky = Resources.Load<Material>("Materials/CieloNoche");
+        if (sky != null)
+        {
+            RenderSettings.skybox = sky;
+            DynamicGI.UpdateEnvironment();
+        }
         Camera cam = Camera.main;
         _cam = cam != null ? cam.transform : null;
         _nextFlash = Time.unscaledTime + Random.Range(5f, 9f);
@@ -111,14 +118,16 @@ public class HauntedManor : MonoBehaviour
     {
         // Superficies con textura y relieve procedurales (ProceduralSurfaces); el color base va algo más claro
         // porque la textura lo oscurece en las juntas y las vetas.
-        _stone = ProceduralSurfaces.Make("Piedra de la mansión", ProceduralSurfaces.Kind.Blocks, new Color(0.24f, 0.27f, 0.34f), 0.5f);
-        _stoneDark = ProceduralSurfaces.Make("Piedra oscura", ProceduralSurfaces.Kind.Blocks, new Color(0.13f, 0.15f, 0.2f), 0.45f, 1.2f);
-        _trim = ProceduralSurfaces.Make("Cornisa", ProceduralSurfaces.Kind.Rough, new Color(0.3f, 0.34f, 0.42f), 0.5f);
-        _roof = ProceduralSurfaces.Make("Pizarra", ProceduralSurfaces.Kind.Slate, new Color(0.11f, 0.12f, 0.16f), 0.75f, 1.3f);
-        _wood = ProceduralSurfaces.Make("Madera podrida", ProceduralSurfaces.Kind.Planks, new Color(0.17f, 0.13f, 0.11f), 0.5f);
-        _bark = ProceduralSurfaces.Make("Corteza escarchada", ProceduralSurfaces.Kind.Bark, new Color(0.26f, 0.28f, 0.34f), 0.5f, 1.4f);
-        _path = ProceduralSurfaces.Make("Losa", ProceduralSurfaces.Kind.Rough, new Color(0.22f, 0.24f, 0.29f), 0.6f, 1.2f);
-        _snow = ProceduralSurfaces.Make("Nieve de noche", ProceduralSurfaces.Kind.Snow, new Color(0.5f, 0.56f, 0.66f), 0.7f, 0.6f);
+        // Fase 2: materiales con texturas reales de Poly Haven (Resources/Materials/Manor, los crea SetupManorMaterials),
+        // teñidos hacia el azul de la noche. Si no están, se usan las superficies procedurales de la fase 1.
+        _stone = Real("castle_brick_07", new Color(0.5f, 0.55f, 0.66f)) ?? ProceduralSurfaces.Make("Piedra de la mansión", ProceduralSurfaces.Kind.Blocks, new Color(0.24f, 0.27f, 0.34f), 0.5f);
+        _stoneDark = Real("castle_brick_07", new Color(0.3f, 0.34f, 0.43f)) ?? ProceduralSurfaces.Make("Piedra oscura", ProceduralSurfaces.Kind.Blocks, new Color(0.13f, 0.15f, 0.2f), 0.45f, 1.2f);
+        _trim = Real("castle_wall_varriation", new Color(0.55f, 0.6f, 0.7f)) ?? ProceduralSurfaces.Make("Cornisa", ProceduralSurfaces.Kind.Rough, new Color(0.3f, 0.34f, 0.42f), 0.5f);
+        _roof = Real("roof_slates_02", new Color(0.4f, 0.44f, 0.55f)) ?? ProceduralSurfaces.Make("Pizarra", ProceduralSurfaces.Kind.Slate, new Color(0.11f, 0.12f, 0.16f), 0.75f, 1.3f);
+        _wood = Real("dark_wooden_planks", new Color(0.6f, 0.56f, 0.58f)) ?? ProceduralSurfaces.Make("Madera podrida", ProceduralSurfaces.Kind.Planks, new Color(0.17f, 0.13f, 0.11f), 0.5f);
+        _bark = Real("bark_willow", new Color(0.5f, 0.54f, 0.64f)) ?? ProceduralSurfaces.Make("Corteza escarchada", ProceduralSurfaces.Kind.Bark, new Color(0.26f, 0.28f, 0.34f), 0.5f, 1.4f);
+        _path = Real("cobblestone_floor_001", new Color(0.5f, 0.55f, 0.65f)) ?? ProceduralSurfaces.Make("Losa", ProceduralSurfaces.Kind.Rough, new Color(0.22f, 0.24f, 0.29f), 0.6f, 1.2f);
+        _snow = Real("snow_02", new Color(0.62f, 0.68f, 0.8f)) ?? ProceduralSurfaces.Make("Nieve de noche", ProceduralSurfaces.Kind.Snow, new Color(0.5f, 0.56f, 0.66f), 0.7f, 0.6f);
         _iron = MenuRuins.Lit("Hierro forjado", new Color(0.07f, 0.08f, 0.1f), 0.5f, 0.6f);
         _ice = MenuRuins.Lit("Hielo", new Color(0.55f, 0.75f, 0.95f), 0.92f, 0f, new Color(0.08f, 0.18f, 0.35f));
         _crystalBase = new Color(0.2f, 0.5f, 1.8f);
@@ -133,6 +142,16 @@ public class HauntedManor : MonoBehaviour
         _winCandle = MenuRuins.Lit("Ventana con vela", new Color(1f, 0.75f, 0.45f), 0.6f, 0f, _candleBase);
         _lamp = MenuRuins.Lit("Cristal del farol", new Color(1f, 0.85f, 0.6f), 0.6f, 0f, new Color(4f, 2.6f, 1.2f));
         _moon = MenuRuins.Lit("Luna", Color.white, 0f, 0f, new Color(7f, 7.4f, 8f));
+    }
+
+    // Copia de un material real de la mansión con su tinte nocturno, o null si no existe.
+    private static Material Real(string id, Color tint)
+    {
+        var src = Resources.Load<Material>("Materials/Manor/" + id);
+        if (src == null) return null;
+        var m = new Material(src) { name = id + " (noche)" };
+        m.SetColor("_BaseColor", tint);
+        return m;
     }
 
     // Las mallas combinadas con textura reciben UVs proyectadas en el mundo (metros por repetición de cada superficie).
