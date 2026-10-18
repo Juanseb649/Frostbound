@@ -3,7 +3,8 @@ using UnityEditor.SceneManagement;
 
 // Al darle Play en el editor el juego arranca siempre en 00_MainMenu, como en la versión compilada, sin cambiar la
 // escena abierta (al salir de Play se vuelve a ella). Se apaga en Tools/Frostbound/Play desde el menú principal para
-// probar una escena suelta. El bridge se lo salta en el siguiente Play cuando abre una escena a propósito ("open").
+// probar una escena suelta. El bridge se lo salta en el siguiente Play cuando abre una escena a propósito ("open"),
+// y las escenas de herramienta (nombre con "_" delante) siempre arrancan en sí mismas.
 [InitializeOnLoad]
 public static class PlayFromMainMenu
 {
@@ -64,7 +65,9 @@ public static class PlayFromMainMenu
 
     private static void Apply()
     {
-        EditorSceneManager.playModeStartScene = Enabled && !_skipOnce
+        // Las escenas de herramienta (nombre que empieza por "_", como _UICatalog) arrancan en sí mismas.
+        bool toolScene = EditorSceneManager.GetActiveScene().name.StartsWith("_");
+        EditorSceneManager.playModeStartScene = Enabled && !_skipOnce && !toolScene
             ? AssetDatabase.LoadAssetAtPath<SceneAsset>(SceneIds.MainMenuPath)
             : null;
     }
