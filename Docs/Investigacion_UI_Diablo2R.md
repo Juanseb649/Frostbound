@@ -375,10 +375,30 @@ Esta sección describe lo que **ya está en el juego** (rama `feature/campana-co
 | Destello del foco | ![Destello](ui_capturas/15_destello.jpg) | Franja dorada sobre el marco y ribete de escarcha |
 | Disolución | ![Disolución](ui_capturas/16_disolucion.jpg) | Capturada a mitad, en versión lenta |
 
-### 8.4 Pendiente
+### 8.4 Verificación en la build de desarrollo (18-10-2026)
 
-- Medir en una **build de desarrollo** que la UI no asigna memoria por fotograma (en el editor el contador incluye al propio editor).
-- Probar con **mando de Xbox**, **co-op** y **ultrawide** (2560×1080 y 3440×1440).
+Build de desarrollo de Windows (`Tools/Frostbound/Release/Windows (desarrollo)`) con autoprueba sin intervención (`Scripts/Debug/BuildAutoTest.cs`; se lanza con `-autotest <carpeta>` desde `ReleaseBuilder.AutoTest*`).
+
+| Prueba | Resultado |
+|---|---|
+| Errores y excepciones | **0** (tras arreglar el Frostspire, ver abajo) |
+| Asignaciones por fotograma | Título **0,05** · partida 45 · inventario 15. Con toda la UI apagada la partida da ~70 de ~82 antes del arreglo: la UI aporta ~12 pequeñas, el resto es del juego |
+| Reconstrucciones de Canvas | Título 0 · partida ~2/fot (nombres que siguen a los personajes y minimapa, 0,03 ms) |
+| FPS (1920×1080, en ventana) | Título ~82 · partida ~65 |
+| 21:9 y 32:9 | El título cabe entero; HUD e inventario centrados y escalados por altura. Se probó la **proporción** con ventanas de 1920×822 y 1920×540 porque el monitor es 16:9 |
+| Mando (virtual, en la build) | Título: JUGAR → abajo OPCIONES → derecha CRÉDITOS → SALIR → arriba JUGAR. A en OPCIONES abre Configuración, flechas dentro y B la cierra devolviendo el foco a OPCIONES |
+| Co-op | El jugador 2 entra con un mando virtual: dos HUD completos con el estilo nuevo y cartel "JUGADOR 2" en oro |
+
+| 21:9 | 32:9 | Co-op |
+|---|---|---|
+| ![21:9](ui_capturas/18_titulo_21x9.jpg) | ![32:9](ui_capturas/19_inventario_32x9.jpg) | ![Co-op](ui_capturas/20_coop.jpg) |
+
+**Error encontrado y corregido:** al cargar el poblado en la build salía `CollisionMeshData couldn't be created … "Combined Mesh (root: scene) 3"`. El Frostspire de la escena estaba marcado para *static batching*: al compilar, Unity juntaba sus mallas, así que `VillageWorldGenerator` ni podía ponerle colisión ni moverlo, y la montaña quedaba sin colisión en el juego compilado. Se quitó solo esa bandera (`SetupVillage.NoStaticBatching`, aplicado a la escena con `Tools/Frostbound/Poblado/Frostspire sin static batching`).
+
+### 8.5 Pendiente
+
+- Probar con un **mando de Xbox físico** (la navegación ya se verificó con uno virtual) y con un monitor ultrawide real.
+- Las ~12 asignaciones por fotograma que quedan en la UI son pequeñas y repartidas; no hay un culpable claro.
 - Fase 2 del realismo de la mansión: texturas descargadas (Poly Haven), cielo HDRI y casa modelada.
 
 ## 9. Referencias
