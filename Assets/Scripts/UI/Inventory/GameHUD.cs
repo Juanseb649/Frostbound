@@ -125,6 +125,10 @@ public class GameHUD : MonoBehaviour
         if (_ability != null) _ability.Failed -= OnAbilityFailed;
     }
 
+    // Últimos valores escritos en los textos del HUD (-1 = aún sin escribir).
+    private int _shownHp = -1, _shownHpMax = -1, _shownMp = -1, _shownMpMax = -1, _shownLevel = -1, _shownXp = -1, _shownXpNext = -2, _shownPoints = -1, _shownTimer = -1, _shownCost = -1;
+    private readonly int[] _shownBelt = { -1, -1, -1, -1, -1, -1, -1, -1 };
+
     void Update()
     {
         if (_stats == null) return;
@@ -145,17 +149,29 @@ public class GameHUD : MonoBehaviour
             UIFactory.SetFill(_mpFill, mp);
         }
         UIFactory.SetFill(_xpFill, _stats.LevelProgress);
-        _hpText.text = Mathf.CeilToInt(_stats.currentHealth) + " / " + Mathf.CeilToInt(_stats.MaxHealth);
-        _mpText.text = Mathf.FloorToInt(_stats.currentMana) + " / " + Mathf.CeilToInt(_stats.MaxMana);
-        _levelText.text = _stats.level.ToString();
-        if (_hpOrb != null) _xpText.text = _stats.IsMaxLevel ? "NIVEL MÁXIMO" : _stats.experience + " / " + _stats.ExperienceToNextLevel() + " XP";
-        if (_hpOrb == null) _xpText.text = _stats.IsMaxLevel ? "NIVEL MÁXIMO" : "EXPERIENCIA  " + _stats.experience + " / " + _stats.ExperienceToNextLevel();
+        // Los textos solo se rearman cuando cambia algún número (si no, cada fotograma crea cadenas nuevas).
+        int hpNow = Mathf.CeilToInt(_stats.currentHealth), hpMax = Mathf.CeilToInt(_stats.MaxHealth);
+        int mpNow = Mathf.FloorToInt(_stats.currentMana), mpMax = Mathf.CeilToInt(_stats.MaxMana);
+        int xpNow = _stats.experience, xpNext = _stats.IsMaxLevel ? -1 : _stats.ExperienceToNextLevel();
+        if (hpNow != _shownHp || hpMax != _shownHpMax) { _shownHp = hpNow; _shownHpMax = hpMax; _hpText.text = hpNow + " / " + hpMax; }
+        if (mpNow != _shownMp || mpMax != _shownMpMax) { _shownMp = mpNow; _shownMpMax = mpMax; _mpText.text = mpNow + " / " + mpMax; }
+        if (_stats.level != _shownLevel) { _shownLevel = _stats.level; _levelText.text = _shownLevel.ToString(); }
+        if (xpNow != _shownXp || xpNext != _shownXpNext)
+        {
+            _shownXp = xpNow; _shownXpNext = xpNext;
+            if (_hpOrb != null) _xpText.text = xpNext < 0 ? "NIVEL MÁXIMO" : xpNow + " / " + xpNext + " XP";
+            else _xpText.text = xpNext < 0 ? "NIVEL MÁXIMO" : "EXPERIENCIA  " + xpNow + " / " + xpNext;
+        }
 
         bool points = _stats.pointsAvailable > 0 && (inventoryScreen == null || !inventoryScreen.IsOpen);
         _pointsChip.gameObject.SetActive(points);
         if (points)
         {
-            _pointsText.text = "+" + _stats.pointsAvailable + (_stats.pointsAvailable == 1 ? " PUNTO" : " PUNTOS") + "  ·  C";
+            if (_stats.pointsAvailable != _shownPoints)
+            {
+                _shownPoints = _stats.pointsAvailable;
+                _pointsText.text = "+" + _shownPoints + (_shownPoints == 1 ? " PUNTO" : " PUNTOS") + "  ·  C";
+            }
             float s = 1f + Mathf.Sin(Time.unscaledTime * 4f) * 0.035f;
             _pointsChip.localScale = new Vector3(s, s, 1f);
         }
@@ -243,7 +259,12 @@ public class GameHUD : MonoBehaviour
             _beltIcons[i].sprite = item != null ? item.icon : null;
             _beltIcons[i].enabled = item != null && item.icon != null;
             _beltIcons[i].color = n > 0 ? Color.white : new Color(1f, 1f, 1f, 0.3f);
-            _beltCounts[i].text = item != null ? n.ToString() : "";
+            int shown = item != null ? n : -1;
+            if (i < _shownBelt.Length && _shownBelt[i] != shown)
+            {
+                _shownBelt[i] = shown;
+                _beltCounts[i].text = shown >= 0 ? shown.ToString() : "";
+            }
             float f = Mathf.Clamp01(1f - (Time.unscaledTime - _beltFlash[i]) / 0.35f);
             float sc = 1f + f * 0.18f;
             _beltIcons[i].rectTransform.localScale = new Vector3(sc, sc, 1f);
@@ -473,11 +494,13 @@ public class GameHUD : MonoBehaviour
         }
         float left = _ability.CooldownLeft;
         _abilityShade.fillAmount = left > 0f ? _ability.Cooldown01 : 0f;
-        _abilityTimer.text = left > 0f ? Mathf.CeilToInt(left).ToString() : "";
+        int timer = left > 0f ? Mathf.CeilToInt(left) : 0;
+        if (timer != _shownTimer) { _shownTimer = timer; _abilityTimer.text = timer > 0 ? timer.ToString() : ""; }
         bool ready = left <= 0f && _ability.CanAfford;
         _abilityIcon.color = ready ? new Color(0.75f, 0.92f, 1f) : new Color(0.4f, 0.48f, 0.58f);
         if (_abilityFrame != null) _abilityFrame.color = ready ? FrostboundUI.OldGoldLight : Color.white;
-        _abilityCost.text = Mathf.CeilToInt(_ability.Data.cost).ToString();
+        int cost = Mathf.CeilToInt(_ability.Data.cost);
+        if (cost != _shownCost) { _shownCost = cost; _abilityCost.text = cost.ToString(); }
         _abilityCost.color = _ability.CanAfford ? new Color(0.55f, 0.75f, 1f) : FrostboundUI.Negative;
     }
 

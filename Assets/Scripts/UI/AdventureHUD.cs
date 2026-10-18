@@ -115,8 +115,15 @@ public class AdventureHUD : MonoBehaviour
             GameObject p = GameObject.Find("Player");
             if (p != null) _wallet = Wallet.Of(p);
         }
-        if (_wallet != null) _coins.text = "● " + _wallet.Coins.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES")) + " monedas";
+        // Solo se rearma el texto cuando cambian las monedas.
+        if (_wallet != null && _wallet.Coins != _shownCoins)
+        {
+            _shownCoins = _wallet.Coins;
+            _coins.text = "● " + _shownCoins.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES")) + " monedas";
+        }
     }
+
+    private long _shownCoins = -1;
 
     private void UpdateTracker()
     {

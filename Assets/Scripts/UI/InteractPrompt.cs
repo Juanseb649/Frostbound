@@ -72,6 +72,9 @@ public class InteractPrompt : MonoBehaviour
         return _prompts[i];
     }
 
+    // Se reutiliza en cada fotograma (crear uno nuevo cada vez genera basura).
+    private readonly HashSet<NPCInteractable> _shown = new HashSet<NPCInteractable>();
+
     void LateUpdate()
     {
         if (Time.unscaledTime > _rescanAt)
@@ -84,7 +87,8 @@ public class InteractPrompt : MonoBehaviour
         WorldHUD hud = WorldHUD.Instance;
         bool hideAll = cam == null || GameplayInput.Blocked || PauseMenu.IsPaused || LoadingScreen.Active;
         int used = 0;
-        var shown = new HashSet<NPCInteractable>();
+        HashSet<NPCInteractable> shown = _shown;
+        shown.Clear();
         if (!hideAll)
             foreach (PlayerController pc in Players.All)
             {

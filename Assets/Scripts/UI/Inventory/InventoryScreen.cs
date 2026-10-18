@@ -922,8 +922,8 @@ public class InventoryScreen : MonoBehaviour
 
     private RectTransform Panel(string name, float x, float y, float w, float h, string title)
     {
+        // Sin raycast: el marco de la ventana (debajo) ya frena los clics hacia el mundo.
         Image frame = FrostUI.Panel(_window, name, out _, 16f, FrostUI.BorderDim, FrostboundUI.WindowBg);
-        frame.raycastTarget = true;
         UIFactory.TopLeft(frame.rectTransform, x, y, w, h);
         if (!string.IsNullOrEmpty(title)) SectionLabel(frame.rectTransform, title, 24f, 20f);
         return frame.rectTransform;
