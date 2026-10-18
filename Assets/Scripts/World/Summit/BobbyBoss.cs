@@ -21,7 +21,10 @@ public class BobbyBoss : MonoBehaviour
     {
         _boss = GetComponent<BossController>();
         _brain = GetComponent<EnemyBrain>();
-        _boss.blinkInterval = 7f;
+        _boss.blinkInterval = BossTuning.BobbyBlinkEvery;
+        _brain.definition.cooldown = BossTuning.BobbyCooldown;
+        // Es más grande que un ninja: sin más alcance, sus golpes no llegan al héroe.
+        _brain.definition.attackRange = 2.6f;
         _nextLance = Time.time + 5f;
         Crystals();
     }
@@ -48,11 +51,11 @@ public class BobbyBoss : MonoBehaviour
         if (!_boss.Engaged || Time.time < _nextLance) return;
         Transform target = _brain.Target;
         if (target == null) return;
-        _nextLance = Time.time + (hp < 0.5f ? 4.5f : 6f);
+        _nextLance = Time.time + (hp < 0.5f ? BossTuning.BobbyLanceEveryHurt : BossTuning.BobbyLanceEvery);
         Lances(target.position);
     }
 
-    private float Power => 12f + _brain.Level * 1.8f;
+    private float Power => BossTuning.BobbyLance(_brain.Level);
 
     // Fila de lanzas de escarcha desde Bobby hacia el héroe: brotan una tras otra.
     private void Lances(Vector3 toward)

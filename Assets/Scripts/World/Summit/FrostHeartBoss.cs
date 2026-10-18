@@ -59,15 +59,15 @@ public class FrostHeartBoss : MonoBehaviour
         if (_phase == Phase.Shield && !shielded && _boss.Health.healthFloor > 0f) _boss.Health.healthFloor = 0f;
 
         if (!_boss.Engaged) return;
-        if (_phase != Phase.Rings && Time.time >= _nextWave && _spawned.Count < 4)
+        if (_phase != Phase.Rings && Time.time >= _nextWave && _spawned.Count < BossTuning.MaxWaveAdds)
         {
             _nextWave = Time.time + (_phase == Phase.Waves ? 16f : 20f);
             Wave(_phase == Phase.Waves ? 2 : 1);
         }
         if (_phase == Phase.Rings && Time.time >= _nextRing)
         {
-            _nextRing = Time.time + 3.6f;
-            IceRing.Spawn(transform.position, ChamberRadius, 3f, 14f + _brain.Level * 1.8f);
+            _nextRing = Time.time + BossTuning.RingEvery;
+            IceRing.Spawn(transform.position, ChamberRadius, 3f, BossTuning.HeartRing(_brain.Level));
         }
     }
 
@@ -83,8 +83,8 @@ public class FrostHeartBoss : MonoBehaviour
         d.preferredDistance = new Vector2(0f, 26f);
         d.projectileSpeed = p == Phase.Rings ? 16f : 12f;
         d.windup = 0.7f;
-        d.cooldown = p == Phase.Rings ? 2.4f : 1.6f;
-        d.hitsPerAttack = p == Phase.Waves ? 1 : 3;
+        d.cooldown = p == Phase.Rings ? 2.6f : 2f;
+        d.hitsPerAttack = 2;
         if (old == Phase.None) return;
         AudioManager.Play3D(AudioId.Boss_Grunt1, transform.position, 0.6f, 3f, 45f);
         if (p == Phase.Shield)
@@ -107,7 +107,7 @@ public class FrostHeartBoss : MonoBehaviour
     {
         GameDatabase db = GameDatabase.Instance;
         if (db == null) return;
-        EnemyDefinition def = db.FindEnemy(SummitCreature.CrystallizedId) ?? db.FindEnemy("Corrupt_Knight");
+        EnemyDefinition def = db.FindEnemy("Corrupt_Melee");
         if (def == null || def.prefab == null) return;
         for (int i = 0; i < count; i++)
         {
@@ -130,7 +130,7 @@ public class FrostHeartBoss : MonoBehaviour
             float a = (i / 3f) * Mathf.PI * 2f + 0.5f;
             Vector3 at = transform.position + new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)) * (ChamberRadius * 0.72f);
             if (UnityEngine.AI.NavMesh.SamplePosition(at, out UnityEngine.AI.NavMeshHit hit, 4f, UnityEngine.AI.NavMesh.AllAreas)) at = hit.position;
-            _feeders.Add(FeedingCrystal.Spawn(at, transform, 260f + _brain.Level * 25f));
+            _feeders.Add(FeedingCrystal.Spawn(at, transform, BossTuning.HeartFeeder(_brain.Level)));
         }
     }
 

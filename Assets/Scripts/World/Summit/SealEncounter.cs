@@ -62,8 +62,8 @@ public class SealEncounter : MonoBehaviour
         GameObject go = Instantiate(ninja.prefab, at, Quaternion.Euler(0f, 180f, 0f), transform);
         go.name = "Bobby";
         EnemyBrain brain = go.GetComponent<EnemyBrain>();
-        brain.Setup(ninja, null, 16, false, BobbyBoss.Plumage);
-        Bobby = BossController.Make(brain, BobbyTitle, "El que rompió el sello", 11f, 1.35f, 1.35f, def =>
+        brain.Setup(ninja, null, BossTuning.BobbyLevel, false, BobbyBoss.Plumage);
+        Bobby = BossController.Make(brain, BobbyTitle, "El que rompió el sello", BossTuning.BobbyHealth, BossTuning.BobbyDamage, 1.35f, def =>
         {
             def.displayName = BobbyTitle;
             def.sightRange = 24f;
@@ -134,8 +134,8 @@ public class SealEncounter : MonoBehaviour
         GameObject go = Instantiate(mage.prefab, transform.position, Quaternion.Euler(0f, 180f, 0f), transform);
         go.name = "Corazon_del_Frost";
         EnemyBrain brain = go.GetComponent<EnemyBrain>();
-        brain.Setup(mage, null, 18, false, new Color(0.4f, 0.6f, 1f));
-        Heart = BossController.Make(brain, HeartTitle, "Lo que late bajo la montaña", 16f, 1.25f, 3f, def =>
+        brain.Setup(mage, null, BossTuning.HeartLevel, false, new Color(0.4f, 0.6f, 1f));
+        Heart = BossController.Make(brain, HeartTitle, "Lo que late bajo la montaña", BossTuning.HeartHealth, BossTuning.HeartDamage, 3f, def =>
         {
             def.displayName = HeartTitle;
             def.experience = 2500;

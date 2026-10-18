@@ -60,12 +60,12 @@ public class MadreSaviaBoss : MonoBehaviour
         }
     }
 
-    private float Power => 10f + _brain.Level * 1.6f;
+    private float Power => BossTuning.SapPower(_brain.Level);
 
     private void OnShot(EnemyProjectile p)
     {
         if (p == null) return;
-        float dps = 3f + _brain.Level * 0.4f;
+        float dps = BossTuning.SapPoison(_brain.Level);
         p.Ended = at => PoisonPuddle.Spawn(at, 2f, dps, 6f);
     }
 
@@ -78,7 +78,7 @@ public class MadreSaviaBoss : MonoBehaviour
         {
             case Phase.Orbs:
                 d.ranged = true; d.attackRange = 12f; d.preferredDistance = new Vector2(7f, 11f); d.projectileSpeed = 10f;
-                d.windup = 0.8f; d.cooldown = 1.6f; d.hitsPerAttack = 1; d.areaRadius = 0f;
+                d.windup = 0.8f; d.cooldown = 1.4f; d.hitsPerAttack = 2; d.areaRadius = 0f;
                 d.projectileMaterial = Orb();
                 break;
             case Phase.Roots:
@@ -131,7 +131,7 @@ public class MadreSaviaBoss : MonoBehaviour
 
     private void SapRain(Vector3 around)
     {
-        float dps = 3f + _brain.Level * 0.4f;
+        float dps = BossTuning.SapPoison(_brain.Level);
         GroundWarning.Spawn(around, 1.6f, 1.4f, Power, RainColor, at => PoisonPuddle.Spawn(at, 1.6f, dps, 5f));
         for (int i = 0; i < 5; i++)
         {

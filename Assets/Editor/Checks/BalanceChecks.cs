@@ -252,4 +252,76 @@ public static class BalanceChecks
         QuestLog.SetStage(QuestLog.Citadel, QuestLog.CitadelBarbarian);
         return "etapa=" + QuestLog.Stage(QuestLog.Citadel);
     }
+
+    // Equilibrio de los jefes de la campaña frente a Rocco (exec BalanceChecks.BossTable, sin Play).
+    // Vida en "pingüinos normales del mismo nivel"; golpes en % de la vida típica del héroe en su tramo
+    // (40 de base + un tercio de sus puntos en Vida, a 8 por punto).
+    public static string BossTable()
+    {
+        var db = UnityEditor.AssetDatabase.LoadAssetAtPath<GameDatabase>("Assets/Resources/GameDatabase.asset");
+        EnemyDefinition melee = db.FindEnemy("Corrupt_Melee"), mage = db.FindEnemy("Corrupt_Mage"), ninja = db.FindEnemy("Corrupt_Ninja");
+        float Hero(int lvl) => 40f + (12f + (lvl - 1) * 5f / 3f) * 8f;
+        float Eq(float hp, int lvl) => hp / melee.HealthAt(lvl);
+        string Pct(float dmg, int lvl) => Mathf.RoundToInt(dmg / Hero(lvl) * 100f) + "%";
+        float Hit(EnemyDefinition d, int lvl, float mult) => (d.damage.x + d.damage.y) * 0.5f * d.DamageScaleAt(lvl) * mult;
+        var sb = new StringBuilder();
+
+        int l = BossTuning.RoccoLevel;
+        float hp = mage.HealthAt(l) * BossTuning.RoccoHealth;
+        sb.Append("Rocco nv").Append(l).Append(" vida=").Append(Mathf.RoundToInt(hp)).Append(" (").Append(Eq(hp, l).ToString("0")).Append(" normales) golpe=").Append(Pct(Hit(mage, l, BossTuning.RoccoDamage), l));
+
+        l = BossTuning.SapLevel;
+        hp = mage.HealthAt(l) * BossTuning.SapHealth;
+        sb.Append(" | Madre Savia nv").Append(l).Append(" vida=").Append(Mathf.RoundToInt(hp)).Append(" (").Append(Eq(hp, l).ToString("0")).Append(") orbe=").Append(Pct(Hit(mage, l, BossTuning.SapDamage), l))
+          .Append(" lluvia=").Append(Pct(BossTuning.SapPower(l), l)).Append(" raíces=").Append(Pct(BossTuning.SapPower(l) * 1.3f, l))
+          .Append(" charco/s=").Append(Pct(BossTuning.SapPoison(l), l));
+
+        l = BossTuning.BobbyLevel;
+        hp = ninja.HealthAt(l) * BossTuning.BobbyHealth * 0.9f;
+        sb.Append(" | Bobby nv").Append(l).Append(" vida hasta rendirse=").Append(Mathf.RoundToInt(hp)).Append(" (").Append(Eq(hp, l).ToString("0")).Append(") ataque doble=").Append(Pct(Hit(ninja, l, BossTuning.BobbyDamage) * 2f, l))
+          .Append(" lanza=").Append(Pct(BossTuning.BobbyLance(l), l));
+
+        l = BossTuning.HeartLevel;
+        hp = mage.HealthAt(l) * BossTuning.HeartHealth;
+        float feeders = 3f * BossTuning.HeartFeeder(l);
+        sb.Append(" | Corazón nv").Append(l).Append(" vida=").Append(Mathf.RoundToInt(hp)).Append("+cristales ").Append(Mathf.RoundToInt(feeders))
+          .Append(" (").Append(Eq(hp + feeders, l).ToString("0")).Append(") esquirla=").Append(Pct(Hit(mage, l, BossTuning.HeartDamage), l))
+          .Append(" anillo=").Append(Pct(BossTuning.HeartRing(l), l));
+        sb.Append(" | héroe típico: nv9=").Append(Mathf.RoundToInt(Hero(9))).Append(" nv12=").Append(Mathf.RoundToInt(Hero(12))).Append(" nv18=").Append(Mathf.RoundToInt(Hero(18)));
+        return sb.ToString();
+    }
+
+    // ---------- Presión de un jefe en juego: el héroe quieto (el peor caso) recibe golpes N segundos ----------
+    private static float _probeHp, _probeAt;
+
+    public static string ProbeStart()
+    {
+        CharacterStats st = Players.Primary != null ? Players.Primary.Stats : null;
+        if (st == null) return "sin héroe";
+        st.invulnerable = false;
+        st.baseMaxHealth += 100000f;
+        st.currentHealth = st.MaxHealth;
+        _probeHp = st.currentHealth;
+        _probeAt = Time.time;
+        return "sonda en marcha (armadura " + Mathf.RoundToInt(st.DamageReduction * 100f) + "%)";
+    }
+
+    public static string ProbeResult()
+    {
+        CharacterStats st = Players.Primary != null ? Players.Primary.Stats : null;
+        if (st == null) return "sin héroe";
+        float lost = _probeHp - st.currentHealth, secs = Time.time - _probeAt;
+        return "daño=" + Mathf.RoundToInt(lost) + " en " + secs.ToString("0") + " s → " + (lost / Mathf.Max(1f, secs)).ToString("0.0") + "/s";
+    }
+
+    // Escalinata: el héroe frente a Rocco.
+    public static string GoRocco()
+    {
+        GameObject p = Players.PrimaryObject;
+        Vector3 at = StairsLayout.ArenaCenter + new Vector3(0f, 0.2f, -5f);
+        Rigidbody rb = p.GetComponent<Rigidbody>();
+        if (rb != null) rb.position = at;
+        p.transform.position = at;
+        return "frente a Rocco";
+    }
 }

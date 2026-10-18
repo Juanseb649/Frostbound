@@ -99,3 +99,16 @@ Cada tarea se verifica con el bridge (comprobaciones en `Editor/Checks`), la aut
 | Bobby, Corazón y sello | `05_Cumbre` | `GoChamber`, `ToBobby`, `BobbyGivesUp`, `State`, `HeartTo50`, `BreakFeeders`, `HeartTo20`, `KillHeart`, `GoSeal`, `UseSeal` |
 | Epílogo y créditos | `01_Village` | `exec QuestChecks.Epilogue`, `TalkSteveEnd`, `Credits` |
 | Viaje por las puertas | `03_Escalinata` / `04_BosqueCorrupto` | `exec ForestChecks.WalkToForestGate`, `WalkToStairsGate`, `Where` |
+
+### Dificultad de los jefes (C-11)
+
+Todos los números están en `Assets/Scripts/Enemies/BossTuning.cs`. La referencia es Rocco, ya probado jugando.
+
+| Jefe | Nivel | Vida | Vida en «pingüinos normales» | Presión (héroe quieto, % de vida/s) |
+|---|---|---|---|---|
+| Rocco (referencia) | 9 | 1 976 | 18 | 11,5 (con gólems) |
+| Madre Savia | 12 | 2 414 | 18 | 5,8 → 8,2 → 7,6 |
+| Bobby | 16 | 3 330 hasta rendirse | 20 | 8,4 |
+| Corazón del Frost | 18 | 3 654 + 3 cristales de 366 | 26 | 4,9 → 6,9 → 8,1 |
+
+Medir de nuevo: `exec BalanceChecks.BossTable` (sin Play) y, en la escena del jefe, `exec BalanceChecks.ProbeStart` → esperar → `exec BalanceChecks.ProbeResult`.

@@ -66,8 +66,8 @@ public class MadreSaviaEncounter : MonoBehaviour
         GameObject go = Instantiate(mage.prefab, transform.position, Quaternion.identity, transform);
         go.name = "Madre_Savia";
         EnemyBrain brain = go.GetComponent<EnemyBrain>();
-        brain.Setup(mage, null, 12, false, MadreSaviaBoss.Plumage);
-        Boss = BossController.Make(brain, BossTitle, "Chamana corrupta del bosque", 10f, 1.3f, 1.8f, def =>
+        brain.Setup(mage, null, BossTuning.SapLevel, false, MadreSaviaBoss.Plumage);
+        Boss = BossController.Make(brain, BossTitle, "Chamana corrupta del bosque", BossTuning.SapHealth, BossTuning.SapDamage, 1.8f, def =>
         {
             def.displayName = BossTitle;
             def.sightRange = 22f;
