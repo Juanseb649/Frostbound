@@ -31,7 +31,7 @@ Leyenda: ⬜ pendiente · 🟡 en curso · ✅ hecha · ⛔ bloqueada
 - 2026-10-17: el subtítulo del título dice **"LA MANSIÓN HELADA"** (genérico, sin nombre propio) mientras se decide lo de los Vendaval.
 - Verificación visual: `shot` del bridge da la imagen real con UI y posprocesado. `camshot` usa una cámara en perspectiva **sin posprocesado**: sirve para probar encuadres, no luz. Para ir a Héroes: `exec SmokeTest.MenuHeroes`.
 
-- 2026-10-17: **realismo estilizado, fase 1** (sin assets externos): materiales PBR procedurales (`ProceduralSurfaces`) con UVs proyectadas en el mundo; grade de cine con profundidad de campo en Héroes y Crear; brasas, niebla de suelo, ráfagas de viento y vaivén de cámara. Pendiente fase 2: HDRI, texturas de Poly Haven y casa modelada (Blender o Asset Store, sin decidir).
+- 2026-10-17: **realismo estilizado, fase 1** (sin assets externos): materiales PBR procedurales (`ProceduralSurfaces`) con UVs proyectadas en el mundo; grade de cine con profundidad de campo en Héroes y Crear; brasas, niebla de suelo, ráfagas de viento y vaivén de cámara. Fase 2 hecha el 2026-10-18: casa modelada en Blender (`Blender/frostbound_manor.py`), texturas PBR y cielo HDRI de Poly Haven (CC0).
 - 2026-10-17: en el editor, el Play arranca siempre en `00_MainMenu` (`Editor/PlayFromMainMenu.cs`, se desactiva en Tools/Frostbound). El `open` del bridge se lo salta en el siguiente Play.
 
 - 2026-10-17: arreglos de maquetación de paso (ya existían): panel de Crear héroe (nombre, chips y equipo) y lista de Configuración → Control (19 acciones no cabían).

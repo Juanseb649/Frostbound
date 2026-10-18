@@ -399,7 +399,15 @@ Build de desarrollo de Windows (`Tools/Frostbound/Release/Windows (desarrollo)`)
 
 - Probar con un **mando de Xbox físico** (la navegación ya se verificó con uno virtual) y con un monitor ultrawide real.
 - Las ~12 asignaciones por fotograma que quedan en la UI son pequeñas y repartidas; no hay un culpable claro.
-- Fase 2 del realismo de la mansión: texturas descargadas (Poly Haven), cielo HDRI y casa modelada.
+### 8.6 Fase 2 de la mansión (18-10-2026)
+
+- **Casa modelada en Blender** (Blender/frostbound_manor.py → Assets/Resources/Models/Mansion.fbx): ventanas góticas de arco apuntado con marco, parteluz y alféizar, esquineras, cornisas con ménsulas, tejados con alero, torre con almenas y chapitel roto, porche con columnas y puerta de tablones. Mismas coordenadas que la versión de primitivas, que queda como respaldo.
+- **Texturas PBR reales y cielo HDRI** de Poly Haven (CC0, ver Assets/Frostbound/Textures/LEEME.md), preparadas con Tools/Frostbound/Menús/Materiales reales de la mansión.
+- Regenerar la casa: `blender -b -P Blender/frostbound_manor.py -- Assets/Resources/Models/Mansion.fbx`.
+
+| Vista amplia | Título | Detalle |
+|---|---|---|
+| ![Mansión](ui_capturas/22_mansion_modelada.jpg) | ![Título](ui_capturas/23_titulo_fase2.jpg) | ![Detalle](ui_capturas/24_detalle_texturas.jpg) |
 
 ## 9. Referencias
 
