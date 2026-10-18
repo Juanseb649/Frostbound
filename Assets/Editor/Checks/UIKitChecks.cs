@@ -76,6 +76,24 @@ public static class UIKitChecks
         return "raycast activos=" + total + " innecesarios=" + needless + " ej: " + string.Join(", ", sample);
     }
 
+    // Dónde cae la mansión modelada (para comprobar ejes y escala del FBX): límites en el mundo.
+    public static string ManorBounds()
+    {
+        var m = GameObject.Find("Mansión modelada");
+        if (m == null) return "sin mansión modelada";
+        Bounds b = default;
+        bool first = true;
+        int renderers = 0;
+        foreach (var r in m.GetComponentsInChildren<Renderer>())
+        {
+            renderers++;
+            if (first) { b = r.bounds; first = false; } else b.Encapsulate(r.bounds);
+        }
+        var vela = m.transform.Find("Mansion_Vela");
+        string candle = vela != null ? vela.GetComponent<Renderer>().bounds.center.ToString("F1") : "-";
+        return "renderers=" + renderers + " min=" + b.min.ToString("F1") + " max=" + b.max.ToString("F1") + " vela=" + candle + " (esperado ≈ 9.4, 5.6, 16.4)";
+    }
+
     // Guarda la textura de marcos en FrostboundBridge/ui_atlas.png y resume el alfa de la placa.
     public static string DumpAtlas()
     {

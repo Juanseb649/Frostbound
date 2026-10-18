@@ -91,9 +91,15 @@ public class HauntedManor : MonoBehaviour
         Materials();
         _kit = new MeshKit(transform, _cone, _prism, _stone);
         Ground();
-        Manor();
-        Porch();
-        Windows();
+        // Fase 2: la mansión modelada en Blender (Resources/Models/Mansion). Sin ella, la de primitivas.
+        GameObject model = Resources.Load<GameObject>("Models/Mansion");
+        if (model != null) PlaceModel(model);
+        else
+        {
+            Manor();
+            Porch();
+            Windows();
+        }
         Corruption();
         FenceAndGate();
         Path();
@@ -154,18 +160,65 @@ public class HauntedManor : MonoBehaviour
         return m;
     }
 
-    // Las mallas combinadas con textura reciben UVs proyectadas en el mundo (metros por repetición de cada superficie).
+    // Metros por repetición de cada superficie con textura (0 = sin textura).
+    private float TilingOf(Material m)
+    {
+        if (m == _stone || m == _stoneDark) return 2f;
+        if (m == _trim || m == _wood) return 1.5f;
+        if (m == _roof) return 2.2f;
+        if (m == _bark) return 1f;
+        if (m == _path) return 1.2f;
+        if (m == _snow) return 4f;
+        return 0f;
+    }
+
+    // Las mallas combinadas con textura reciben UVs proyectadas en el mundo.
     private void ProjectSurfaceUVs()
     {
-        var tiling = new Dictionary<Material, float>
-        {
-            { _stone, 2f }, { _stoneDark, 2f }, { _trim, 1.5f }, { _roof, 2.2f },
-            { _wood, 1.5f }, { _bark, 1f }, { _path, 1.2f }, { _snow, 4f }
-        };
         foreach (MeshFilter mf in _kit.visual.GetComponentsInChildren<MeshFilter>())
         {
-            Material m = mf.GetComponent<MeshRenderer>().sharedMaterial;
-            if (m != null && tiling.TryGetValue(m, out float meters)) ProceduralSurfaces.ProjectUVs(mf.sharedMesh, meters);
+            float meters = TilingOf(mf.GetComponent<MeshRenderer>().sharedMaterial);
+            if (meters > 0f) ProceduralSurfaces.ProjectUVs(mf.sharedMesh, meters);
+        }
+    }
+
+    // Coloca la mansión modelada: cada malla lleva un material con nombre (Piedra, Pizarra, FrostA…) que se cambia
+    // por el de la escena, y una copia propia de la malla con UVs proyectadas como el resto del decorado.
+    private void PlaceModel(GameObject prefab)
+    {
+        GameObject go = Instantiate(prefab, transform, false);
+        go.name = "Mansión modelada";
+        foreach (MeshRenderer mr in go.GetComponentsInChildren<MeshRenderer>())
+        {
+            Material[] mats = mr.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++) mats[i] = ModelMaterial(mats[i] != null ? mats[i].name : "");
+            mr.sharedMaterials = mats;
+            mr.shadowCastingMode = ShadowCastingMode.On;
+            MeshFilter mf = mr.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+            mf.sharedMesh = Instantiate(mf.sharedMesh);
+            float meters = TilingOf(mats[0]);
+            if (meters > 0f) ProceduralSurfaces.ProjectUVs(mf.sharedMesh, meters);
+        }
+    }
+
+    private Material ModelMaterial(string name)
+    {
+        switch (name)
+        {
+            case "Piedra": return _stone;
+            case "PiedraOscura": return _stoneDark;
+            case "Cornisa": return _trim;
+            case "Pizarra": return _roof;
+            case "Madera": return _wood;
+            case "Hierro": return _iron;
+            case "Nieve": return _snow;
+            case "FrostA": return _winFrost[0];
+            case "FrostB": return _winFrost[1];
+            case "FrostC": return _winFrost[2];
+            case "Rota": return _winDark;
+            case "Vela": return _winCandle;
+            default: return _stone;
         }
     }
 
