@@ -321,7 +321,67 @@ Las tareas van en orden. Cada una tiene un criterio de aceptación verificable. 
 
 ---
 
-## 8. Referencias
+## 8. Guía visual implementada (estado al 17-10-2026)
+
+Esta sección describe lo que **ya está en el juego** (rama `feature/campana-completa`) y las reglas para mantenerlo coherente. Las capturas están en `Docs/ui_capturas/` y se hicieron en el juego corriendo a 1920×1080. Donde lo implementado se apartó de la propuesta de las secciones 5 a 7, se indica.
+
+### 8.1 Dónde vive cada cosa
+
+| Pieza | Archivo | Regla |
+|---|---|---|
+| Colores y medidas | `Scripts/UI/FrostboundUI.cs` | **Único** lugar con hex. `FrostUI`, `InputGlyph` y `LootQualityInfo` solo reenvían |
+| Fábrica de menús | `Scripts/UI/Menu/FrostUI.cs` | `Title` (Cinzel oro), `Kicker` (Cinzel en mayúsculas), `Text` (Nunito), `Panel` (marco de hierro con placa) |
+| Botón | `Scripts/UI/Menu/FrostButton.cs` | `Create(..., Style.Normal/Primary/Danger)`: hierro, oro o sangre. Destello y escarcha al enfocar |
+| Marcos | `Scripts/UI/Kit/FrostFrames.cs` | Generados por código en una textura (hace de atlas): hierro, oro, sangre, plata y placa. **Cambio:** no se modelaron en Blender |
+| Cajas del juego | `Scripts/UI/Inventory/UIFactory.cs` → `Frame` | Las formas redondeadas pasan al marco de plata, que se tiñe con el color del borde (rareza o foco) |
+| Efectos | `Resources/Shaders/UIFrostFrame.shader` | Destello, escarcha y disolución. **Cambio:** HLSL escrito a mano en vez de Shader Graph |
+| Disolución | `Scripts/UI/Kit/UIDissolve.cs` | `UIDissolve.Ghost(panel)` al cerrar: una copia visual se deshace, la ventana real cierra al instante |
+| Accesibilidad | `Scripts/Core/AccessibilitySettings.cs` | Tamaño del texto de lectura y forma por rareza |
+| Catálogo | Escena `_UICatalog` (`Tools/Frostbound/UI/Crear catálogo de UI`) | Todos los componentes y estados en una pantalla |
+| Fondo del menú | `Scripts/World/Atmosphere/HauntedManor.cs` | Mansión helada 3D; `MenuRuins` sigue disponible |
+
+### 8.2 Reglas de uso
+
+1. **Títulos:** siempre `FrostUI.Title` (Cinzel ExtraBold, oro viejo, sin cursiva). Etiquetas pequeñas: `FrostUI.Kicker`.
+2. **Texto y datos:** Nunito (`FrostUI.Text` o `skin.nunito800`). Cinzel solo para títulos, botones y nombres.
+3. **Botones:** uno solo principal (oro) por pantalla: la acción que se espera. Peligro (sangre) solo para borrar o salir sin guardar.
+4. **Foco y selección:** siempre en oro (`OldGoldLight`). El hielo queda para lo mágico (maná, Frost).
+5. **Paneles:** `FrostUI.Panel` para ventanas y cajas, y `UIFactory.Frame` para casillas y botones pequeños. Nada de esquinas redondeadas nuevas.
+6. **Rareza:** color del marco más forma en la esquina (círculo, rombo, cruz, estrella). Nunca solo color.
+7. **Animación:** escala ≤ 1,01 al pasar el ratón, sin rebotes. Cerrar ventanas con `UIDissolve.Ghost`.
+8. **Sonido:** `AudioManager.PlayUI` con `UI_Click`, `UI_OpenMenu`, `UI_CloseMenu`, `UI_Equip` y `UI_Error`. Los botones del kit ya lo hacen.
+9. **Rendimiento:** no rearmar textos en `Update` si el valor no cambió. Solo lo interactivo detecta clics.
+10. **Efectos de shader en UI:** el shader recibe posiciones en el espacio del **Canvas raíz**; los rectángulos se le pasan en ese espacio (ver `FrostButton.UpdateFx`).
+
+### 8.3 Pantallas
+
+| Pantalla | Captura | Notas |
+|---|---|---|
+| Título | ![Título](ui_capturas/01_titulo.jpg) | Mansión helada de fondo, último héroe y JUGAR de oro al centro, fila de acciones abajo |
+| Selección de personaje | ![Personajes](ui_capturas/02_personajes.jpg) | Resumen a la izquierda, ranuras a la derecha y fondo desenfocado (profundidad de campo) |
+| Crear héroe | ![Crear](ui_capturas/03_crear.jpg) | Tarjetas de clase de hierro y la elegida en oro |
+| HUD | ![HUD](ui_capturas/04_hud.jpg) | Orbes y estatuas originales; habilidad con marco de hierro (oro cuando está lista) y XP en línea de oro |
+| Inventario | ![Inventario](ui_capturas/05_inventario.jpg) | Casillas de plata teñidas por rareza con su forma |
+| Equipo | ![Equipo](ui_capturas/06_equipo.jpg) | Ranuras vacías con silueta |
+| Personaje | ![Personaje](ui_capturas/07_personaje.jpg) | Atributos y habilidad de clase |
+| Tienda | ![Tienda](ui_capturas/08_tienda.jpg) | Título en oro; comprar y vender suenan |
+| Menú de NPC | ![NPC](ui_capturas/09_npc.jpg) | Marco de hierro, nombre en oro y opciones de plata |
+| Pausa | ![Pausa](ui_capturas/10_pausa.jpg) | REANUDAR como principal |
+| Configuración | ![Configuración](ui_capturas/11_configuracion.jpg) | Incluye tamaño del texto y forma por rareza |
+| Carga | ![Carga](ui_capturas/12_carga.jpg) | Nombre de la zona en oro y barra recta de oro |
+| Muerte | ![Muerte](ui_capturas/13_muerte.jpg) | "HAS MUERTO" en rojo Cinzel (ya tenía el estilo) |
+| Jugador 2 | ![Jugador 2](ui_capturas/17_jugador2.jpg) | Tarjetas de hierro, la elegida en oro |
+| Catálogo | ![Catálogo](ui_capturas/14_catalogo.jpg) | Referencia de todos los componentes y tokens |
+| Destello del foco | ![Destello](ui_capturas/15_destello.jpg) | Franja dorada sobre el marco y ribete de escarcha |
+| Disolución | ![Disolución](ui_capturas/16_disolucion.jpg) | Capturada a mitad, en versión lenta |
+
+### 8.4 Pendiente
+
+- Medir en una **build de desarrollo** que la UI no asigna memoria por fotograma (en el editor el contador incluye al propio editor).
+- Probar con **mando de Xbox**, **co-op** y **ultrawide** (2560×1080 y 3440×1440).
+- Fase 2 del realismo de la mansión: texturas descargadas (Poly Haven), cielo HDRI y casa modelada.
+
+## 9. Referencias
 
 **Diablo II: Resurrected**
 - Wikipedia: [Diablo II: Resurrected](https://en.wikipedia.org/wiki/Diablo_II:_Resurrected)
