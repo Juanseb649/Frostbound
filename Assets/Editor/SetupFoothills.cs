@@ -33,6 +33,23 @@ public static class SetupFoothills
         Shaman();
     }
 
+    [MenuItem("Tools/Frostbound/Bosque/Crear escena del Bosque Corrupto")]
+    public static void RunForest() => Create(SceneIds.ForestPath, (go, pine, mound, bonfire, snow, stone) =>
+    {
+        ForestGenerator fg = go.AddComponent<ForestGenerator>();
+        fg.pinePrefab = pine; fg.bonfirePrefab = bonfire; fg.snowMaterial = snow; fg.stoneMaterial = stone;
+        return ForestLayout.Generate(fg.fallbackSeed).entry + Vector3.up * 0.1f;
+    }, "Generador_Bosque");
+
+    // Para el bridge: crea la escena y vuelve a la que estaba abierta.
+    public static string CreateForest()
+    {
+        string back = EditorSceneManager.GetActiveScene().path;
+        RunForest();
+        if (!string.IsNullOrEmpty(back)) EditorSceneManager.OpenScene(back, OpenSceneMode.Single);
+        return "bosque creado; build=" + BuildList();
+    }
+
     // Chamán corrupto: parte del mago corrupto; se une a las hordas tras la caída de Rocco.
     public static string Shaman()
     {

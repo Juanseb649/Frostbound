@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/03_Escalinata.unity
     guid: 6ced8cb3b8e4d264c828ee5ad6fefec4
+  - enabled: 1
+    path: Assets/Scenes/04_BosqueCorrupto.unity
+    guid: 296c4b9c668baa541988b47b2ca0fbed
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

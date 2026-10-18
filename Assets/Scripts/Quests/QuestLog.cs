@@ -187,6 +187,19 @@ public static class QuestLog
         }
     }
 
+    // ¿Alguna misión en curso espera ahora este aviso?
+    public static bool Expects(QuestObjective type, string target)
+    {
+        foreach (QuestDefinition q in All)
+        {
+            int stage = Stage(q.id);
+            if (stage <= 0 || stage >= q.DoneStage) continue;
+            QuestStage st = q.Stage(stage);
+            if (st != null && st.type == type && Matches(st.target, target)) return true;
+        }
+        return false;
+    }
+
     // Vacío = cualquiera; "pista" acepta "pista" y "pista_bufanda" (así cuentan varias del mismo tipo).
     private static bool Matches(string wanted, string got)
     {

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 // Un punto del mundo que avisa a las misiones: al llegar (Llegar) o al usarlo como a un NPC (Interactuar),
@@ -10,8 +11,12 @@ public class QuestMarker : MonoBehaviour
     public float radius = 6f;
     [Tooltip("Lo que se dice al usarlo o al llegar (vacío = nada).")]
     [TextArea(1, 3)] public string message = "";
-    [Tooltip("Solo cuenta mientras esta misión está activa (vacío = siempre).")]
-    public string quest = "";
+    [Tooltip("Nombre y botón al acercarse (solo Interactuar).")]
+    public string displayName = "Pista";
+    public string actionLabel = "Examinar";
+
+    // Al usarlo (para la animación del objeto: la raíz se seca, el altar se enciende...).
+    public event Action Activated;
 
     // Recuerdo de la partida: "marca_<id>" etapa 1 = ya usado.
     public bool Used => QuestLog.Stage(SaveKey) >= 1;
@@ -22,10 +27,14 @@ public class QuestMarker : MonoBehaviour
     void Start()
     {
         if (type != QuestObjective.Interactuar) return;
+        if (Used) return;
         _npc = GetComponent<NPCInteractable>();
         if (_npc == null) _npc = gameObject.AddComponent<NPCInteractable>();
+        _npc.displayName = displayName;
+        _npc.role = "";
+        _npc.talkLabel = actionLabel;
+        _npc.headHeight = 1f;
         _npc.talkOverride = Use;
-        if (Used) _npc.enabled = false;
     }
 
     void Update()
@@ -39,14 +48,20 @@ public class QuestMarker : MonoBehaviour
             }
     }
 
-    private bool Relevant => string.IsNullOrEmpty(quest) || QuestLog.Active(quest);
+    // Solo cuenta si alguna misión en curso espera justo esto ahora.
+    private bool Relevant => QuestLog.Expects(type, id);
 
     // Usarlo (también desde las comprobaciones).
     public bool Use()
     {
-        if (Used || !Relevant) return false;
+        if (Used) return false;
+        if (!Relevant)
+        {
+            if (WorldHUD.Instance != null) WorldHUD.Instance.Say(transform, 1.2f, "Aún no sabes qué hacer con esto.", 3f);
+            return true;
+        }
         Trigger();
-        if (_npc != null) _npc.enabled = false;
+        if (_npc != null) Destroy(_npc);
         return true;
     }
 
@@ -60,5 +75,6 @@ public class QuestMarker : MonoBehaviour
             else Notifications.Show(message, FrostboundUI.Gold);
         }
         QuestLog.Report(type, id);
+        Activated?.Invoke();
     }
 }

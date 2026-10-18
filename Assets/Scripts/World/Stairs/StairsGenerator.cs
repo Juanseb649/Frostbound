@@ -486,13 +486,15 @@ public class StairsGenerator : MonoBehaviour
         down.gameObject.layer = 2;
 
         ZoneGate onward = ZoneGate.Build(_root, "Paso_Bosque", StairsLayout.ArenaGate, 180f, 6f, _stone, cloth);
-        onward.targetScene = "";
+        onward.targetScene = SceneIds.Forest;
+        onward.arrival = ForestLayout.ArrivalFromStairs;
         onward.label = "Camino del Bosque Corrupto";
         onward.canPass = () => QuestLog.Stage(QuestLog.Ascent) >= QuestLog.AscentRocco;
         onward.blockedMessage = "Rocco Vendaval cierra el camino. Derrótalo primero.";
         onward.gameObject.layer = 2;
 
         ZoneArrival.Create(_root, StairsLayout.ArrivalFromFoothills, StairsLayout.Entry, 90f);
+        ZoneArrival.Create(_root, ForestLayout.ArrivalFromForest, StairsLayout.ArenaGate + Vector3.forward * 11f, 0f);
     }
 
     private void BakeNavMesh()
