@@ -34,7 +34,43 @@ public static class ReleaseBuilder
     public static string BuildMac() => Build(BuildTarget.StandaloneOSX, "macOS", GameName + ".app");
     public static string BuildLinux() => Build(BuildTarget.StandaloneLinux64, "Linux", GameName + ".x86_64");
 
-    private static string Build(BuildTarget target, string folder, string file)
+    // Build de desarrollo: trae los contadores del Profiler (UIPerfProbe) y la autoprueba (BuildAutoTest).
+    [MenuItem("Tools/Frostbound/Release/Windows (desarrollo)")] public static void MenuWindowsDev() => Debug.Log(BuildWindowsDev());
+    public static string BuildWindowsDev() => Build(BuildTarget.StandaloneWindows64, "Windows_Dev", GameName + ".exe", BuildOptions.Development);
+
+    // Autoprueba en ventana a cada resolución: escribe Builds/autotest/<res>/informe.txt y capturas, y se cierra sola.
+    public static string AutoTest1080() => AutoTest(1920, 1080);
+    // Ultrawide en un monitor 16:9: la ventana no puede ser más grande que la pantalla, así que se prueba la
+    // proporción (lo que importa para la UI) con el mismo ancho.
+    public static string AutoTest21x9() => AutoTest(1920, 822);
+    public static string AutoTest32x9() => AutoTest(1920, 540);
+
+    private static string AutoTest(int w, int h)
+    {
+        string exe = Path.Combine(Root, "Windows_Dev", GameName + ".exe");
+        if (!File.Exists(exe)) return "no existe " + exe + " (ejecuta BuildWindowsDev)";
+        string dir = Path.Combine(Root, "autotest", w + "x" + h);
+        if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        string args = "-autotest \"" + dir + "\" -screen-width " + w + " -screen-height " + h + " -screen-fullscreen 0 -logFile \"" + Path.Combine(Root, "autotest", w + "x" + h + ".log") + "\"";
+        Directory.CreateDirectory(Path.Combine(Root, "autotest"));
+        var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, args) { UseShellExecute = false });
+        return "autoprueba " + w + "×" + h + " lanzada pid=" + p.Id;
+    }
+
+    public static string AutoTestReport()
+    {
+        string root = Path.Combine(Root, "autotest");
+        if (!Directory.Exists(root)) return "sin autopruebas";
+        var sb = new StringBuilder();
+        foreach (string dir in Directory.GetDirectories(root))
+        {
+            string file = Path.Combine(dir, "informe.txt");
+            sb.Append("== ").Append(Path.GetFileName(dir)).Append('\n').Append(File.Exists(file) ? File.ReadAllText(file) : "(sin informe)\n");
+        }
+        return sb.ToString();
+    }
+
+    private static string Build(BuildTarget target, string folder, string file, BuildOptions extra = BuildOptions.None)
     {
         if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone, target))
             return folder + ": falta el módulo de compilación (instálalo desde Unity Hub → Installs → Add modules)";
@@ -47,7 +83,7 @@ public static class ReleaseBuilder
             locationPathName = Path.Combine(dir, file),
             target = target,
             targetGroup = BuildTargetGroup.Standalone,
-            options = BuildOptions.None
+            options = extra
         };
         BuildReport report = BuildPipeline.BuildPlayer(options);
         BuildSummary s = report.summary;

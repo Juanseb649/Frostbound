@@ -18,7 +18,7 @@ public class UIPerfProbe : MonoBehaviour
     private long[] _count;
     private double[] _ms;
     private int _frames, _target;
-    private float _maxFrameMs;
+    private float _maxFrameMs, _elapsed;
 
     public static void Begin(int frames)
     {
@@ -57,6 +57,7 @@ public class UIPerfProbe : MonoBehaviour
                 _ms[i] += _rec[i].elapsedNanoseconds / 1e6;
             }
             _maxFrameMs = Mathf.Max(_maxFrameMs, Time.unscaledDeltaTime * 1000f);
+            _elapsed += Time.unscaledDeltaTime;
         }
         if (++_frames <= _target) return;
 
@@ -67,6 +68,7 @@ public class UIPerfProbe : MonoBehaviour
             sb.Append(" | ").Append(Markers[i]).Append(": ").Append((_count[i] / (double)n).ToString("0.##")).Append("/fot, ")
               .Append((_ms[i] / n).ToString("0.000")).Append(" ms/fot");
         sb.Append(" | peor fotograma ").Append(_maxFrameMs.ToString("0.0")).Append(" ms");
+        sb.Append(" | FPS medio ").Append((n / Mathf.Max(0.001f, _elapsed)).ToString("0"));
         Last = sb.ToString();
         Destroy(gameObject);
     }
