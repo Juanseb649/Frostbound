@@ -92,6 +92,11 @@ public class VillageWorldGenerator : MonoBehaviour
                 mound.transform.localScale = new Vector3(s.scale * 1.4f, s.scale * 0.6f, s.scale);
             }
 
+        // Cerrado hasta hablar con Steve: la empalizada del sur entra en el NavMesh (antes del horneado);
+        // el rastrillo norte se monta después y corta el NavMesh con su obstáculo mientras está bajado.
+        VillageLock.Build(root, SceneMaterial("Iron", new Color(0.12f, 0.13f, 0.15f)), SceneMaterial("Wood", new Color(0.42f, 0.28f, 0.18f)),
+            SceneMaterial("WoodDark", new Color(0.26f, 0.17f, 0.11f)));
+
         if (navMesh != null)
         {
             // El volumen del NavMesh cubre toda la zona (el castillo y su poblado quedan lejos del centro).
@@ -126,6 +131,22 @@ public class VillageWorldGenerator : MonoBehaviour
         if (steve != null && steve.GetComponent<NPCInteractable>() != null && steve.GetComponent<QuestGiver>() == null) steve.AddComponent<QuestGiver>();
         PipoAtHome.Ensure(steve);
         BobbyAtHome.Ensure(steve);
+
+    }
+
+    private Dictionary<string, Material> _sceneMats;
+
+    // Un material de la escena del poblado por su nombre (los de Assets/Materials/Village), o uno sencillo si no está.
+    private Material SceneMaterial(string name, Color fallback)
+    {
+        if (_sceneMats == null)
+        {
+            _sceneMats = new Dictionary<string, Material>();
+            foreach (Renderer r in FindObjectsByType<Renderer>())
+                foreach (Material m in r.sharedMaterials)
+                    if (m != null && !_sceneMats.ContainsKey(m.name)) _sceneMats[m.name] = m;
+        }
+        return _sceneMats.TryGetValue(name, out Material found) ? found : MenuRuins.Lit(name, fallback, 0.2f);
     }
 
     // Puerta sellada, interior (se genera al entrar), asedio de la ciudadela y la guardia del poblado en ruinas.

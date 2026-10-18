@@ -128,6 +128,15 @@ public class AdventureHUD : MonoBehaviour
     private void UpdateTracker()
     {
         string quest = QuestLog.Tracked();
+        // Antes de la primera misión: el poblado está cerrado y la pista es ir a ver a Steve.
+        if (quest.Length == 0 && VillageLock.Instance != null && !VillageLock.Open)
+        {
+            _tracker.gameObject.SetActive(true);
+            _questTitle.text = "El poblado";
+            _questObjective.text = "Habla con Steve, en su claro al sur del poblado";
+            _questDetail.text = "La puerta norte está cerrada";
+            return;
+        }
         bool show = quest.Length > 0;
         _tracker.gameObject.SetActive(show);
         if (!show) return;
