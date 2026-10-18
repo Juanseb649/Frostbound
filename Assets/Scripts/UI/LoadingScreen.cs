@@ -24,6 +24,30 @@ public class LoadingScreen : MonoBehaviour
         "Pulsa Esc para pausar la partida."
     };
 
+    // Consejos de cada zona de la campaña (salen la mitad de las veces al viajar a ella).
+    private static readonly string[] ForestTips =
+    {
+        "Los charcos de savia envenenan: no te quedes encima.",
+        "El círculo rojo del leñador avisa de su hachazo: sal de él o rueda.",
+        "El acechador aparece a tu espalda. Date la vuelta cuando oigas «...».",
+        "Las raíces corruptas se arrancan: busca su brillo verde entre los claros."
+    };
+
+    private static readonly string[] SummitTips =
+    {
+        "Los cristalizados resisten los golpes: el fuego los rompe. Graba una runa Ignis.",
+        "El hijo del Frost se parte en dos al morir. Guarda vida para las esquirlas.",
+        "Enciende los tres altares para fundir el muro de hielo de la cámara.",
+        "Los anillos de hielo se cruzan rodando con Espacio."
+    };
+
+    private static string TipFor(string scene, System.Random rng)
+    {
+        string[] zone = scene == SceneIds.Forest ? ForestTips : scene == SceneIds.Summit ? SummitTips : null;
+        if (zone != null && rng.Next(2) == 0) return zone[rng.Next(zone.Length)];
+        return Tips[rng.Next(Tips.Length)];
+    }
+
     private static LoadingScreen _instance;
     public static bool Active => _instance != null;
 
@@ -157,7 +181,7 @@ public class LoadingScreen : MonoBehaviour
         _fill.fillMethod = Image.FillMethod.Horizontal;
         _fill.fillAmount = 0f;
 
-        string tip = Tips[rng.Next(Tips.Length)];
+        string tip = TipFor(scene, rng);
         TextMeshProUGUI tipText = FrostUI.Text(root, "Consejo", tip, 22f, Color.white, TextAlignmentOptions.Center, FrostUI.BodyLight);
         FrostUI.Place(tipText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(1200f, 36f));
         tipText.rectTransform.pivot = new Vector2(0.5f, 0.5f);

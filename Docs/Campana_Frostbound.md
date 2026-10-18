@@ -65,3 +65,37 @@
 | **C-11** | Pulido | Mapa por zona, consejos de carga, equilibrio de niveles (II: 8–14, III: 14–20), comprobaciones de cada capítulo |
 
 Cada tarea se verifica con el bridge (comprobaciones en `Editor/Checks`), la autoprueba de la build y capturas, como la UI.
+
+---
+
+## 6. Estado (18 de octubre de 2026)
+
+| ID | Estado | Dónde |
+|---|---|---|
+| C-1 | ✅ | `Scripts/Quests/QuestDefinition.cs`, `QuestLog.cs`; datos en `Resources/Quests` (herramienta `Tools/Frostbound/Misiones`) |
+| C-2 | ✅ | `QuestLog.Report` desde muertes de enemigos y jefes, `QuestMarker` (llegar / interactuar) y `QuestGiver` (hablar) |
+| C-3 | ✅ | `QuestGiver` genérico: ofrece y comenta según los datos (Steve); Pipo y Bobby en el poblado |
+| C-4 | ✅ | `World/Forest/ForestLayout.cs`, `ForestGenerator.cs`, escena `04_BosqueCorrupto` |
+| C-5 | ✅ | `Enemies/ForestCreature.cs`, `PoisonPuddle.cs`; assets con `Tools/Frostbound/Bosque/Crear enemigos del bosque` |
+| C-6 | ✅ | `World/Forest/MadreSaviaBoss.cs`, `MadreSaviaEncounter.cs`, `PipoAtHome.cs`, `Enemies/GroundWarning.cs` |
+| C-7 | ✅ | `World/Summit/SummitLayout.cs`, `SummitGenerator.cs`, escena `05_Cumbre` |
+| C-8 | ✅ | `Enemies/SummitCreature.cs`, `Damageable.damageScale` |
+| C-9 | ✅ | `World/Summit/BobbyBoss.cs`, `FrostHeartBoss.cs`, `SealEncounter.cs`, `BossController.spare` |
+| C-10 | ✅ | `UI/Ending/EndingSequence.cs`, `CreditsRoll.cs` (y `GameCredits`), `World/Summit/BobbyAtHome.cs` |
+| C-11 | 🟡 | Consejos de carga por zona y build de desarrollo sin errores. Falta: partida completa a mano y ajuste fino de dificultad |
+
+### Cómo probarlo por el bridge
+
+| Qué | Escena | Comandos |
+|---|---|---|
+| Campaña entera con avisos simulados | `01_Village` | `exec QuestChecks.Flow` |
+| Steve ofrece y comenta | `01_Village` | `exec QuestChecks.Steve` |
+| Bosque: info, pistas, raíces | `04_BosqueCorrupto` | `exec ForestChecks.StartChapter`, `Info`, `GoClue`, `UseNext` |
+| Enemigos del bosque | `04_BosqueCorrupto` | `exec ForestChecks.Bestiary`, `Puddles` |
+| Madre Savia y Pipo | `04_BosqueCorrupto` | `GoHeart`, `ToBoss`, `BossTo40`, `BossTo20`, `KillBoss`, `GoCocoon`, `FreePipo` |
+| Pipo en casa | `01_Village` | `exec QuestChecks.PipoHome`, `PipoState` |
+| Cumbre y altares | `05_Cumbre` | `exec SummitChecks.StartChapter`, `Info`, `LightAltars` |
+| Enemigos de la cumbre | `05_Cumbre` | `exec SummitChecks.Bestiary` |
+| Bobby, Corazón y sello | `05_Cumbre` | `GoChamber`, `ToBobby`, `BobbyGivesUp`, `State`, `HeartTo50`, `BreakFeeders`, `HeartTo20`, `KillHeart`, `GoSeal`, `UseSeal` |
+| Epílogo y créditos | `01_Village` | `exec QuestChecks.Epilogue`, `TalkSteveEnd`, `Credits` |
+| Viaje por las puertas | `03_Escalinata` / `04_BosqueCorrupto` | `exec ForestChecks.WalkToForestGate`, `WalkToStairsGate`, `Where` |

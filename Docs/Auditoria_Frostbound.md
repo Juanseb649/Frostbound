@@ -84,10 +84,19 @@ Datos: 108 ScriptableObjects. 4 clases, 7 enemigos, 18 armas, 8 runas, 4 sets, p
 | `01_Village.unity` | Sí (1) | Poblado procedural (3,4 MB), claro de Steve, iglús con escaramuzas, ciudadela, castillo e interior |
 | `02_Foothills.unity` | Sí (2) | Las Faldas: montaña con ventisca, 6 campamentos, hordas, ruinas, 2 hogueras y guardianes del paso |
 | `03_Escalinata.unity` | Sí (3) | Escalera de piedra en S hasta la explanada de Rocco Vendaval |
+| `04_BosqueCorrupto.unity` | Sí (4) | Bosque de pinos negros: pistas de Pipo, raíces corruptas, corazón del bosque con la Madre Savia |
+| `05_Cumbre.unity` | Sí (5) | Grieta de hielo con tres altares, muro de hielo y la cámara del sello (Bobby y el Corazón del Frost) |
+
+Las misiones son datos (`Assets/Resources/Quests`, `QuestDefinition`): etapas con objetivo, líneas del NPC y recompensa.
+Diseño completo en `Docs/Campana_Frostbound.md`.
 
 **Capítulo I:**
 - **"La ciudadela caída":** Steve da la misión → asedio de la plaza → **Gorvald, el Bárbaro Corrupto** (rompe el sello del castillo) → interior del castillo → **Smeagol, el Ninja Maldito** en la sala del trono.
 - **"El ascenso":** sendero del norte → Las Faldas → guardianes del paso helado → La Escalinata → **Rocco Vendaval** (3 fases: báculo, arco y mandoble). Al caer revela a Bobby y Pipo, y se despiertan los chamanes.
+
+**Capítulo II · El Bosque Corrupto:** "El rastro de Pipo" (3 pistas) → "Savia negra" (3 raíces) → "La Madre Savia" (jefa en 3 fases; Pipo libre en un capullo de hielo y de vuelta con Steve). Enemigos nuevos: leñador, escupesavia y acechador.
+
+**Capítulo III · La Cumbre:** "La cumbre" (3 altares) → "El sello": **Bobby** se rinde y confiesa → **Corazón del Frost** (oleadas, escudo con 3 cristales, anillos de hielo) → rehacer el sello → "De vuelta a casa" (Bobby y Pipo en el poblado) → créditos. Enemigos nuevos: cristalizado (débil al fuego) e hijo del Frost (se parte en dos).
 
 ---
 
