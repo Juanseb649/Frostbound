@@ -896,7 +896,7 @@ public class FrostMenu : MonoBehaviour
         if (s == Screen.Credits)
         {
             TextMeshProUGUI t = FrostUI.Text(box.transform, "Texto",
-                "<size=30><font=\"" + (FrostUI.Display != null ? FrostUI.Display.name : "") + "\">Frostbound</font></size>\n\nDiseño y desarrollo: Sebastián\nProgramación asistida: Claude\n\nTipografías: Lilita One, Nunito y Cinzel (SIL Open Font License)\nHecho con Unity",
+                "<size=30><font=\"" + (FrostUI.Display != null ? FrostUI.Display.name : "") + "\">Frostbound</font></size>\n\n" + GameCredits.Plain,
                 20f, Color.white, TextAlignmentOptions.Center);
             t.textWrappingMode = TextWrappingModes.Normal;
             FrostUI.Stretch(t.rectTransform, 40f);

@@ -24,6 +24,7 @@ public class SummitGenerator : MonoBehaviour
     public int Seed { get; private set; }
     public SummitLayout.Result Layout { get; private set; }
     public Transform ChamberCenter { get; private set; }
+    public SealEncounter Encounter { get; private set; }
     public bool Built { get; private set; }
 
     public const string AscentQuest = "el_ascenso_final";
@@ -503,6 +504,14 @@ public class SummitGenerator : MonoBehaviour
             if (i % 3 == 0) Crystal(ch, p + (ground - p).normalized * 1.8f, rng.Range(0f, 360f), 1.4f);
         }
         PulseLight(ground + Vector3.up * 6f, 34f, 3.5f);
+
+        // Bobby, el Corazón del Frost y el sello.
+        var enc = new GameObject("Encuentro_Sello");
+        enc.transform.SetParent(ch, false);
+        enc.transform.position = ground;
+        Encounter = enc.AddComponent<SealEncounter>();
+        Encounter.npcPrefab = npcPrefab;
+        Encounter.radius = c.radius - 3f;
     }
 
     private void Gates()

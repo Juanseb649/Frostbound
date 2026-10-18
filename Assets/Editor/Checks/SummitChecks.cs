@@ -93,4 +93,91 @@ public static class SummitChecks
         sb.Append(" esquirlas=").Append(shards);
         return sb.ToString();
     }
+
+    // ---------- Final (C-9 y C-10) ----------
+
+    private static SealEncounter Enc => Gen.Encounter;
+
+    // Altares encendidos y en la cámara: Bobby aparece.
+    public static string ToBobby()
+    {
+        StartChapter();
+        QuestLog.SetStage(SummitGenerator.AscentQuest, QuestLog.Get(SummitGenerator.AscentQuest).DoneStage);
+        QuestLog.SetStage(SealEncounter.Quest, SealEncounter.StageBobby);
+        return "bobby=" + (Enc.Bobby != null ? Enc.Bobby.title : "no") + " misión=" + QuestLog.Objective(SealEncounter.Quest, QuestLog.Stage(SealEncounter.Quest));
+    }
+
+    // Bobby al 10 %: se rinde (discurso) y despierta el Corazón.
+    public static string BobbyGivesUp()
+    {
+        BossController b = Enc.Bobby;
+        if (b == null) return "sin Bobby";
+        b.Health.TakeHit(new DamageInfo { amount = b.Health.maxHealth, type = DamageType.Physical, source = Players.PrimaryObject });
+        return "vida=" + Mathf.RoundToInt(b.Health.Health) + " hablando=" + b.Speaking;
+    }
+
+    public static string State()
+    {
+        var sb = new StringBuilder();
+        BossController b = Enc.Bobby, h = Enc.Heart;
+        sb.Append("bobby=").Append(b == null ? "-" : (b.Spared ? "rendido" : b.Speaking ? "hablando" : "pelea"));
+        if (h != null)
+        {
+            FrostHeartBoss fh = h.GetComponent<FrostHeartBoss>();
+            sb.Append(" corazón=").Append(Mathf.RoundToInt(h.Health.Health)).Append('/').Append(Mathf.RoundToInt(h.Health.maxHealth))
+              .Append(h.Health.IsDead ? " roto" : "").Append(fh != null && fh.Shielded ? " escudo" : "");
+        }
+        sb.Append(" alimentadores=").Append(Object.FindObjectsByType<FeedingCrystal>().Length)
+          .Append(" anillos=").Append(Object.FindObjectsByType<IceRing>().Length)
+          .Append(" sello=").Append(Enc.Seal != null);
+        string t = QuestLog.Tracked();
+        sb.Append(" | ").Append(t).Append('@').Append(QuestLog.Stage(t)).Append(" '").Append(QuestLog.Objective(t, QuestLog.Stage(t))).Append("'");
+        return sb.ToString();
+    }
+
+    public static string HeartTo50() => HeartTo(0.5f);
+    public static string HeartTo20() => HeartTo(0.2f);
+
+    private static string HeartTo(float k)
+    {
+        BossController h = Enc.Heart;
+        if (h == null) return "sin corazón";
+        h.Health.invulnerable = false;
+        float floor = h.Health.healthFloor;
+        h.Health.healthFloor = 0f;
+        h.Health.TakeHit(new DamageInfo { amount = h.Health.Health - h.Health.maxHealth * k, type = DamageType.Fire, source = Players.PrimaryObject });
+        h.Health.healthFloor = floor;
+        return State();
+    }
+
+    public static string BreakFeeders()
+    {
+        int n = 0;
+        foreach (FeedingCrystal f in Object.FindObjectsByType<FeedingCrystal>())
+        {
+            Damageable d = f.GetComponent<Damageable>();
+            d.TakeHit(new DamageInfo { amount = d.maxHealth + 1f, type = DamageType.Physical, source = Players.PrimaryObject });
+            n++;
+        }
+        return "rotos=" + n + " · " + State();
+    }
+
+    public static string KillHeart()
+    {
+        BossController h = Enc.Heart;
+        if (h == null) return "sin corazón";
+        h.Health.invulnerable = false;
+        h.Health.healthFloor = 0f;
+        h.Health.TakeHit(new DamageInfo { amount = h.Health.Health + 1f, type = DamageType.Fire, source = Players.PrimaryObject });
+        return State();
+    }
+
+    public static string UseSeal()
+    {
+        if (Enc.Seal == null) return "sin sello";
+        bool ok = Enc.Seal.Use();
+        return "sello usado=" + ok + " final=" + EndingSequence.Running + " · " + State();
+    }
+
+    public static string GoSeal() => Go(Gen.Layout.Find(SummitLayout.ClearingKind.Chamber).center + Vector3.back * 3f);
 }

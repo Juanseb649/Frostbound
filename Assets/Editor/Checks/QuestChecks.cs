@@ -112,4 +112,22 @@ public static class QuestChecks
         string t = QuestLog.Tracked();
         return s + " | tras hablar con Steve: " + MadreSaviaEncounter.Quest + "@" + QuestLog.Stage(MadreSaviaEncounter.Quest) + " sigue=" + t + "@" + QuestLog.Stage(t);
     }
+
+    // Todo cumplido salvo el epílogo: Bobby aparece junto a Steve; hablar con Steve termina el juego (créditos).
+    public static string Epilogue()
+    {
+        foreach (QuestDefinition q in QuestLog.All) if (q.id != BobbyAtHome.Epilogue) QuestLog.SetStage(q.id, q.DoneStage);
+        string t = QuestLog.Tracked();
+        return t + "@" + QuestLog.Stage(t) + " bobby=" + (GameObject.Find("NPC_Bobby") != null) + " pipo=" + (GameObject.Find("NPC_Pipo") != null);
+    }
+
+    public static string TalkSteveEnd()
+    {
+        var steve = GameObject.Find(MapSystem.SteveName);
+        if (steve == null) return "sin Steve";
+        steve.GetComponent<NPCInteractable>().Choose(NPCOption.Hablar);
+        return "epilogo=" + QuestLog.Stage(BobbyAtHome.Epilogue) + " cumplido=" + QuestLog.Done(BobbyAtHome.Epilogue);
+    }
+
+    public static string Credits() => "créditos=" + CreditsRoll.Showing;
 }
