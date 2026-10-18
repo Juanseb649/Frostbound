@@ -13,6 +13,8 @@ Shader "Frostbound/MountainBackdrop"
         _Base ("Altura de la base (mundo)", Float) = 0
         _Top ("Altura de las cumbres (mundo)", Float) = 60
         _Emission ("Brillo propio", Color) = (0, 0, 0, 0)
+        _KeyDir ("Luz clave (dirección hacia la luz)", Vector) = (-0.45, 0.75, -0.5, 0)
+        _KeyColor ("Luz clave", Color) = (0.78, 0.86, 1, 1)
     }
     SubShader
     {
@@ -28,7 +30,8 @@ Shader "Frostbound/MountainBackdrop"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _Snow, _Rock, _HazeColor, _Emission;
+                half4 _Snow, _Rock, _HazeColor, _Emission, _KeyColor;
+                float4 _KeyDir;
                 half _Haze;
                 float _Base, _Top;
             CBUFFER_END
@@ -63,13 +66,16 @@ Shader "Frostbound/MountainBackdrop"
                 float snow = smoothstep(0.35, 0.6, n.y + h * 0.35 + wobble - 0.2);
                 half3 albedo = lerp(_Rock.rgb, _Snow.rgb, snow);
 
+                // La luna queda detrás de las montañas: una luz clave desde arriba a la izquierda (de cara a la cámara)
+                // marca las facetas y las aristas, y la luna solo perfila.
                 Light moon = GetMainLight();
-                half lambert = saturate(dot(n, moon.direction)) * 0.75 + 0.25;
-                half3 lit = albedo * (moon.color * lambert * 0.9 + _HazeColor.rgb * 0.55) + _Emission.rgb;
+                half key = saturate(dot(n, normalize(_KeyDir.xyz)));
+                half back = saturate(dot(n, moon.direction));
+                half3 lit = albedo * (_KeyColor.rgb * (key * 0.95 + 0.18) + moon.color * back * 0.35 + _HazeColor.rgb * 0.25) + _Emission.rgb;
 
                 // Bruma: más espesa en la base (se funde con la niebla del valle) y según la capa.
                 half3 fogTint = lerp(unity_FogColor.rgb, _HazeColor.rgb, 0.5);
-                half mist = saturate(_Haze + (1 - h) * (1 - h) * (1 - h) * 0.7);
+                half mist = saturate(_Haze + (1 - h) * (1 - h) * (1 - h) * 0.55);
                 return half4(lerp(lit, fogTint, mist), 1);
             }
             ENDHLSL

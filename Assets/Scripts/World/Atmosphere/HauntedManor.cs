@@ -87,6 +87,8 @@ public class HauntedManor : MonoBehaviour
         }
         Camera cam = Camera.main;
         _cam = cam != null ? cam.transform : null;
+        // La cordillera y el Frostspire están a 200-260 m: que la cámara llegue a dibujarlos.
+        if (cam != null) cam.farClipPlane = Mathf.Max(cam.farClipPlane, 400f);
         _nextFlash = Time.unscaledTime + Random.Range(5f, 9f);
         _nextFlock = Time.unscaledTime + Random.Range(3f, 6f);
     }
@@ -614,6 +616,9 @@ public class HauntedManor : MonoBehaviour
     // Cordillera nevada detrás de la mansión, en dos capas (media y lejana) y con el Frostspire y su punta de cristal.
     // Va con su propio sombreador (Resources/Shaders/MountainBackdrop): la niebla del menú la borraría a esta
     // distancia. No se combina ni proyecta sombras.
+    // A la izquierda, fuera del logo: equilibra la luna de la derecha y su cristal se ve en 16:9, 21:9 y 32:9.
+    private const float SpireX = -112f;
+
     private void Cordillera()
     {
         var root = new GameObject("Cordillera").transform;
@@ -621,39 +626,50 @@ public class HauntedManor : MonoBehaviour
         Shader sh = Resources.Load<Shader>("Shaders/MountainBackdrop");
         if (sh == null) return;
         Material near = new Material(sh) { name = "Cordillera media" };
-        near.SetFloat("_Haze", 0.18f);
-        near.SetFloat("_Top", 55f);
+        near.SetFloat("_Haze", 0.1f);
+        near.SetFloat("_Top", 70f);
         Material far = new Material(sh) { name = "Cordillera lejana" };
-        far.SetFloat("_Haze", 0.38f);
-        far.SetFloat("_Top", 80f);
-        far.SetColor("_Snow", new Color(0.72f, 0.8f, 0.96f));
+        far.SetFloat("_Haze", 0.2f);
+        far.SetFloat("_Top", 100f);
+        far.SetColor("_Snow", new Color(0.82f, 0.88f, 1f));
 
         var rng = new System.Random(4207);
         float Rr(float a, float b) => a + (float)rng.NextDouble() * (b - a);
-        // Capa lejana: picos altos y anchos, repartidos de lado a lado (también para 21:9 y 32:9).
+        // Las montañas son las protagonistas (el héroe es un pingüino): la capa lejana es una pared de cumbres que
+        // llena el cielo hasta el borde de arriba, por detrás del logo, de lado a lado (también en 21:9 y 32:9).
         int seed = 0;
-        for (float x = -260f; x <= 260f; x += Rr(26f, 40f))
-            Peak(root, new Vector3(x, -2f, Rr(195f, 230f)), Rr(48f, 72f), Rr(1.4f, 1.9f), far, seed++);
-        // Capa media: más bajos y más cerca, sin tapar el centro (detrás de la casa queda la capa lejana y el Frostspire).
-        for (float x = -230f; x <= 230f; x += Rr(22f, 34f))
+        for (float x = -300f; x <= 300f; x += Rr(18f, 30f))
         {
-            if (Mathf.Abs(x) < 18f) continue;
-            Peak(root, new Vector3(x, -2f, Rr(130f, 160f)), Rr(26f, 42f), Rr(1.5f, 2.1f), near, seed++);
+            // Junto al Frostspire, más bajas: que nada le quite el protagonismo.
+            float h = Mathf.Abs(x - SpireX) < 35f ? Rr(55f, 70f) : Rr(70f, 92f);
+            Peak(root, new Vector3(x, -2f, Rr(200f, 235f)), h, Rr(1.6f, 2.2f), far, seed++);
         }
-        // El Frostspire: a la derecha detrás de la casa (sin quedar tapado por el logo), con su punta de cristal.
-        const float spireHeight = 62f;
-        Vector3 spire = new Vector3(45f, -2f, 185f);
-        Peak(root, spire, spireHeight, 1.1f, far, 99);
+        // Capa media: a los lados de la casa, sin tapar el centro, para enmarcarla.
+        for (float x = -240f; x <= 240f; x += Rr(20f, 30f))
+        {
+            if (Mathf.Abs(x) < 22f || Mathf.Abs(x - SpireX) < 45f) continue;
+            Peak(root, new Vector3(x, -2f, Rr(130f, 165f)), Rr(45f, 70f), Rr(1.5f, 2.1f), near, seed++);
+        }
+        // El Frostspire: el más alto y esbelto, a la izquierda de la casa; su cristal queda dentro del cuadro.
+        const float spireHeight = 95f;
+        Vector3 spire = new Vector3(SpireX, -2f, 235f);
+        // Material propio: más helado y sin apenas bruma, para que se lea por delante de la cordillera.
+        Material spireMat = new Material(sh) { name = "Frostspire" };
+        spireMat.SetColor("_Snow", new Color(0.88f, 0.95f, 1f));
+        spireMat.SetColor("_Rock", new Color(0.2f, 0.32f, 0.58f));
+        spireMat.SetFloat("_Haze", 0.05f);
+        spireMat.SetFloat("_Top", spireHeight);
+        Peak(root, spire, spireHeight, 1.0f, spireMat, 99);
         Material tip = new Material(sh) { name = "Punta del Frostspire" };
         tip.SetColor("_Snow", new Color(0.35f, 0.6f, 1f));
         tip.SetColor("_Rock", new Color(0.25f, 0.45f, 0.9f));
-        tip.SetColor("_Emission", new Color(0.25f, 0.55f, 1.4f));
-        tip.SetFloat("_Haze", 0.15f);
+        tip.SetColor("_Emission", new Color(0.5f, 1.3f, 3.2f));
+        tip.SetFloat("_Haze", 0f);
         tip.SetFloat("_Top", 120f);
         var crystal = new GameObject("Punta de cristal", typeof(MeshFilter), typeof(MeshRenderer));
         crystal.transform.SetParent(root, false);
-        crystal.transform.localPosition = spire + new Vector3(0f, spireHeight * 1.04f + 5f, 0f);
-        crystal.transform.localScale = new Vector3(3.5f, 13f, 3.5f);
+        crystal.transform.localPosition = spire + new Vector3(0f, spireHeight * 1.04f + 6f, 0f);
+        crystal.transform.localScale = new Vector3(6f, 24f, 6f);
         crystal.GetComponent<MeshFilter>().sharedMesh = MenuRuins.Octahedron();
         var cr = crystal.GetComponent<MeshRenderer>();
         cr.sharedMaterial = tip;

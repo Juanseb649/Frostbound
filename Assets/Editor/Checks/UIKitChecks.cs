@@ -159,4 +159,18 @@ public static class UIKitChecks
 
     public static string Wide21x9() => WideShot("mt_21x9", 1920, 822);
     public static string Wide32x9() => WideShot("mt_32x9", 1920, 540);
+
+    // Antes de mandar una tanda por el bridge: si el usuario está jugando, no se toca nada.
+    public static string EditorState() => (Application.isPlaying ? "play" : "edicion") + " escena=" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+    // Dónde cae en pantalla el cristal del Frostspire (0-1; fuera de 0-1 = fuera del cuadro).
+    public static string SpireOnScreen()
+    {
+        GameObject tip = GameObject.Find("Punta de cristal");
+        Camera cam = Camera.main;
+        if (tip == null || cam == null) return "sin cristal o cámara";
+        Vector3 v = cam.WorldToViewportPoint(tip.transform.position);
+        Renderer r = tip.GetComponent<Renderer>();
+        return "cristal en " + v.ToString("F2") + " mundo=" + tip.transform.position.ToString("F0") + " visible=" + (r != null && r.isVisible);
+    }
 }
