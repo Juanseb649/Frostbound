@@ -225,57 +225,9 @@ public static class SetupVillage
 
     private static void BuildFountain()
     {
+        // La fuente (pileta, taza, agua, chorros, estatua del fundador...) la monta SetupFountain.
         Transform g = Group("Fuente_Helada", Vector3.zero);
-        Prim(PrimitiveType.Cylinder, "Pileta", g, new Vector3(0f, 0.35f, 0f), Vector3.zero, new Vector3(6.4f, 0.35f, 6.4f), "WallStone", false);
-        Prim(PrimitiveType.Cylinder, "Pileta_Borde", g, new Vector3(0f, 0.72f, 0f), Vector3.zero, new Vector3(6.7f, 0.04f, 6.7f), "Snow", false);
-        Prim(PrimitiveType.Cylinder, "Agua_Congelada", g, new Vector3(0f, 0.7f, 0f), Vector3.zero, new Vector3(5.8f, 0.03f, 5.8f), "Ice", false);
-        Prim(PrimitiveType.Cylinder, "Columna", g, new Vector3(0f, 1.6f, 0f), Vector3.zero, new Vector3(0.8f, 0.95f, 0.8f), "WallStone", false);
-        Prim(PrimitiveType.Cylinder, "Taza", g, new Vector3(0f, 2.55f, 0f), Vector3.zero, new Vector3(2.6f, 0.14f, 2.6f), "WallStone", false);
-        Prim(PrimitiveType.Cylinder, "Taza_Hielo", g, new Vector3(0f, 2.7f, 0f), Vector3.zero, new Vector3(2.3f, 0.03f, 2.3f), "Ice", false);
-
-        for (int i = 0; i < 10; i++)
-        {
-            float deg = i * 36f + Rand(-8f, 8f);
-            Vector3 edge = Polar(deg, 1.25f);
-            float len = Rand(0.35f, 0.8f);
-            GameObject icicle = new GameObject("Carambano");
-            icicle.transform.SetParent(g, false);
-            icicle.transform.localPosition = edge + Vector3.up * 2.45f;
-            icicle.transform.localRotation = Quaternion.Euler(180f, 0f, 0f);
-            icicle.transform.localScale = new Vector3(0.14f, len, 0.14f);
-            icicle.isStatic = true;
-            icicle.AddComponent<MeshFilter>().sharedMesh = _cone;
-            icicle.AddComponent<MeshRenderer>().sharedMaterial = Mats["Ice"];
-        }
-
-        GameObject statueModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Penguin.obj");
-        if (statueModel != null)
-        {
-            var statue = (GameObject)PrefabUtility.InstantiatePrefab(statueModel, g);
-            statue.name = "Estatua_Fundador";
-            statue.transform.localPosition = new Vector3(0f, 2.72f, 0f);
-            statue.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            statue.transform.localScale = Vector3.one;
-            Bounds? sb = GetBounds(statue, "");
-            float statueHeight = sb.HasValue ? sb.Value.size.y : 1f;
-            statue.transform.localScale = Vector3.one * (1.5f / Mathf.Max(0.05f, statueHeight));
-            Bounds? sb2 = GetBounds(statue, "");
-            if (sb2.HasValue) statue.transform.position += Vector3.up * (g.position.y + 2.72f - sb2.Value.min.y);
-            foreach (Renderer r in statue.GetComponentsInChildren<Renderer>(true))
-            {
-                var mats = new Material[Mathf.Max(1, r.sharedMaterials.Length)];
-                for (int i = 0; i < mats.Length; i++) mats[i] = Mats["IceStatue"];
-                r.sharedMaterials = mats;
-            }
-            foreach (Collider c in statue.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
-        }
-        else
-        {
-            Cone("Cristal", g, new Vector3(0f, 2.7f, 0f), new Vector3(0.7f, 2.2f, 0.7f), "IceStatue");
-        }
-
-        Light l = AddPointLight(g, new Vector3(0f, 3.8f, 0f), new Color(0.55f, 0.8f, 1f), 1.2f, 7f, false);
-        l.name = "Luz_Fuente";
+        SetupFountain.Build(g);
 
         CapsuleCollider block = g.gameObject.AddComponent<CapsuleCollider>();
         block.center = new Vector3(0f, 1.5f, 0f);
