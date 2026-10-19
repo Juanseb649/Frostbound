@@ -5,13 +5,15 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // Sobre el NPC más cercano a cada héroe aparece el botón con el que interactúa (B del mando, E del teclado, o lo que
-// tenga asignado en Configuración → Control) y debajo, en letra pequeña, «Hablar».
+// tenga asignado en Configuración → Control) y debajo, en letra pequeña, «Hablar». Mientras un NPC cuenta una misión,
+// junto a la esquina de su globo aparece, más tenue, el mismo botón con «Saltar».
 public class InteractPrompt : MonoBehaviour
 {
     private class Prompt
     {
         public RectTransform root, glyphSlot;
         public TextMeshProUGUI label;
+        public CanvasGroup group;
         public string glyphKey = "";
     }
 
@@ -67,6 +69,8 @@ public class InteractPrompt : MonoBehaviour
             p.label.rectTransform.sizeDelta = new Vector2(120f, 20f);
             p.label.outlineWidth = 0.25f;
             p.label.outlineColor = new Color32(5, 8, 14, 255);
+            p.group = p.root.gameObject.AddComponent<CanvasGroup>();
+            p.group.interactable = p.group.blocksRaycasts = false;
             _prompts.Add(p);
         }
         return _prompts[i];
@@ -93,16 +97,29 @@ public class InteractPrompt : MonoBehaviour
             foreach (PlayerController pc in Players.All)
             {
                 if (pc == null || !Players.IsAlive(pc) || pc.InDialogue) continue;
-                NPCInteractable npc = Nearest(pc);
-                if (npc == null || shown.Contains(npc) || (hud != null && hud.MenuOpen && hud.MenuTarget == npc) || npc.Busy) continue;
-                Vector3 head = npc.transform.position + Vector3.up * (npc.headHeight * npc.transform.lossyScale.y + 0.75f);
-                Vector3 sp = cam.WorldToScreenPoint(head);
-                if (sp.z <= 0f) continue;
+                NPCInteractable npc = Telling(pc);
+                bool skip = npc != null;
+                if (!skip) npc = Nearest(pc);
+                if (npc == null || shown.Contains(npc) || (hud != null && hud.MenuOpen && hud.MenuTarget == npc) || (npc.Busy && !skip)) continue;
+                // El globo de la charla ocupa la cabeza: el aviso de saltar se cuelga de su esquina inferior derecha.
+                Vector3 sp;
+                if (skip)
+                {
+                    if (hud == null || !hud.BubbleCorner(npc.transform, out Vector2 corner)) continue;
+                    sp = new Vector3(corner.x + 46f * _canvas.scaleFactor, corner.y - 10f * _canvas.scaleFactor, 1f);
+                }
+                else
+                {
+                    sp = cam.WorldToScreenPoint(npc.transform.position + Vector3.up * (npc.headHeight * npc.transform.lossyScale.y + 0.75f));
+                    if (sp.z <= 0f) continue;
+                }
                 shown.Add(npc);
                 Prompt p = Get(used++);
                 p.root.gameObject.SetActive(true);
                 float k = _canvas.scaleFactor > 0f ? _canvas.scaleFactor : 1f;
                 p.root.anchoredPosition = new Vector2(sp.x / k, sp.y / k);
+                p.label.text = skip ? "Saltar" : "Hablar";
+                p.group.alpha = skip ? 0.9f : 1f;
                 SetGlyph(p, pc);
             }
         for (int i = used; i < _prompts.Count; i++) _prompts[i].root.gameObject.SetActive(false);
@@ -125,6 +142,16 @@ public class InteractPrompt : MonoBehaviour
     }
 
     private NPCInteractable Nearest(PlayerController pc) => NearestOf(pc, _npcs);
+
+    // El NPC que cuenta una misión, si este héroe está lo bastante cerca para saltarla.
+    private static NPCInteractable Telling(PlayerController pc)
+    {
+        QuestGiver g = QuestGiver.Telling;
+        if (g == null || g.Npc == null) return null;
+        Vector3 d = g.transform.position - pc.transform.position;
+        d.y = 0f;
+        return d.sqrMagnitude <= QuestGiver.SkipRange * QuestGiver.SkipRange ? g.Npc : null;
+    }
 
     private static void SetGlyph(Prompt p, PlayerController pc)
     {

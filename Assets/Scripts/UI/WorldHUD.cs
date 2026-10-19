@@ -326,6 +326,23 @@ public class WorldHUD : MonoBehaviour
         UpdateBubble(_main);
     }
 
+    // Esquina inferior derecha del globo principal de ese personaje, en píxeles de pantalla (para colgarle avisos).
+    public bool BubbleCorner(Transform speaker, out Vector2 screen)
+    {
+        screen = Vector2.zero;
+        if (_main == null || !_main.Active || _main.target != speaker) return false;
+        var corners = new Vector3[4];
+        _main.rt.GetWorldCorners(corners);
+        screen = corners[3];
+        return true;
+    }
+
+    // Quita el globo principal si es de ese personaje (al saltar una charla).
+    public void HideSay(Transform speaker)
+    {
+        if (_main != null && _main.Active && _main.target == speaker) _main.rt.gameObject.SetActive(false);
+    }
+
     // Globo pequeño para conversaciones de fondo: puede haber varios a la vez, uno por personaje.
     public void SayAmbient(Transform speaker, float height, string text, float seconds)
     {

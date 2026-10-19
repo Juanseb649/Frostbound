@@ -39,7 +39,7 @@ public static class FrostboundWeaponTests
     // Pone al héroe delante del primer muñeco, mirándolo.
     public static string FaceDummy()
     {
-        GameObject dummy = GameObject.Find("Muneco_Practica_1");
+        GameObject dummy = SetupWeapons.SpawnPracticeDummy();
         Equipment eq = Player;
         if (dummy == null || eq == null) return "falta muñeco o Player";
         Vector3 d = dummy.transform.position;
@@ -57,7 +57,7 @@ public static class FrostboundWeaponTests
     {
         string r = FaceDummy();
         Equipment eq = Player;
-        GameObject dummy = GameObject.Find("Muneco_Practica_1");
+        GameObject dummy = SetupWeapons.SpawnPracticeDummy();
         if (eq == null || dummy == null) return r;
         Vector3 d = dummy.transform.position;
         Vector3 toCenter = (-new Vector3(d.x, 0f, d.z)).normalized;
@@ -69,7 +69,7 @@ public static class FrostboundWeaponTests
 
     public static string Attack()
     {
-        GameObject dummy = GameObject.Find("Muneco_Practica_1");
+        GameObject dummy = SetupWeapons.SpawnPracticeDummy();
         PlayerCombat combat = Object.FindAnyObjectByType<PlayerCombat>();
         if (dummy == null || combat == null) return "falta muñeco o combate";
         return combat.TryAttack(dummy.transform.position) ? "ataque" : "en espera";
@@ -131,7 +131,7 @@ public static class FrostboundWeaponTests
         WeaponHolder h = eq.GetComponentInChildren<WeaponHolder>();
         if (h != null) sb.Append(" | agarre ").Append(h.CurrentGrip).Append(h.MainModel != null ? " modelo " + h.MainModel.name + " en " + h.MainModel.transform.parent.name : " sin modelo");
         sb.Append(" | daño ").Append(eq.Stats.Damage.ToString("F1")).Append(" vida ").Append(eq.Stats.currentHealth.ToString("F0"));
-        GameObject dummy = GameObject.Find("Muneco_Practica_1");
+        GameObject dummy = SetupWeapons.SpawnPracticeDummy();
         if (dummy != null)
         {
             Damageable d = dummy.GetComponent<Damageable>();
@@ -215,7 +215,7 @@ public static class FrostboundWeaponTests
     {
         Equipment eq = Player;
         if (eq == null) return "sin Player";
-        GameObject dummy = GameObject.Find("Muneco_Practica_1");
+        GameObject dummy = SetupWeapons.SpawnPracticeDummy();
         if (dummy == null) return "sin muñeco";
         Vector3 d = dummy.transform.position;
         Vector3 toCenter = (-new Vector3(d.x, 0f, d.z)).normalized;
@@ -249,7 +249,7 @@ public static class FrostboundWeaponTests
         foreach (SpringBone sb in Object.FindObjectsByType<SpringBone>())
             if (sb.transform.parent != null) _maxLag = Mathf.Max(_maxLag, sb.Lag);
         PlayerCombat combat = Object.FindAnyObjectByType<PlayerCombat>();
-        GameObject dummy = GameObject.Find("Muneco_Practica_1");
+        GameObject dummy = SetupWeapons.SpawnPracticeDummy();
         if (combat != null && dummy != null && now - _filmStart < 1.6f) combat.TryAttack(dummy.transform.position);
         if (now >= _filmNext)
         {

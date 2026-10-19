@@ -460,37 +460,8 @@ public static class SetupWeapons
             EditorUtility.SetDirty(eq);
         }
 
-        GameObject town = GameObject.Find(SetupVillage.RootName);
-        Transform parent = town != null ? town.transform : null;
-        GameObject old = GameObject.Find("Campo_Practica");
-        if (old != null) Object.DestroyImmediate(old);
-        var field = new GameObject("Campo_Practica");
-        if (parent != null) field.transform.SetParent(parent, true);
-
-        Material straw = VillageMat("Paja", new Color(0.86f, 0.72f, 0.38f));
-        Material wood = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/Wood.mat");
-        Material cloth = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/ClothRed.mat");
-        Vector3[] spots = { Polar(30f, 9.6f), Polar(55f, 9.2f), Polar(80f, 9.4f) };
-        for (int i = 0; i < spots.Length; i++) Dummy(field.transform, "Muneco_Practica_" + (i + 1), spots[i], straw, wood, cloth);
-
-        GameObject lootOld = GameObject.Find("Botin_Prueba");
-        if (lootOld != null) Object.DestroyImmediate(lootOld);
-        var loot = new GameObject("Botin_Prueba");
-        Vector3 p0 = player.transform.position;
-        string[] ids = { "sword", "bow", "knife", "katana", "crossbow", "throwing_kunai", "rune_fire", "rune_poison", "rune_frost", "rune_chain", "rune_lifesteal" };
-        for (int i = 0; i < ids.Length; i++)
-        {
-            if (!items.TryGetValue(ids[i], out ItemDefinition item)) continue;
-            float a = -70f + i * (140f / (ids.Length - 1));
-            Vector3 pos = p0 + Quaternion.Euler(0f, a, 0f) * Vector3.forward * (i % 2 == 0 ? 2.6f : 3.4f) + Vector3.up * (2.5f + (i % 3) * 0.6f);
-            var go = new GameObject("Botin_" + item.id);
-            go.transform.SetParent(loot.transform, false);
-            go.transform.position = pos;
-            go.transform.rotation = Quaternion.Euler(i * 37f, i * 71f, i * 13f);
-            var wi = go.AddComponent<WorldItem>();
-            wi.stack = new ItemStack(item, 1);
-            wi.spriteMaterial = combat.lootSpriteMaterial;
-        }
+        // Los muñecos y el botín de prueba ya no forman parte del poblado; las pruebas crean su propio muñeco (SpawnPracticeDummy).
+        int removed = RemoveTestObjects();
 
         // Armas nuevas expuestas en la herrería.
         GameObject forge = GameObject.Find("Herreria_Fragua");
@@ -517,7 +488,55 @@ public static class SetupWeapons
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        return "• Escena: combate en el Player, 3 muñecos de práctica junto a la herrería, armero con armas nuevas y " + ids.Length + " objetos de prueba que caen al empezar.";
+        return "• Escena: combate en el Player y armero con armas nuevas" + (removed > 0 ? "; quitados " + removed + " grupos de prueba." : ".");
+    }
+
+    private static readonly string[] TestObjects = { "Campo_Practica", "Botin_Prueba" };
+
+    // Quita de la escena abierta el campo de práctica y el botín de prueba que montaban versiones anteriores.
+    private static int RemoveTestObjects()
+    {
+        int n = 0;
+        foreach (string name in TestObjects)
+        {
+            GameObject go = GameObject.Find(name);
+            if (go == null) continue;
+            Object.DestroyImmediate(go);
+            n++;
+        }
+        return n;
+    }
+
+    // Para el canal de comandos: abre el poblado, quita los objetos de prueba y guarda.
+    public static string CleanVillage()
+    {
+        if (EditorApplication.isPlaying) return "en Play: no se toca la escena";
+        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        Scene scene = SceneManager.GetActiveScene();
+        int n = RemoveTestObjects();
+        if (n > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+        return "quitados " + n + " grupos de prueba de " + scene.name;
+    }
+
+    // Muñeco temporal para las pruebas de armas (no se guarda en la escena).
+    public const string PracticeDummyName = "Muneco_Practica_1";
+
+    public static GameObject SpawnPracticeDummy()
+    {
+        GameObject existing = GameObject.Find(PracticeDummyName);
+        if (existing != null) return existing;
+        Material straw = VillageMat("Paja", new Color(0.86f, 0.72f, 0.38f));
+        Material wood = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/Wood.mat");
+        Material cloth = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Village/ClothRed.mat");
+        Dummy(null, PracticeDummyName, Polar(30f, 9.6f), straw, wood, cloth);
+        GameObject dummy = GameObject.Find(PracticeDummyName);
+        if (dummy != null)
+            foreach (Transform t in dummy.GetComponentsInChildren<Transform>(true)) t.gameObject.hideFlags = HideFlags.DontSave;
+        return dummy;
     }
 
     private static void Dummy(Transform parent, string name, Vector3 pos, Material straw, Material wood, Material cloth)

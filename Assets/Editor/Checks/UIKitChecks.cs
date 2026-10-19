@@ -160,6 +160,26 @@ public static class UIKitChecks
     public static string Wide21x9() => WideShot("mt_21x9", 1920, 822);
     public static string Wide32x9() => WideShot("mt_32x9", 1920, 540);
 
+    // Créditos del menú: arriba del todo y desplazados al final.
+    public static string CreditsTop() => Credits(0f);
+    public static string CreditsBottom() => Credits(1f);
+
+    private static string Credits(float t)
+    {
+        FrostMenu m = Object.FindAnyObjectByType<FrostMenu>();
+        return m == null ? "sin menú" : m.CreditsScrollTo(t);
+    }
+
+    // Emblemas de clase de "Crea tu héroe" en una hoja: FrostboundBridge/emblemas.png.
+    public static string EmblemSheet()
+    {
+        Texture2D sheet = FrostEmblems.Sheet();
+        string file = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "FrostboundBridge", "emblemas.png");
+        File.WriteAllBytes(file, sheet.EncodeToPNG());
+        Object.DestroyImmediate(sheet);
+        return file;
+    }
+
     // Antes de mandar una tanda por el bridge: si el usuario está jugando, no se toca nada.
     public static string EditorState() => (Application.isPlaying ? "play" : "edicion") + " escena=" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 

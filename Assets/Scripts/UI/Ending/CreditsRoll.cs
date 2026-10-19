@@ -150,22 +150,52 @@ public class CreditsRoll : MonoBehaviour
     }
 }
 
-// Texto de los créditos (los mismos en el menú y al final del juego).
+// Texto de los créditos (los mismos en el menú y al final del juego). Solo datos comprobables en el proyecto:
+// los autores, las licencias que acompañan a las fuentes (Assets/Frostbound/UI/Fonts/OFL-*.txt) y las texturas
+// (Assets/Frostbound/Textures/LEEME.md), y los paquetes de Packages/manifest.json.
+// PENDIENTE: créditos de música y sonido (Assets/Resources/Audio). Su origen y licencia no están documentados;
+// no se muestran hasta tenerlos.
 public static class GameCredits
 {
-    public static string Rich =>
-        H("Diseño y desarrollo") + "Sebastián\n\n" +
-        H("Programación asistida") + "Claude (Anthropic)\n\n" +
-        H("Historia") + "La caída de la ciudadela, el ascenso del Frostspire,\nel Bosque Corrupto y la Cumbre del sello\n\n" +
-        H("Tipografías") + "Cinzel, Nunito y Lilita One\nSIL Open Font License\n\n" +
-        H("Texturas y cielo de la mansión") + "Poly Haven (CC0)\n\n" +
-        H("Mansión del menú") + "Modelada con Blender\n\n" +
-        H("Motor") + "Unity 6 · Universal Render Pipeline\n\n" +
-        H("Gracias por jugar") + "Pipo, Rocco y Bobby te mandan saludos.";
+    public sealed class Section
+    {
+        public string title;
+        public string[] names;
+        public string note;
+        public Section(string title, string note, params string[] names) { this.title = title; this.note = note; this.names = names; }
+    }
 
-    public static string Plain =>
-        "Diseño y desarrollo: Sebastián\nProgramación asistida: Claude\n\n" +
-        "Tipografías: Lilita One, Nunito y Cinzel (SIL Open Font License)\nTexturas y cielo: Poly Haven (CC0)\nHecho con Unity";
+    public static readonly Section[] Sections =
+    {
+        new Section("Diseño y desarrollo", null, "Sebastián Ibarra", "Mauricio Ordoñez"),
+        new Section("Programación asistida", null, "Claude · Anthropic"),
+        new Section("Tipografías", "SIL Open Font License 1.1", "Cinzel · Nunito · Lilita One"),
+        new Section("Texturas y cielo", "Dominio público (CC0)", "Poly Haven"),
+        new Section("Mansión del menú", null, "Modelada en Blender"),
+        new Section("Tecnología", null, "Unity 6 · Universal Render Pipeline", "TextMeshPro · Input System · AI Navigation"),
+    };
 
-    private static string H(string s) => "<color=#C9A65A><size=80%>" + s.ToUpperInvariant() + "</size></color>\n";
+    public const string Thanks = "Gracias por jugar";
+    public const string ThanksLine = "Pipo, Rocco y Bobby te mandan saludos.";
+
+    // Versión en un solo texto enriquecido (el rollo del final).
+    public static string Rich
+    {
+        get
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (Section s in Sections)
+            {
+                sb.Append(H(s.title));
+                sb.Append(string.Join("\n", s.names)).Append('\n');
+                if (!string.IsNullOrEmpty(s.note)) sb.Append(Note(s.note)).Append('\n');
+                sb.Append('\n');
+            }
+            return sb.Append(H(Thanks)).Append(ThanksLine).ToString();
+        }
+    }
+
+    private static string Hex(Color c) => "#" + ColorUtility.ToHtmlStringRGB(c);
+    private static string H(string s) => "<color=" + Hex(FrostboundUI.OldGoldLight) + "><size=80%>" + s.ToUpperInvariant() + "</size></color>\n";
+    private static string Note(string s) => "<color=" + Hex(FrostboundUI.Ash) + "><size=70%>" + s + "</size></color>";
 }

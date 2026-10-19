@@ -157,7 +157,7 @@ public class AdventureHUD : MonoBehaviour
                 if (gate != null && !CitadelGate.CitadelOpen)
                 {
                     objective = "Derrota a los corruptos del camino de la Ciudadela Caída";
-                    detail = "Grupos derrotados: " + gate.Cleared + "/" + gate.Required + " · el hielo sella la ciudadela";
+                    detail = "Grupos derrotados " + gate.Cleared + "/" + gate.Required;
                 }
                 else detail = d.magnitude > 16f ? "A " + Mathf.RoundToInt(d.magnitude) + " m · sigue los mojones rojos" : "";
             }

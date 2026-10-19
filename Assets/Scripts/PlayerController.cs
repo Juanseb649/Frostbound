@@ -206,7 +206,8 @@ public class PlayerController : MonoBehaviour
         if (_clickTarget.HasValue && FlatOffset(_clickTarget.Value).sqrMagnitude < stopDistance * stopDistance)
             _clickTarget = null;
 
-        if (keys && InputMap.KeyPressed(GameAction.Interact) && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
+        // Mientras alguien cuenta una misión, Interactuar la salta.
+        if (keys && InputMap.KeyPressed(GameAction.Interact) && !GameplayInput.Blocked && !QuestGiver.TrySkip(transform.position) && !PickUpNearest()) TalkToNearest();
 
         if (Time.time < _holdUntil)
         {
@@ -277,7 +278,7 @@ public class PlayerController : MonoBehaviour
         Gamepad g = PadOf(this);
         Vector2 input = GameplayInput.Blocked || (Stats != null && Stats.IsDead) ? Vector2.zero : Stick(g);
         bool interact = InputMap.PadPressed(g, GameAction.Interact) || (UsesKeyboard(this) && InputMap.KeyPressed(GameAction.Interact));
-        if (interact && !GameplayInput.Blocked && !PickUpNearest()) TalkToNearest();
+        if (interact && !GameplayInput.Blocked && !QuestGiver.TrySkip(transform.position) && !PickUpNearest()) TalkToNearest();
 
         if (Time.time < _holdUntil)
         {

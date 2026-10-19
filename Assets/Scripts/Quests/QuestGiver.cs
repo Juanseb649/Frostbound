@@ -14,6 +14,13 @@ public class QuestGiver : MonoBehaviour
     private NameTag _tag;
     private int _line;
     private bool _telling;
+    private Coroutine _tell;
+    private QuestDefinition _told;
+    private float _tellStart;
+
+    // El que está contando ahora una misión (solo hay una charla de misión a la vez).
+    public static QuestGiver Telling { get; private set; }
+    public NPCInteractable Npc => _npc;
 
     void Awake()
     {
@@ -26,7 +33,11 @@ public class QuestGiver : MonoBehaviour
     }
 
     void OnEnable() => QuestLog.Changed += OnQuest;
-    void OnDisable() => QuestLog.Changed -= OnQuest;
+    void OnDisable()
+    {
+        QuestLog.Changed -= OnQuest;
+        if (Telling == this) Telling = null;
+    }
     void Start() => RefreshTag();
 
     private void OnQuest(string id, int stage) => RefreshTag();
@@ -65,13 +76,13 @@ public class QuestGiver : MonoBehaviour
 
     private bool Talk()
     {
-        if (_telling) return true;
+        if (_telling) { SkipTell(); return true; }
         // Las misiones que esperaban que hablaras con él avanzan antes de que conteste.
         QuestLog.Report(QuestObjective.Hablar, giverId);
         QuestDefinition offer = Offer();
         if (offer != null)
         {
-            StartCoroutine(Tell(offer));
+            _tell = StartCoroutine(Tell(offer));
             return true;
         }
         string[] pool = CurrentLines();
@@ -91,21 +102,62 @@ public class QuestGiver : MonoBehaviour
     private IEnumerator Tell(QuestDefinition quest)
     {
         _telling = true;
+        _told = quest;
+        _tellStart = Time.time;
+        Telling = this;
         foreach (string line in quest.offerLines)
         {
             float s = Say(line);
             yield return new WaitForSeconds(s + 0.15f);
         }
-        _telling = false;
-        _line = 0;
-        QuestLog.Begin(quest.id);
+        FinishTell();
     }
+
+    // Igual al final de la charla, se llegue leyendo todo o saltándola: empieza la misión una sola vez.
+    private void FinishTell()
+    {
+        QuestDefinition quest = _told;
+        _telling = false;
+        _told = null;
+        _tell = null;
+        _line = 0;
+        if (Telling == this) Telling = null;
+        if (quest != null) QuestLog.Begin(quest.id);
+    }
+
+    // Corta la charla de misión: quita el globo y da la misión como si hubiera terminado.
+    public void SkipTell()
+    {
+        if (!_telling) return;
+        if (_tell != null) StopCoroutine(_tell);
+        _npc.TalkUntil = 0f;
+        if (WorldHUD.Instance != null) WorldHUD.Instance.HideSay(transform);
+        FinishTell();
+    }
+
+    // Para el héroe: salta la charla en curso si está lo bastante cerca para oírla.
+    public static bool TrySkip(Vector3 listener)
+    {
+        QuestGiver g = Telling;
+        // La misma pulsación que eligió «Hablar» no puede saltar la charla que acaba de abrir.
+        if (g == null || !g._telling || Time.time - g._tellStart < 0.3f) return false;
+        Vector3 d = g.transform.position - listener;
+        d.y = 0f;
+        if (d.sqrMagnitude > SkipRange * SkipRange) return false;
+        g.SkipTell();
+        return true;
+    }
+
+    public const float SkipRange = 12f;
 
     // Para las comprobaciones: da la misión que toque sin esperar la charla.
     public void SkipIntro()
     {
         StopAllCoroutines();
         _telling = false;
+        _told = null;
+        _tell = null;
+        if (Telling == this) Telling = null;
         QuestDefinition offer = Offer();
         if (offer != null) QuestLog.SetStage(offer.id, 1);
     }
