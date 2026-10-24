@@ -43,6 +43,7 @@ public class GameHUD : MonoBehaviour
 
     private PlayerAbility _ability;
     private Image _abilityIcon, _abilityShade, _abilityFrame;
+    private RectTransform _abilityBar;
     private TextMeshProUGUI _abilityCost, _abilityTimer, _abilityName;
     private PlayerAbility.Kind _abilityShown = (PlayerAbility.Kind)(-1);
 
@@ -84,6 +85,7 @@ public class GameHUD : MonoBehaviour
         _orbRoot.anchorMin = _orbRoot.anchorMax = _orbRoot.pivot = a;
         _orbRoot.anchoredPosition = !coop ? Vector2.zero : new Vector2(right ? -12f : 12f, 0f);
         _orbRoot.localScale = Vector3.one * (coop ? CoopScale : 1f);
+        PlaceAbility(!coop && !secondary);
         if (_feed != null)
         {
             var vl = _feed.GetComponent<VerticalLayoutGroup>();
@@ -410,10 +412,31 @@ public class GameHUD : MonoBehaviour
         chipButton.onClick.AddListener(() => { if (inventoryScreen != null) { if (secondary) inventoryScreen.OpenFor(player, InventoryScreen.Tab.Character); else inventoryScreen.Open(); } });
     }
 
-    // Casilla de la habilidad de clase, encima del extremo izquierdo del cinturón de pociones.
+    // Casilla de la habilidad de clase: abajo a la izquierda, justo encima de las monedas (AdventureHUD).
+    // En co-op vuelve encima del cinturón para moverse con el HUD de cada jugador.
+    private void PlaceAbility(bool corner)
+    {
+        if (_abilityFrame == null) return;
+        RectTransform rt = _abilityFrame.rectTransform;
+        if (corner)
+        {
+            rt.SetParent(transform, false);
+            rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.zero;
+            rt.sizeDelta = Vector2.one * 80f * DesignScale;
+            rt.anchoredPosition = new Vector2(26f, 228f);
+        }
+        else
+        {
+            rt.SetParent(_abilityBar, false);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            Anchor(rt, 709f, -96f, 789f, -16f);
+        }
+    }
+
     private void BuildAbility(RectTransform bar)
     {
         if (_ability == null) return;
+        _abilityBar = bar;
         // Marco de hierro biselado (kit /d2r-ui) con placa de piedra; se tiñe de oro cuando la habilidad está lista.
         Image frame = UIFactory.Img(bar, "Habilidad", FrostFrames.Button(FrostFrames.Metal.Iron), Color.white);
         Image plate = UIFactory.Img(frame.transform, "Placa", FrostFrames.Plate, new Color(0.03f, 0.05f, 0.1f, 0.95f));
@@ -445,6 +468,7 @@ public class GameHUD : MonoBehaviour
         name.rectTransform.sizeDelta = new Vector2(160f, 0f);
         // Contorno noche de los menús: el nombre queda sobre la nieve, que es muy clara.
         if (name.font != null) name.fontSharedMaterial = FrostUI.BodyMaterial(name.font);
+        PlaceAbility(!secondary);
     }
 
     // Teclas del cinturón y de la habilidad según Configuración → Control: texto con teclado, iconos de Xbox con mando.
