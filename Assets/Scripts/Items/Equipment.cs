@@ -69,7 +69,9 @@ public class Equipment : MonoBehaviour
         if (!restored && UsesItems()) GiveStartingItems();
         // Una partida guardada sin nada equipado (creada y cerrada antes del primer guardado, o con objetos que ya no
         // existen) no deja al héroe sin ropa ni arma: recibe el equipo de su clase.
-        else if (restored && _equipped.Count == 0 && UsesItems())
+        // Solo si la mochila también está vacía: quien se quitó toda la ropa a propósito la tiene en la mochila,
+        // y darle otra vez el equipo inicial la duplicaba al cargar.
+        else if (restored && _equipped.Count == 0 && _inventory.UsedSlots == 0 && UsesItems())
         {
             Debug.Log("[Equipment] La partida no tenía equipo: se entrega el equipo inicial de la clase.");
             GiveStartingItems();
