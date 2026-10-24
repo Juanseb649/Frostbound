@@ -220,7 +220,7 @@ public static class SetupWeapons
 
     // ---------- Modelos y materiales ----------
 
-    private static void ConfigureModels()
+    internal static void ConfigureModels()
     {
         var mats = new Dictionary<string, Material>();
         Shader toon = Shader.Find("Frostbound/Toon");
@@ -273,7 +273,7 @@ public static class SetupWeapons
     // ---------- Iconos ----------
 
     // Renderiza el modelo en diagonal sobre fondo transparente (con el contorno del shader toon).
-    private static Sprite RenderIcon(GameObject model, string name, WeaponType type)
+    internal static Sprite RenderIcon(GameObject model, string name, WeaponType type)
     {
         if (model == null) return null;
         const int size = 256;

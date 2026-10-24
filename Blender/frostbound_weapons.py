@@ -7,6 +7,7 @@ independiente con el ORIGEN EN LA EMPUÑADURA y la punta/hoja hacia +Z (en Unity
 el pingüino la sujete con la aleta (Anchor_Hand_R / Anchor_Hand_L).
 
 Uso: blender -b -P frostbound_weapons.py -- "<carpeta Gear/Models>" "<salida Assets/Models/Weapons>"
+Solo los escudos nuevos: añade --solo-escudos al final.
 """
 
 import math
@@ -447,6 +448,114 @@ def w_bolt():
     return b
 
 
+# ---------- Escudos ----------
+# Se modelan de frente hacia +Y (el umbo hacia +Y), con el asa en el origen, y al final se giran para quedar
+# con la misma orientación que el escudo redondo del vikingo (su normal en Blender es (0.643, -0.766, 0)):
+# así WeaponHolder los coloca en la aleta izquierda con la misma pose.
+
+SHIELD_YAW = math.atan2(-0.643, -0.766)
+
+
+def plate(b, outline, thick, material, y0=0.0):
+    """Placa plana: contorno [(x, z)] en el plano XZ, grosor hacia -Y desde y0."""
+    bm = bmesh.new()
+    front = [bm.verts.new((x, y0, z)) for (x, z) in outline]
+    back = [bm.verts.new((x, y0 - thick, z)) for (x, z) in outline]
+    bm.faces.new(front)
+    bm.faces.new(list(reversed(back)))
+    n = len(outline)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((front[i], back[i], back[j], front[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return b._obj(bm, material)
+
+
+def rim(b, outline, y, r, material):
+    n = len(outline)
+    for i in range(n):
+        x0, z0 = outline[i]
+        x1, z1 = outline[(i + 1) % n]
+        b.cyl((x0, y, z0), (x1, y, z1), r, material, segs=5)
+
+
+def kite_outline(w, h, top_round=0.35, steps=8):
+    """Escudo de cometa: arriba redondeado, abajo en punta."""
+    pts = []
+    top = h * 0.5
+    for i in range(steps + 1):
+        a = math.pi * i / steps
+        pts.append((math.cos(a) * w * 0.5, top - h * top_round * (1 - math.sin(a)) * 0.35))
+    pts.append((-w * 0.42, -h * 0.05))
+    pts.append((0.0, -h * 0.5))
+    pts.append((w * 0.42, -h * 0.05))
+    return list(reversed(pts))
+
+
+def w_shield_buckler():
+    b = Builder("W_shield_buckler")
+    circle = [(math.cos(i / 14 * math.tau) * 0.17, math.sin(i / 14 * math.tau) * 0.17) for i in range(14)]
+    plate(b, circle, 0.025, "W_DarkIron")
+    rim(b, circle, -0.004, 0.012, "W_Steel")
+    b.sphere((0, 0.02, 0), 0.06, "W_Steel", scale=(1, 0.7, 1))
+    b.cyl((0, -0.03, -0.05), (0, -0.03, 0.05), 0.012, "W_Leather", segs=6)
+    return b
+
+
+def w_shield_kite():
+    b = Builder("W_shield_kite")
+    out = kite_outline(0.4, 0.62)
+    plate(b, out, 0.025, "W_Blue")
+    rim(b, out, -0.004, 0.011, "W_Steel")
+    # Cruz blanca de caballero.
+    b.box((0, 0.004, 0.05), (0.05, 0.01, 0.42), "W_Feather")
+    b.box((0, 0.004, 0.12), (0.3, 0.01, 0.05), "W_Feather")
+    b.cyl((0, -0.03, -0.06), (0, -0.03, 0.06), 0.012, "W_Leather", segs=6)
+    return b
+
+
+def w_shield_tower():
+    b = Builder("W_shield_tower")
+    w, h = 0.48, 0.76
+    out = [(-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2 - 0.04), (w / 2 - 0.05, h / 2), (-w / 2 + 0.05, h / 2), (-w / 2, h / 2 - 0.04)]
+    plate(b, out, 0.035, "W_DarkWood")
+    rim(b, out, -0.004, 0.014, "W_DarkIron")
+    for z in (-0.22, 0.0, 0.22):
+        b.box((0, 0.006, z), (w * 0.96, 0.012, 0.035), "W_DarkIron")
+    for x in (-0.17, 0.17):
+        for z in (-0.3, 0.3):
+            b.sphere((x, 0.012, z), 0.018, "W_Steel")
+    b.cyl((0, -0.04, -0.07), (0, -0.04, 0.07), 0.013, "W_Leather", segs=6)
+    return b
+
+
+def w_shield_wolf():
+    b = Builder("W_shield_wolf")
+    out = kite_outline(0.44, 0.66)
+    plate(b, out, 0.03, "W_Black")
+    rim(b, out, -0.004, 0.013, "W_Gold")
+    # Cabeza de lobo aullando (formas simples en dorado) y púas en el borde.
+    b.sphere((0, 0.02, 0.06), 0.07, "W_DarkIron", scale=(1, 0.6, 1.1))
+    b.cyl((0, 0.03, 0.1), (0.0, 0.05, 0.2), 0.035, "W_DarkIron", r2=0.012, segs=6)
+    b.cyl((-0.04, 0.03, 0.11), (-0.07, 0.04, 0.17), 0.018, "W_Gold", r2=0.003, segs=4)
+    b.cyl((0.04, 0.03, 0.11), (0.07, 0.04, 0.17), 0.018, "W_Gold", r2=0.003, segs=4)
+    b.sphere((-0.025, 0.06, 0.08), 0.01, "W_Red")
+    b.sphere((0.025, 0.06, 0.08), 0.01, "W_Red")
+    for (x, z) in out[::3]:
+        b.cyl((x, -0.01, z), (x * 1.18, -0.01, z * 1.1), 0.012, "W_Steel", r2=0.002, segs=4)
+    b.cyl((0, -0.035, -0.06), (0, -0.035, 0.06), 0.012, "W_Leather", segs=6)
+    return b
+
+
+SHIELDS = [w_shield_buckler, w_shield_kite, w_shield_tower, w_shield_wolf]
+
+
+def finish_shield(builder):
+    ob = builder.finish()
+    ob.data.transform(Matrix.Rotation(SHIELD_YAW, 4, "Z"))
+    return ob
+
+
 SCALES = {"w_claymore": 0.85, "w_longaxe": 0.85, "w_spear": 0.8, "w_maul": 0.9, "w_longbow": 0.88}
 
 NEW_WEAPONS = [w_claymore, w_longaxe, w_spear, w_maul, w_knife, w_sword, w_scimitar, w_hammer, w_nunchaku,
@@ -519,8 +628,14 @@ def export(ob):
 
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    if "--solo-escudos" in sys.argv:
+        for fn in SHIELDS:
+            export(finish_shield(fn()))
+        return
     for fn in NEW_WEAPONS:
         export(fn().finish(SCALES.get(fn.__name__, 1.0)))
+    for fn in SHIELDS:
+        export(finish_shield(fn()))
     for spec in STARTER:
         path = os.path.join(GEAR_DIR, spec[0])
         if os.path.exists(path):
