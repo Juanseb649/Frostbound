@@ -11,7 +11,7 @@ public class GameHUD : MonoBehaviour
     public UISkin skin;
     public Equipment player;
     public InventoryScreen inventoryScreen;
-    [Tooltip("Muestra las teclas de depuración (X experiencia, G objeto).")]
+    [Tooltip("Ya no se usa: la chuleta de teclas de la esquina se quitó (los controles están en el tutorial).")]
     public bool showDebugHints = true;
     [Tooltip("Tamaño de las estatuas con los orbes respecto al diseño original (1 = grande como en el diseño).")]
     [Range(0.3f, 1f)] public float orbStatueScale = 0.46f;
@@ -584,18 +584,8 @@ public class GameHUD : MonoBehaviour
         vl.childForceExpandHeight = false;
         vl.childForceExpandWidth = false;
 
-        if (secondary)
-        {
-            toast.anchoredPosition = new Vector2(0f, -230f);
-            return;
-        }
-        // Teclas.
-        string hints = "Espacio  Rodar     I  Inventario     C  Personaje     1–6  Pociones     Q  Poción de vida";
-        if (showDebugHints && player.GetComponent<ProgressionDebug>() != null) hints += "\n<color=#5B6F8A>Depuración:  X  +experiencia     Mayús+X  subir nivel     G  objeto al azar</color>";
-        TextMeshProUGUI hint = UIFactory.Text(root, "Hints", hints, skin.nunito700, 13f, FrostboundUI.Muted);
-        UIFactory.Anchored(hint.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -20f), new Vector2(700f, 44f));
-        hint.outlineWidth = 0.2f;
-        hint.outlineColor = new Color32(10, 18, 34, 255);
+        // Sin chuleta de teclas en la esquina: los controles se explican en el tutorial (Pausa → Cómo jugar).
+        if (secondary) toast.anchoredPosition = new Vector2(0f, -230f);
     }
 
     private TextMeshProUGUI BarText(RectTransform bar)
