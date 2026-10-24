@@ -8,17 +8,18 @@ using UnityEngine.UI;
 
 // Menús de inicio (guía "Frostbound · Menús de inicio"): pantalla de título, selección de personaje
 // (las partidas guardadas) y creación del héroe. Todo se construye por código; detrás van el decorado 3D
-// (la mansión helada, HauntedManor, o las ruinas del Frostspire, MenuRuins) y el ambiente de noche helada.
+// (la noche helada de HauntedManor, que ahora muestra el poblado con la cordillera detrás y guarda la mansión
+// para más adelante, o las ruinas del Frostspire, MenuRuins) y el ambiente de noche helada.
 public class FrostMenu : MonoBehaviour
 {
     private enum Screen { Title, Heroes, Create, Options, Credits }
     public enum Backdrop { Manor, Ruins }
 
-    [Tooltip("Decorado 3D del menú: la mansión helada o las ruinas del Frostspire.")]
+    [Tooltip("Decorado 3D del menú: Manor es la noche helada de HauntedManor (hoy, el poblado y la cordillera; la mansión queda guardada en HauntedManor.Mode). Ruins, las ruinas del Frostspire.")]
     public Backdrop backdrop = Backdrop.Manor;
 
     public const string Version = "v0.3 · Prealfa";
-    public const string Tagline = "El Frost lo consume todo. La esperanza aún resiste.";
+    public const string Tagline = "Asciende al Frostspire";
 
     private static readonly Dictionary<string, string> ShortNames = new Dictionary<string, string>
     {
@@ -78,7 +79,7 @@ public class FrostMenu : MonoBehaviour
         if (GetComponent<NightFrostAtmosphere>() == null) gameObject.AddComponent<NightFrostAtmosphere>();
         if (backdrop == Backdrop.Manor)
         {
-            if (FindAnyObjectByType<HauntedManor>() == null) new GameObject("Mansión helada").AddComponent<HauntedManor>();
+            if (FindAnyObjectByType<HauntedManor>() == null) new GameObject("Decorado del menú").AddComponent<HauntedManor>();
             if (_cam != null) _cam.orthographic = false;
         }
         else if (FindAnyObjectByType<MenuRuins>() == null) new GameObject("Ruinas del Frostspire").AddComponent<MenuRuins>();
@@ -268,7 +269,17 @@ public class FrostMenu : MonoBehaviour
         k.alignment = TextAlignmentOptions.Center;
         FrostUI.Place(k.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(900f, 30f));
         TextMeshProUGUI t = FrostUI.Title(root, "Titulo", title, 86f);
+        Frozen(t, 0.22f);
         FrostUI.Place(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -66f), new Vector2(1300f, 110f));
+    }
+
+    // Letras heladas: cara de escarcha (blanco arriba, azul hielo abajo) con contorno azul por dentro.
+    private static void Frozen(TextMeshProUGUI t, float outline)
+    {
+        if (t.font != null) t.fontSharedMaterial = FrostUI.IceMaterial(t.font, outline);
+        t.enableVertexGradient = true;
+        Color top = Color.white, bottom = new Color(0.55f, 0.8f, 0.97f);
+        t.colorGradient = new VertexGradient(top, top, bottom, bottom);
     }
 
     // ---------- Título ----------
@@ -276,10 +287,15 @@ public class FrostMenu : MonoBehaviour
     private void BuildTitle()
     {
         RectTransform root = Screenroot(Screen.Title);
+        // Escarcha: un halo frío detrás del logo.
+        Image rime = FrostUI.Img(root, "Escarcha", FrostUI.Glow, new Color(0.55f, 0.82f, 1f, 0.16f));
+        FrostUI.Place(rime.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(1250f, 230f));
         TextMeshProUGUI title = FrostUI.Title(root, "Frostbound", "FROSTBOUND", 150f, TextAlignmentOptions.Center, 0.24f);
         FrostUI.Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(1400f, 200f));
-        // La premisa en una línea: el Frost se extiende y el poblado aún resiste (Docs/Campana_Frostbound.md).
+        Frozen(title, 0.24f);
+        // La meta en pocas palabras: subir al Frostspire (Docs/Campana_Frostbound.md).
         TextMeshProUGUI sub = FrostUI.Title(root, "Subtitulo", Tagline, 30f, TextAlignmentOptions.Center, 0.18f);
+        Frozen(sub, 0.18f);
         sub.characterSpacing = 6f;
         FrostUI.Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(1400f, 44f));
 

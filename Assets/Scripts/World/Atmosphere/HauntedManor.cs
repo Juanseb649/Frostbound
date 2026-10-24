@@ -3,7 +3,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-// Decorado 3D del menú: una mansión gótica abandonada, tragada por el hielo corrupto del Frost, en una colina nevada
+// Decorado 3D del menú. Ahora muestra el poblado nevado de noche (casas con ventanas encendidas, calle empedrada,
+// campanario, iglús y pinos) con la cordillera y el Frostspire detrás. La mansión de abajo es un concepto guardado
+// para una versión posterior (aún no está en el juego): se recupera con HauntedManor.Mode = Scenery.Manor.
+//
+// Concepto de la mansión: una mansión gótica abandonada, tragada por el hielo corrupto del Frost, en una colina nevada
 // de noche. Ventanas con luz azul que late (solo una conserva una vela cálida), torre con el chapitel roto, tejado
 // hundido, verja de hierro con el portón entreabierto, lápidas, árboles muertos, cuervos, bruma baja y, cada poco,
 // un destello del Frost que tiñe la niebla. Es el fondo de 00_MainMenu; el héroe aparece en el camino, ante el portón.
@@ -59,6 +63,11 @@ public class HauntedManor : MonoBehaviour
 
     public static HauntedManor Instance { get; private set; }
 
+    // Qué se construye detrás del menú. Se lee en Awake, así que hay que fijarlo antes de crear el componente.
+    public enum Scenery { Village, Manor }
+    public static Scenery Mode = Scenery.Village;
+    private static bool IsVillage => Mode == Scenery.Village;
+
     private float R(float a, float b) => a + (float)_r.NextDouble() * (b - a);
 
     void Awake()
@@ -104,24 +113,28 @@ public class HauntedManor : MonoBehaviour
         _manorPivot.localPosition = ManorAnchor * (1f - ManorScale);
         _manorKit = new MeshKit(_manorPivot, _cone, _prism, _stone);
         Ground();
-        // Fase 2: la mansión modelada en Blender (Resources/Models/Mansion). Sin ella, la de primitivas.
-        GameObject model = Resources.Load<GameObject>("Models/Mansion");
-        if (model != null) PlaceModel(model);
+        if (IsVillage) Village();
         else
         {
-            // La de primitivas también va dentro del pivote de la casa.
-            MeshKit main = _kit;
-            _kit = _manorKit;
-            Manor();
-            Porch();
-            Windows();
-            _kit = main;
+            // Fase 2: la mansión modelada en Blender (Resources/Models/Mansion). Sin ella, la de primitivas.
+            GameObject model = Resources.Load<GameObject>("Models/Mansion");
+            if (model != null) PlaceModel(model);
+            else
+            {
+                // La de primitivas también va dentro del pivote de la casa.
+                MeshKit main = _kit;
+                _kit = _manorKit;
+                Manor();
+                Porch();
+                Windows();
+                _kit = main;
+            }
+            Corruption();
+            FenceAndGate();
+            Path();
+            Graveyard();
+            Trees();
         }
-        Corruption();
-        FenceAndGate();
-        Path();
-        Graveyard();
-        Trees();
         Lantern();
         Cordillera();
         _kit.Combine("Mansión");
@@ -129,8 +142,11 @@ public class HauntedManor : MonoBehaviour
         ProjectSurfaceUVs(_kit);
         ProjectSurfaceUVs(_manorKit);
         Moon();
-        Curtain();
-        Lights();
+        if (!IsVillage)
+        {
+            Curtain();
+            Lights();
+        }
         PostFx();
         Snow();
         Mist();
@@ -183,7 +199,7 @@ public class HauntedManor : MonoBehaviour
     private float TilingOf(Material m)
     {
         if (m == _stone || m == _stoneDark) return 2f;
-        if (m == _trim || m == _wood) return 1.5f;
+        if (m == _trim || m == _wood || m == _plaster) return 1.5f;
         if (m == _roof) return 2.2f;
         if (m == _bark) return 1f;
         if (m == _path) return 1.2f;
@@ -259,6 +275,236 @@ public class HauntedManor : MonoBehaviour
         };
         foreach (Vector4 d in drifts)
             _kit.Mesh(_sphere, new Vector3(d.x, -0.1f, d.y), new Vector3(0f, R(-10f, 10f), 0f), new Vector3(d.z, R(0.5f, 0.9f), d.w), _snow);
+    }
+
+    // ---------- El poblado (fondo actual del menú) ----------
+
+    private Material _pine, _plaster;
+    private readonly List<Vector3> _chimneys = new List<Vector3>();
+
+    // El poblado de noche: una calle empedrada que sube hacia el campanario entre casas de piedra, madera y revoque
+    // con tejados nevados y ventanas encendidas, iglús, pinos y faroles. La cordillera queda detrás.
+    private void Village()
+    {
+        _pine = MenuRuins.Lit("Pino nevado", new Color(0.09f, 0.16f, 0.15f), 0.2f);
+        _plaster = Real("castle_wall_varriation", new Color(0.62f, 0.62f, 0.68f)) ?? ProceduralSurfaces.Make("Revoque", ProceduralSurfaces.Kind.Rough, new Color(0.36f, 0.37f, 0.42f), 0.5f);
+        Street();
+        // A los lados de la calle miran a la calle; las del fondo miran a la cámara.
+        House(new Vector3(-6.9f, 0f, 7.5f), -90f, 4.2f, 5f, 3.6f, 0);
+        House(new Vector3(-7.6f, 0f, 13.8f), -90f, 4.8f, 5.6f, 4.6f, 1);
+        House(new Vector3(-7.1f, 0f, 20.2f), -90f, 4.2f, 5f, 3.8f, 2);
+        House(new Vector3(-13.6f, 0f, 10f), -80f, 5f, 5f, 4.2f, 3);
+        House(new Vector3(-14.4f, 0f, 17.5f), -95f, 4.6f, 6f, 5f, 4);
+        House(new Vector3(-11.8f, 0f, 25.5f), -60f, 4.2f, 5f, 4.2f, 5);
+        House(new Vector3(7f, 0f, 8.4f), 90f, 4.2f, 5f, 3.8f, 6);
+        House(new Vector3(7.8f, 0f, 14.6f), 90f, 5f, 6f, 4.8f, 7);
+        House(new Vector3(7.2f, 0f, 21.2f), 90f, 4.2f, 5f, 3.6f, 8);
+        House(new Vector3(14f, 0f, 11.2f), 100f, 4.6f, 5f, 4.2f, 9);
+        House(new Vector3(14.6f, 0f, 19.4f), 85f, 5f, 5.6f, 4.6f, 10);
+        House(new Vector3(12f, 0f, 26.5f), 60f, 4.2f, 5f, 4f, 11);
+        House(new Vector3(-5.4f, 0f, 29f), 0f, 4.6f, 5f, 4.2f, 12);
+        House(new Vector3(5.8f, 0f, 29.5f), 0f, 4.6f, 5f, 4f, 13);
+        BellTower(new Vector3(0f, 0f, 31f));
+        Igloo(new Vector3(-10.5f, 0f, 1.5f), 35f);
+        Igloo(new Vector3(11.5f, 0f, 3f), -40f);
+        Igloo(new Vector3(-17.5f, 0f, 4.5f), 20f);
+        Pines();
+        StreetLamp(new Vector3(2.7f, 0f, 9.5f), -1f);
+        StreetLamp(new Vector3(-2.7f, 0f, 17f), 1f);
+        // La luz cálida de las ventanas se derrama sobre la calle y la nieve.
+        PointLight("Luz de ventanas", new Vector3(-4f, 1.8f, 13.8f), new Color(1f, 0.66f, 0.38f), 7f, 1.8f, true);
+        PointLight("Luz de ventanas", new Vector3(4.4f, 1.8f, 14.6f), new Color(1f, 0.66f, 0.38f), 7f, 1.8f, true);
+        PointLight("Luz del campanario", new Vector3(0f, 4f, 27.6f), new Color(1f, 0.7f, 0.42f), 10f, 2.2f, true);
+        for (int i = 0; i < _chimneys.Count; i += 3) Smoke(_chimneys[i]);
+    }
+
+    // Calle empedrada desde la cámara hasta el campanario, con una plazoleta redonda donde espera el héroe.
+    private void Street()
+    {
+        for (float z = -11f; z < 28f; z += R(0.78f, 0.92f))
+        {
+            if (R(0f, 1f) < 0.05f) continue;
+            float w = R(2.9f, 3.3f), d = R(0.62f, 0.78f);
+            _kit.Box(new Vector3(R(-0.1f, 0.1f), 0.03f, z), new Vector3(0f, R(-4f, 4f), 0f), new Vector3(w, 0.08f, d), _path);
+        }
+        _kit.Cylinder(new Vector3(0f, 0.02f, HeroSpot.z), 5.4f, 0.05f, _path);
+    }
+
+    // Casa de una planta y desván: zócalo, muros, tejado a dos aguas con nieve en la mitad alta, puerta con marco,
+    // ventanas (casi todas encendidas; alguna rota y alguna ya tocada por el Frost) y chimenea.
+    // La fachada con la puerta mira a -z local.
+    private void House(Vector3 p, float yaw, float w, float d, float h, int v)
+    {
+        Quaternion q = Quaternion.Euler(0f, yaw, 0f);
+        Vector3 e = new Vector3(0f, yaw, 0f);
+        Vector3 L(float x, float y, float z) => p + q * new Vector3(x, y, z);
+        Material wall = v % 3 == 1 ? _wood : v % 3 == 2 ? _plaster : _stone;
+
+        _kit.Box(L(0f, 0.3f, 0f), e, new Vector3(w + 0.3f, 0.6f, d + 0.3f), _stoneDark);
+        _kit.Box(L(0f, h * 0.5f, 0f), e, new Vector3(w, h, d), wall);
+        if (wall == _plaster)
+        {
+            // Entramado de madera en la fachada.
+            foreach (float s in new[] { -1f, 1f })
+                _kit.Box(L(s * (w * 0.5f - 0.08f), h * 0.5f, -d * 0.5f - 0.03f), e, new Vector3(0.16f, h, 0.08f), _wood);
+            _kit.Box(L(0f, h * 0.56f, -d * 0.5f - 0.03f), e, new Vector3(w, 0.14f, 0.08f), _wood);
+        }
+        _kit.Box(L(0f, h + 0.06f, 0f), e, new Vector3(w + 0.25f, 0.12f, d + 0.25f), _trim);
+        float rh = w * 0.62f;
+        _kit.Prism(L(0f, h + 0.1f, 0f), e, new Vector3(w + 0.8f, rh, d + 0.7f), _roof);
+        // Nieve: el mismo triángulo, más pequeño, apoyado en la cumbrera.
+        _kit.Prism(L(0f, h + 0.1f + rh * 0.42f, 0f), e, new Vector3((w + 0.8f) * 0.58f + 0.06f, rh * 0.58f + 0.08f, d + 0.78f), _snow);
+
+        float side = v % 2 == 0 ? 1f : -1f;
+        _kit.Box(L(side * w * 0.2f, 0.98f, -d * 0.5f - 0.02f), e, new Vector3(1.15f, 1.9f, 0.06f), _trim);
+        _kit.Box(L(side * w * 0.2f, 0.95f, -d * 0.5f - 0.06f), e, new Vector3(0.9f, 1.7f, 0.08f), wall == _wood ? _stoneDark : _wood);
+        Window(L(-side * w * 0.22f, h * 0.6f, -d * 0.5f - 0.04f), e, new Vector3(0.62f, 0.78f, 0.06f), WindowMat(v, 0));
+        if (h > 4.2f) Window(L(side * w * 0.2f, h * 0.8f, -d * 0.5f - 0.04f), e, new Vector3(0.5f, 0.6f, 0.06f), WindowMat(v, 1));
+        Window(L(0f, h + 0.1f + rh * 0.3f, -(d + 0.7f) * 0.5f - 0.03f), e, new Vector3(0.45f, 0.55f, 0.06f), WindowMat(v, 2));
+        foreach (float s in new[] { -1f, 1f })
+            foreach (float zz in new[] { -d * 0.22f, d * 0.22f })
+                Window(L(s * (w * 0.5f + 0.04f), h * 0.55f, zz), e, new Vector3(0.06f, 0.72f, 0.58f), WindowMat(v, s > 0f ? 3 : 4));
+
+        if (v % 3 != 2)
+        {
+            Vector3 c = L(w * 0.24f, h + rh * 0.55f, d * 0.18f);
+            _kit.Box(c + Vector3.up * 0.5f, e, new Vector3(0.55f, 1.7f, 0.55f), _stoneDark);
+            _kit.Box(c + Vector3.up * 1.38f, e, new Vector3(0.64f, 0.1f, 0.64f), _snow);
+            _chimneys.Add(c + Vector3.up * 1.45f);
+        }
+    }
+
+    private Material WindowMat(int v, int i)
+    {
+        int k = (v * 3 + i * 5) % 11;
+        if (k == 3) return _winDark;
+        if (k == 7) return _winFrost[v % 3];
+        return _winCandle;
+    }
+
+    // Ventana con su alféizar nevado debajo.
+    private void Window(Vector3 c, Vector3 euler, Vector3 size, Material m)
+    {
+        _kit.Box(c, euler, size, m);
+        Vector3 sill = size.x < size.z ? new Vector3(0.16f, 0.06f, size.z + 0.14f) : new Vector3(size.x + 0.14f, 0.06f, 0.16f);
+        _kit.Box(c + Vector3.down * (size.y * 0.5f + 0.03f), euler, sill, _snow);
+    }
+
+    // Campanario de piedra al final de la calle: cuerpo, campanas encendidas, chapitel en cruz y nieve.
+    private void BellTower(Vector3 p)
+    {
+        Vector3 up = Vector3.up;
+        _kit.Box(p + up * 0.6f, Vector3.zero, new Vector3(4.4f, 1.2f, 4.4f), _stoneDark);
+        _kit.Box(p + up * 4.2f, Vector3.zero, new Vector3(3.5f, 7.2f, 3.5f), _stone);
+        _kit.Box(p + up * 7.9f, Vector3.zero, new Vector3(3.9f, 0.3f, 3.9f), _trim);
+        _kit.Box(p + up * 9f, Vector3.zero, new Vector3(3.3f, 2f, 3.3f), _stoneDark);
+        foreach (Vector3 n in new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right })
+        {
+            Vector3 size = n.x != 0f ? new Vector3(0.06f, 1.3f, 1f) : new Vector3(1f, 1.3f, 0.06f);
+            _kit.Box(p + up * 9f + n * 1.68f, Vector3.zero, size, _winCandle);
+        }
+        _kit.Box(p + up * 10.1f, Vector3.zero, new Vector3(3.9f, 0.25f, 3.9f), _trim);
+        foreach (float yaw in new[] { 0f, 90f })
+        {
+            _kit.Prism(p + up * 10.2f, new Vector3(0f, yaw, 0f), new Vector3(4.1f, 4f, 4.1f), _roof);
+            _kit.Prism(p + up * (10.2f + 4f * 0.45f), new Vector3(0f, yaw, 0f), new Vector3(4.1f * 0.55f + 0.06f, 4f * 0.55f + 0.08f, 4.2f), _snow);
+        }
+        _kit.Cone(p + up * 14.1f, 0.22f, 1.2f, _iron);
+        Window(p + new Vector3(0f, 5.4f, -1.79f), Vector3.zero, new Vector3(0.7f, 1.3f, 0.06f), _winCandle);
+        _kit.Box(p + new Vector3(0f, 2.3f, -1.8f), Vector3.zero, new Vector3(1.5f, 2.4f, 0.08f), _trim);
+        _kit.Box(p + new Vector3(0f, 2.2f, -1.84f), Vector3.zero, new Vector3(1.2f, 2.2f, 0.08f), _wood);
+    }
+
+    // Iglú medio enterrado con su túnel y la luz de dentro asomando por la entrada.
+    private void Igloo(Vector3 p, float yaw)
+    {
+        Quaternion q = Quaternion.Euler(0f, yaw, 0f);
+        Vector3 e = new Vector3(0f, yaw, 0f);
+        _kit.Mesh(_sphere, p, e, new Vector3(4.2f, 3.4f, 4.2f), _snow);
+        _kit.Mesh(_sphere, p + q * new Vector3(0f, 0f, -2f), e, new Vector3(1.6f, 2f, 2f), _snow);
+        _kit.Box(p + q * new Vector3(0f, 0.5f, -2.96f), e, new Vector3(0.75f, 0.9f, 0.08f), _winCandle);
+    }
+
+    private void Pines()
+    {
+        // Dos en primer plano enmarcan la vista; el resto rodea el poblado y sube por la loma del fondo.
+        Pine(new Vector3(-6.4f, 0f, -3f), 7f);
+        Pine(new Vector3(7.4f, 0f, -2.6f), 6.4f);
+        Pine(new Vector3(-18.5f, 0f, 9f), 8f);
+        Pine(new Vector3(19f, 0f, 13f), 7.5f);
+        Pine(new Vector3(-20f, 0f, 21f), 8.5f);
+        Pine(new Vector3(20.5f, 0f, 24f), 8f);
+        for (int i = 0; i < 14; i++)
+            Pine(new Vector3(R(-28f, 28f), R(0.5f, 2.5f), R(32f, 44f)), R(6f, 10f));
+    }
+
+    // Pino de tres pisos con nieve en la parte alta de cada uno.
+    private void Pine(Vector3 p, float h)
+    {
+        _kit.Cylinder(p + Vector3.up * h * 0.12f, h * 0.07f, h * 0.24f, _bark);
+        for (int k = 0; k < 3; k++)
+        {
+            float t = k / 3f;
+            float y = h * (0.18f + t * 0.27f), dia = h * (0.62f - t * 0.17f), ht = h * (0.42f - t * 0.06f);
+            Vector3 e = new Vector3(0f, R(0f, 45f), 0f);
+            _kit.Cone(p + Vector3.up * y, dia, ht, _pine, e);
+            _kit.Cone(p + Vector3.up * (y + ht * 0.45f), dia * 0.57f, ht * 0.57f, _snow, e);
+        }
+    }
+
+    // Farol de la calle; el brazo apunta hacia la calzada (side = +1 a la derecha, -1 a la izquierda).
+    private void StreetLamp(Vector3 p, float side)
+    {
+        _kit.Box(p + new Vector3(0f, 0.12f, 0f), Vector3.zero, new Vector3(0.3f, 0.25f, 0.3f), _iron);
+        _kit.Cylinder(p + new Vector3(0f, 1.3f, 0f), 0.12f, 2.6f, _iron);
+        _kit.Box(p + new Vector3(side * 0.3f, 2.5f, 0f), Vector3.zero, new Vector3(0.62f, 0.06f, 0.06f), _iron);
+        Vector3 lamp = p + new Vector3(side * 0.55f, 2.18f, 0f);
+        _kit.Box(lamp, Vector3.zero, new Vector3(0.24f, 0.34f, 0.24f), _lamp);
+        _kit.Box(lamp + Vector3.down * 0.19f, Vector3.zero, new Vector3(0.3f, 0.04f, 0.3f), _iron);
+        _kit.Cone(lamp + Vector3.up * 0.17f, 0.36f, 0.22f, _iron);
+        PointLight("Luz del farol", lamp + Vector3.down * 0.05f, new Color(1f, 0.68f, 0.38f), 7f, 2.4f, true);
+    }
+
+    // Humo de chimenea: sube despacio y el viento lo tumba.
+    private void Smoke(Vector3 top)
+    {
+        var go = new GameObject("Humo");
+        go.transform.SetParent(transform, false);
+        go.transform.localPosition = top;
+        go.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(5f, 7f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.35f, 0.6f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.1f);
+        main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+        main.maxParticles = 40;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.startColor = new Color(0.6f, 0.65f, 0.75f, 0.3f);
+        main.prewarm = true;
+        var em = ps.emission;
+        em.rateOverTime = 4f;
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Cone;
+        shape.angle = 8f;
+        shape.radius = 0.12f;
+        var vel = ps.velocityOverLifetime;
+        vel.enabled = true;
+        vel.space = ParticleSystemSimulationSpace.World;
+        vel.x = new ParticleSystem.MinMaxCurve(0.25f, 0.45f);
+        vel.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+        vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+        var size = ps.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 2.2f));
+        var col = ps.colorOverLifetime;
+        col.enabled = true;
+        var fade = new Gradient();
+        fade.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+            new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0f, 1f) });
+        col.color = fade;
+        go.GetComponent<ParticleSystemRenderer>().sharedMaterial = MenuRuins.Transparent("Humo", MenuRuins.Soft(64), Color.white, false);
+        ps.Play();
     }
 
     // ---------- La mansión ----------
@@ -647,7 +893,8 @@ public class HauntedManor : MonoBehaviour
         // Capa media: a los lados de la casa, sin tapar el centro, para enmarcarla.
         for (float x = -240f; x <= 240f; x += Rr(20f, 30f))
         {
-            if (Mathf.Abs(x) < 22f || Mathf.Abs(x - SpireX) < 45f) continue;
+            // Con la mansión, el centro queda libre para ella; detrás del poblado la cordillera lo cierra todo.
+            if ((!IsVillage && Mathf.Abs(x) < 22f) || Mathf.Abs(x - SpireX) < 45f) continue;
             Peak(root, new Vector3(x, -2f, Rr(130f, 165f)), Rr(45f, 70f), Rr(1.5f, 2.1f), near, seed++);
         }
         // El Frostspire: el más alto y esbelto, a la izquierda de la casa; su cristal queda dentro del cuadro.
