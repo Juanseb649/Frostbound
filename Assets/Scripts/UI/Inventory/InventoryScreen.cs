@@ -196,6 +196,28 @@ public class InventoryScreen : MonoBehaviour
         if (!IsOpen) return;
         FitWindow();
         if (_dirty) Refresh();
+        KeepSelectionVisible();
+    }
+
+    // Con mando (o teclado) la selección baja por la mochila: la lista se desplaza para que la casilla
+    // elegida no quede fuera de la vista.
+    private void KeepSelectionVisible()
+    {
+        if (_scroll == null || _grid == null || EventSystem.current == null) return;
+        GameObject go = EventSystem.current.currentSelectedGameObject;
+        if (go == null || go.transform.parent != _grid) return;
+        RectTransform view = _scroll.viewport;
+        Bounds b = RectTransformUtility.CalculateRelativeRectTransformBounds(view, go.transform);
+        Rect r = view.rect;
+        const float margin = 8f;
+        float dy = 0f;
+        if (b.max.y > r.yMax - margin) dy = b.max.y - (r.yMax - margin);
+        else if (b.min.y < r.yMin + margin) dy = b.min.y - (r.yMin + margin);
+        if (Mathf.Abs(dy) < 0.5f) return;
+        Vector2 p = _grid.anchoredPosition;
+        p.y = Mathf.Clamp(p.y - dy, 0f, Mathf.Max(0f, _grid.rect.height - r.height));
+        _grid.anchoredPosition = p;
+        _scroll.velocity = Vector2.zero;
     }
 
     public void Open() => OpenTab(Tab.Character);
