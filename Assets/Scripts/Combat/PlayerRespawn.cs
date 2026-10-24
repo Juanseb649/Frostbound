@@ -167,8 +167,10 @@ public class PlayerRespawn : MonoBehaviour
         ResumeControl();
         SetHudVisible(true, null);
 
-        // Los compañeros caídos despiertan con él.
-        foreach (PlayerController p in Players.All)
+        // Los compañeros caídos despiertan con él. Se recorre una copia: al revivir, su PlayerController se vuelve
+        // a activar y se registra otra vez en Players.All, y modificar la lista durante el foreach cortaba la
+        // corrutina (pantalla negra y controles bloqueados).
+        foreach (PlayerController p in new System.Collections.Generic.List<PlayerController>(Players.All))
         {
             if (p == null || p.transform == transform) continue;
             PlayerRespawn other = p.GetComponent<PlayerRespawn>();

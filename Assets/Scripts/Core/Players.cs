@@ -15,7 +15,10 @@ public static class Players
 
     public static void Register(PlayerController p)
     {
-        if (p != null && !_all.Contains(p)) _all.Add(p);
+        // Solo cambia la lista si el jugador es nuevo: OnEnable vuelve a llamar aquí al revivir, y reordenar
+        // siempre invalidaba cualquier foreach sobre Players.All que estuviera en curso.
+        if (p == null || _all.Contains(p)) return;
+        _all.Add(p);
         _all.Sort((a, b) => a.playerIndex.CompareTo(b.playerIndex));
     }
 
