@@ -32,6 +32,8 @@ public static class InputMap
     private const string PrefVersion = "controls_version";
     // Sube cuando cambian los botones por defecto del mando: las asignaciones guardadas de antes se restablecen.
     private const int PadDefaultsVersion = 2;
+    // Atacar pasó del clic derecho al izquierdo: se migra una vez a quien tenía guardado el antiguo por defecto.
+    private const string PrefAttackLeft = "controls_attack_left";
 
     public static readonly GameAction[] All = (GameAction[])Enum.GetValues(typeof(GameAction));
 
@@ -52,7 +54,7 @@ public static class InputMap
             case GameAction.MoveDown: return (int)Key.S;
             case GameAction.MoveLeft: return (int)Key.A;
             case GameAction.MoveRight: return (int)Key.D;
-            case GameAction.Attack: return MouseRight;
+            case GameAction.Attack: return MouseLeft;
             case GameAction.Ability: return (int)Key.F;
             case GameAction.Dodge: return (int)Key.Space;
             case GameAction.Interact: return (int)Key.E;
@@ -137,6 +139,18 @@ public static class InputMap
         Pads.Clear();
         foreach (GameAction a in All) { Keys[a] = DefaultKey(a); Pads[a] = DefaultPad(a); }
         Parse(PlayerPrefs.GetString(PrefKeys, ""), Keys);
+        if (PlayerPrefs.GetInt(PrefAttackLeft, 0) == 0)
+        {
+            PlayerPrefs.SetInt(PrefAttackLeft, 1);
+            if (Keys[GameAction.Attack] == MouseRight)
+            {
+                foreach (GameAction other in All)
+                    if (other != GameAction.Attack && Keys[other] == MouseLeft) Keys[other] = MouseRight;
+                Keys[GameAction.Attack] = MouseLeft;
+                PlayerPrefs.SetString(PrefKeys, Serialize(Keys));
+            }
+            PlayerPrefs.Save();
+        }
         if (PlayerPrefs.GetInt(PrefVersion, 1) >= PadDefaultsVersion) Parse(PlayerPrefs.GetString(PrefPad, ""), Pads);
         else
         {

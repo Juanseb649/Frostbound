@@ -3,7 +3,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 // Ataque del héroe con el arma equipada: cuerpo a cuerpo (arco delante del pingüino) o a distancia (proyectil).
-// Clic derecho: atacar hacia el cursor (Espacio es rodar, PlayerDodge). Clic izquierdo sobre un objetivo: acercarse y atacar (PlayerController).
+// Atacar (clic izquierdo por defecto, se cambia en Configuración): golpe hacia el cursor (Espacio es rodar, PlayerDodge).
+// Clic izquierdo sobre un enemigo lejano: acercarse y atacar (PlayerController).
 // Cada golpe gasta durabilidad; las runas grabadas aplican fuego, veneno, escarcha, cadena, robo de vida o empuje.
 [RequireComponent(typeof(Equipment))]
 public class PlayerCombat : MonoBehaviour
@@ -156,6 +157,8 @@ public class PlayerCombat : MonoBehaviour
         }
         if (!PlayerController.UsesKeyboard(this)) return;
         bool wants = InputMap.KeyHeld(GameAction.Attack) && !(InputMap.KeyIsMouse(GameAction.Attack) && GameplayInput.PointerOverUI);
+        // Con el clic izquierdo, un clic sobre un NPC u objeto no golpea, y al perseguir a un enemigo golpea el controlador.
+        if (wants && InputMap.KeyOf(GameAction.Attack) == InputMap.MouseLeft && _pc != null && (_pc.LeftPressOnTarget || _pc.ChasingTarget)) wants = false;
         if (!wants) return;
         // Con mando como periférico (o sin ratón) apunta solo; con ratón, al cursor.
         if (pad != null || Mouse.current == null) TryAttack(PadAimPoint());

@@ -131,6 +131,13 @@ public class PlayerController : MonoBehaviour
     public float pickupRange = 1.3f;
     private NPCInteractable _hovered;
     private bool _pressStartedOnUI;
+
+    // Atacar con el clic izquierdo (por defecto): el clic en el suelo ya no camina, golpea hacia el cursor.
+    public static bool LeftClickAttacks => InputMap.KeyOf(GameAction.Attack) == InputMap.MouseLeft;
+    // El clic izquierdo actual empezó sobre un NPC, un objeto del suelo o la interfaz: no debe salir un golpe.
+    public bool LeftPressOnTarget { get; private set; }
+    // Persiguiendo a un enemigo clicado: el propio controlador golpea al llegar.
+    public bool ChasingTarget => _attackTarget != null;
     private float _stuckTimer;
     private Vector3 _lastPosition;
     private Quaternion _targetRotation;
@@ -200,6 +207,7 @@ public class PlayerController : MonoBehaviour
         }
         bool keys = UsesKeyboard(this);
         if (keys) UpdateHover();
+        if (keys) TrackLeftPress();
 
         Vector2 input = keys ? Vector2.ClampMagnitude(ReadKeyboardInput(), 1f) : Vector2.zero;
 
@@ -601,6 +609,17 @@ public class PlayerController : MonoBehaviour
 
     private Vector2 ReadKeyboardInput() => InputMap.KeyboardMove();
 
+    private void TrackLeftPress()
+    {
+        Mouse mouse = Mouse.current;
+        if (mouse == null || !mouse.leftButton.isPressed) { LeftPressOnTarget = false; return; }
+        if (!mouse.leftButton.wasPressedThisFrame || _camera == null) return;
+        Vector2 p = mouse.position.ReadValue();
+        Collider under = ColliderUnderCursor(p);
+        LeftPressOnTarget = WorldHUD.PointerOverUI() || NpcUnderCursor(p) != null
+            || (under != null && under.GetComponentInParent<WorldItem>() != null);
+    }
+
     // Devuelve true si hay un punto del suelo al que caminar.
     private bool ReadClick()
     {
@@ -642,6 +661,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
+        if (LeftClickAttacks) return false;
         if (mouse.leftButton.isPressed && !_pressStartedOnUI && _interactTarget == null && _pickupTarget == null && _attackTarget == null)
         {
             Ray ray = _camera.ScreenPointToRay(mouse.position.ReadValue());
