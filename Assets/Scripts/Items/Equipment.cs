@@ -35,6 +35,89 @@ public class Equipment : MonoBehaviour
     public CharacterStats Stats => _stats;
     public ItemStack MainWeapon => GetStack(EquipSlot.Weapon);
 
+    // ----- Perfiles de armas (como en Diablo II) -----
+    // Dos juegos de arma + mano secundaria. El activo está en las ranuras normales; el otro espera guardado
+    // aquí, sin dar bonos. Se cambia con una tecla (R / clic del stick izquierdo) o con las pestañas I y II.
+    private ItemStack _altWeapon, _altOffhand;
+    private float _nextSwap;
+    public int ActiveProfile { get; private set; }
+    public event Action<int> ProfileSwapped;
+
+    public ItemStack AltStack(EquipSlot slot) => slot == EquipSlot.Weapon ? _altWeapon : slot == EquipSlot.Offhand ? _altOffhand : null;
+
+    // Carga de partida: el perfil inactivo y cuál estaba en uso.
+    public void SetAltStacks(ItemStack weapon, ItemStack offhand, int activeProfile)
+    {
+        _altWeapon = weapon != null && weapon.item != null ? weapon : null;
+        _altOffhand = offhand != null && offhand.item != null ? offhand : null;
+        ActiveProfile = Mathf.Clamp(activeProfile, 0, 1);
+    }
+
+    // Guardado: el perfil inactivo va en la misma lista del equipo, marcado con index >= AltIndex
+    // (AltIndex = el activo es el I; AltIndex + 1 = el activo es el II). Las partidas viejas no lo tienen.
+    public const int AltIndex = 1000;
+    public static bool IsAltEntry(SavedStack d) => d != null && d.index >= AltIndex;
+
+    public void CaptureAlt(List<SavedStack> into)
+    {
+        foreach (EquipSlot slot in new[] { EquipSlot.Weapon, EquipSlot.Offhand })
+        {
+            ItemStack s = AltStack(slot);
+            if (s == null || s.item == null) continue;
+            SavedStack d = SavedStack.From(s);
+            d.slot = slot;
+            d.index = AltIndex + ActiveProfile;
+            into.Add(d);
+        }
+    }
+
+    public void RestoreAlt(List<SavedStack> from, ItemDatabase db)
+    {
+        ItemStack w = null, o = null;
+        int profile = 0;
+        foreach (SavedStack d in from)
+        {
+            if (!IsAltEntry(d)) continue;
+            profile = d.index - AltIndex;
+            ItemStack s = d.ToStack(db);
+            if (s == null) continue;
+            s.EnsureInstance();
+            if (d.slot == EquipSlot.Weapon) w = s;
+            else if (d.slot == EquipSlot.Offhand) o = s;
+        }
+        SetAltStacks(w, o, profile);
+    }
+
+    public bool SwapProfiles(out string message)
+    {
+        message = "";
+        if (Time.time < _nextSwap) return false;
+        PlayerCombat combat = GetComponent<PlayerCombat>();
+        if (combat != null && combat.IsAttacking) { message = "Termina el golpe antes de cambiar de armas"; return false; }
+        _nextSwap = Time.time + 0.35f;
+        ItemStack w = GetStack(EquipSlot.Weapon), o = GetStack(EquipSlot.Offhand);
+        _equipped.Remove(EquipSlot.Weapon);
+        _equipped.Remove(EquipSlot.Offhand);
+        if (_altWeapon != null) _equipped[EquipSlot.Weapon] = _altWeapon;
+        if (_altOffhand != null) _equipped[EquipSlot.Offhand] = _altOffhand;
+        _altWeapon = w;
+        _altOffhand = o;
+        ActiveProfile = 1 - ActiveProfile;
+        Apply();
+        AudioManager.PlayUI(AudioId.UI_Equip, 0.7f);
+        ProfileSwapped?.Invoke(ActiveProfile);
+        return true;
+    }
+
+    void Update()
+    {
+        if (!_started || GameplayInput.Blocked || _stats.IsDead || PlayerController.Busy(this)) return;
+        if (GetComponent<PlayerController>() == null) return;
+        if (!InputMap.Pressed(GameAction.SwapWeapons, this)) return;
+        if (SwapProfiles(out string message)) Notifications.Show("Armas " + (ActiveProfile == 0 ? "I" : "II"), FrostboundUI.Muted);
+        else if (!string.IsNullOrEmpty(message)) Notifications.Show(message, FrostboundUI.Negative);
+    }
+
     void Awake()
     {
         _stats = GetComponent<CharacterStats>();
@@ -69,7 +152,9 @@ public class Equipment : MonoBehaviour
         if (!restored && UsesItems()) GiveStartingItems();
         // Una partida guardada sin nada equipado (creada y cerrada antes del primer guardado, o con objetos que ya no
         // existen) no deja al héroe sin ropa ni arma: recibe el equipo de su clase.
-        else if (restored && _equipped.Count == 0 && UsesItems())
+        // Solo si la mochila también está vacía: quien se quitó toda la ropa a propósito la tiene en la mochila,
+        // y darle otra vez el equipo inicial la duplicaba al cargar.
+        else if (restored && _equipped.Count == 0 && _inventory.UsedSlots == 0 && UsesItems())
         {
             Debug.Log("[Equipment] La partida no tenía equipo: se entrega el equipo inicial de la clase.");
             GiveStartingItems();
@@ -239,19 +324,28 @@ public class Equipment : MonoBehaviour
 
     // ----- Runas -----
 
-    // Hechizo de grabado: la runa de la mochila queda grabada en el arma equipada y cuesta maná.
+    // Hechizo de grabado: la runa de la mochila queda grabada en el arma equipada (o, si el arma no tiene
+    // ranuras libres, en el escudo) y cuesta maná.
     public bool EngraveRune(int inventoryIndex, out string message)
+    {
+        ItemStack shield = ShieldBlock.ShieldOf(this);
+        bool weaponFree = MainWeapon != null && MainWeapon.FreeRuneSlots > 0 && !MainWeapon.IsBroken;
+        bool toShield = !weaponFree && shield != null && shield.FreeRuneSlots > 0;
+        return EngraveRune(inventoryIndex, toShield, out message);
+    }
+
+    public bool EngraveRune(int inventoryIndex, bool onShield, out string message)
     {
         message = "";
         ItemStack rune = _inventory.Get(inventoryIndex);
         if (rune == null || !rune.item.IsRune) return false;
-        ItemStack weapon = MainWeapon;
+        ItemStack weapon = onShield ? ShieldBlock.ShieldOf(this) : MainWeapon;
         if (weapon == null)
         {
-            message = "Equipa un arma para grabar la runa";
+            message = onShield ? "Equipa un escudo para grabar la runa" : "Equipa un arma para grabar la runa";
             return false;
         }
-        if (weapon.item.runeSlots <= 0)
+        if (weapon.RuneSlots <= 0)
         {
             message = weapon.item.displayName + " no admite runas";
             return false;
@@ -315,6 +409,7 @@ public class Equipment : MonoBehaviour
     {
         int total = 0;
         foreach (ItemStack s in _equipped.Values) total += ItemPricing.RepairCost(s);
+        total += ItemPricing.RepairCost(_altWeapon) + ItemPricing.RepairCost(_altOffhand);
         for (int i = 0; i < _inventory.Capacity; i++) total += ItemPricing.RepairCost(_inventory.Get(i));
         return total;
     }
@@ -324,6 +419,8 @@ public class Equipment : MonoBehaviour
     {
         int repaired = 0;
         foreach (ItemStack s in _equipped.Values)
+            if (s != null && s.item.HasDurability && s.durability < s.item.maxDurability) { s.Repair(); repaired++; }
+        foreach (ItemStack s in new[] { _altWeapon, _altOffhand })
             if (s != null && s.item.HasDurability && s.durability < s.item.maxDurability) { s.Repair(); repaired++; }
         for (int i = 0; i < _inventory.Capacity; i++)
         {

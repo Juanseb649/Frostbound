@@ -66,6 +66,10 @@ public class ItemDefinition : ScriptableObject
     [Tooltip("Proyectil (flecha, virote, kunai). Vacío = usa el modelo del arma.")]
     public GameObject projectileModel;
 
+    [Header("Escudo")]
+    [Tooltip("Probabilidad base de bloquear un golpe, en %. La Agilidad la sube (tope 75 %). Las runas del escudo dependen de su rareza.")]
+    [Range(0f, 75f)] public float blockChance;
+
     [Header("Runa")]
     public RuneEffect runeEffect = RuneEffect.None;
     [Tooltip("Fuego/Veneno: daño por segundo · Escarcha: ralentización (0.4 = 40 %) · Cadena: fracción del golpe · Vampiro/Filo/Celeridad: fracción · Empuje: metros.")]
@@ -88,6 +92,7 @@ public class ItemDefinition : ScriptableObject
     public bool IsConsumable => category == ItemCategory.Consumable;
     public bool IsWeapon => weaponType != WeaponType.None;
     public bool IsRune => category == ItemCategory.Rune && runeEffect != RuneEffect.None;
+    public bool IsShield => equipSlot == EquipSlot.Offhand && !IsWeapon;
     public WeaponCatalog.Info WeaponInfo => WeaponCatalog.Get(weaponType);
     public WeaponHandling Handling => WeaponInfo.handling;
     public bool IsRanged => IsWeapon && WeaponInfo.projectile;

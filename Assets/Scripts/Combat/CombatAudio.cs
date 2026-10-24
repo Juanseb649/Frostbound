@@ -36,6 +36,12 @@ public static class CombatAudio
         Try(Hurt, at, 0.55f, 0.35f);
     }
 
+    // El escudo para un golpe.
+    public static void Block(Vector3 at)
+    {
+        if (!Try(Metal, at, 0.95f, 0.05f)) AudioManager.Play3D(AudioId.Boss_Attack, at, 0.5f, 2f, 20f);
+    }
+
     public static void Death(Vector3 at) => Try(GoreDeath, at, 0.9f, 0.05f);
 
     private static bool Try(string bank, Vector3 at, float volume, float minGap = 0f)

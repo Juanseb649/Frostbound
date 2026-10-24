@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
   id: viking_shield
   displayName: Escudo redondo
-  description: 
+  description: "Escudo de madera con umbo de hierro. Bloquea golpes seg\xFAn su probabilidad y tu Agilidad."
   icon: {fileID: 21300000, guid: 8a0b62d5e30b12a40a2d6833be6a69fc, type: 3}
   category: 0
   rarity: 0
@@ -37,6 +37,7 @@ MonoBehaviour:
   runeSlots: 0
   weaponModel: {fileID: 919132149155446097, guid: 5ce4106251b47984fbf4b9a950404027, type: 3}
   projectileModel: {fileID: 0}
+  blockChance: 20
   runeEffect: 0
   runePower: 0
   runeDuration: 0

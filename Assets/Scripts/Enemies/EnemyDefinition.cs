@@ -55,7 +55,7 @@ public class EnemyDefinition : ScriptableObject
     {
         int gap = monsterLevel - heroLevel;
         if (gap >= 0) return 1f + 0.1f * Mathf.Min(gap, 5);
-        return Mathf.Max(0.1f, 1f + 0.15f * gap);
+        return Mathf.Max(0.05f, 1f + 0.2f * gap);
     }
 
     void OnValidate()

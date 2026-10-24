@@ -44,10 +44,12 @@ public class EnemyCamp : MonoBehaviour
     private Transform _player;
 
     public IReadOnlyList<EnemyBrain> Members => _members;
-    public bool Cleared => _spawned && _members.Count == 0;
+    // Sin miembros vivos (los destruidos sin pasar por la muerte, p. ej. al recargar, tampoco cuentan).
+    public bool Cleared => _spawned && _members.TrueForAll(m => m == null || m.IsDead);
 
     void Update()
     {
+        _members.RemoveAll(m => m == null);
         Transform near = Players.NearestTransform(transform.position, false);
         if (near != null) _player = near;
         if (_player == null) return;
@@ -194,8 +196,12 @@ public class EnemyCamp : MonoBehaviour
         foreach (EnemyBrain b in _members) if (b != source) b.WakeUp();
     }
 
+    // Corruptos de este campamento muertos en combate (los encuentros obligatorios exigen bajas reales).
+    public int Kills { get; private set; }
+
     public void OnMemberDied(EnemyBrain dead)
     {
+        Kills++;
         _members.Remove(dead);
         foreach (EnemyBrain b in _members)
             if ((b.transform.position - dead.transform.position).sqrMagnitude < 36f) b.Frenzy();

@@ -80,7 +80,7 @@ public class MapUI : MonoBehaviour
         Image frame = UIFactory.Frame(_fullRoot, "Marco", round, new Color(0.04f, 0.06f, 0.11f, 0.98f), FrostboundUI.Border, out _);
         UIFactory.Anchored(frame.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-90f, -6f), new Vector2(760f, 800f));
 
-        _fullTitle = UIFactory.Text(frame.transform, "Titulo", "MAPA", _skin != null ? _skin.cinzel600 : null, 26f, FrostboundUI.Title, TextAlignmentOptions.Center, 3f, true);
+        _fullTitle = UIFactory.Text(frame.transform, "Titulo", "MAPA", _skin != null ? _skin.cinzel600 : null, 26f, FrostboundUI.OldGoldLight, TextAlignmentOptions.Center, 3f, true);
         UIFactory.Anchored(_fullTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(700f, 34f));
 
         RectTransform viewport = UIFactory.Node(frame.transform, "Vista");
@@ -148,6 +148,7 @@ public class MapUI : MonoBehaviour
         if (FullOpen || _fullRoot == null) return;
         FullOpen = true;
         _fullRoot.gameObject.SetActive(true);
+        AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.6f);
     }
 
     public void Close()
@@ -155,6 +156,7 @@ public class MapUI : MonoBehaviour
         if (!FullOpen) return;
         FullOpen = false;
         _fullRoot.gameObject.SetActive(false);
+        AudioManager.PlayUI(AudioId.UI_CloseMenu, 0.6f);
     }
 
     void Update()

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ab13e3148463ba40aac3b2106f78791, type: 3}
+  m_Name: savia_negra
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
+  id: savia_negra
+  title: Savia negra
+  chapter: 2
+  order: 2
+  giver: 
+  speaker: steve
+  requiresQuest: rastro_de_pipo
+  requiresStage: 3
+  offerLines: []
+  stages:
+  - objective: "Destruye las ra\xEDces corruptas que alimentan al Frost"
+    type: 6
+    target: raiz
+    count: 3
+    giverLines:
+    - "La savia de esos pinos sube por las ra\xEDces hasta el hielo. C\xF3rtalas
+      y el bosque respirar\xE1."
+    - "Dicen que una chamana canta junto a las ra\xEDces. La llaman la Madre Savia."
+    onReach: Las pistas llevan a la savia
+  - objective: 
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "Sin ra\xEDces, la savia se seca. Lo que la cuidaba vendr\xE1 a buscarte."
+    onReach: 
+  experience: 350
+  coins: 150

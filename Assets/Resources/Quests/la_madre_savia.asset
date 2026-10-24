@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ab13e3148463ba40aac3b2106f78791, type: 3}
+  m_Name: la_madre_savia
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
+  id: la_madre_savia
+  title: La Madre Savia
+  chapter: 2
+  order: 3
+  giver: 
+  speaker: steve
+  requiresQuest: savia_negra
+  requiresStage: 2
+  offerLines: []
+  stages:
+  - objective: "Encuentra a la Madre Savia en el coraz\xF3n del bosque"
+    type: 2
+    target: claro_savia
+    count: 1
+    giverLines:
+    - "El coraz\xF3n del bosque es un claro donde la savia hierve. Ve con la poci\xF3n
+      a mano."
+    onReach: "Las ra\xEDces se secan: algo despierta en el coraz\xF3n del bosque"
+  - objective: Derrota a la Madre Savia
+    type: 4
+    target: Madre Savia
+    count: 1
+    giverLines:
+    - Su savia envenena. No te quedes en los charcos.
+    onReach: 
+  - objective: Libera a Pipo del capullo de hielo
+    type: 6
+    target: capullo_pipo
+    count: 1
+    giverLines:
+    - "Si Pipo est\xE1 vivo, estar\xE1 cerca de ella. Rompe ese hielo con cuidado."
+    onReach: "La Madre Savia cay\xF3. Busca a Pipo"
+  - objective: Vuelve al poblado y habla con Steve
+    type: 1
+    target: steve
+    count: 1
+    giverLines:
+    - "\xBFPipo? \xA1Pipo! Ven aqu\xED, peque\xF1o. Te llevaremos junto al fuego."
+    onReach: "Pipo est\xE1 a salvo: ll\xE9valo con Steve"
+  - objective: 
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "Pipo dice que Bobby hablaba solo, con una voz que sal\xEDa del hielo."
+    - "Y que subi\xF3 a la cumbre. Al sello. H\xE9roe... ah\xED empez\xF3 todo."
+    onReach: 
+  experience: 600
+  coins: 300

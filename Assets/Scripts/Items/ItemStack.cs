@@ -33,7 +33,7 @@ public class ItemStack
     public int SpaceLeft => item == null ? 0 : item.maxStack - quantity;
 
     // Estado propio: no se apila con otras copias del mismo objeto.
-    public bool HasInstanceData => item != null && (item.HasDurability || item.runeSlots > 0 || quality != LootQuality.None);
+    public bool HasInstanceData => item != null && (item.HasDurability || item.runeSlots > 0 || item.IsShield || quality != LootQuality.None);
 
     public string DisplayName
     {
@@ -87,7 +87,9 @@ public class ItemStack
     public float MaxDurability => item != null ? item.maxDurability : 0f;
     public float Durability01 => item != null && item.HasDurability ? UnityEngine.Mathf.Clamp01(durability / item.maxDurability) : 1f;
     public bool IsBroken => item != null && item.HasDurability && durability <= 0f;
-    public int FreeRuneSlots => item == null ? 0 : UnityEngine.Mathf.Max(0, item.runeSlots - runes.Count);
+    // Ranuras de runa: las del arma; en los escudos, según su rareza (hasta 3).
+    public int RuneSlots => item == null ? 0 : item.IsShield ? ShieldBlock.RuneSlots(this) : item.runeSlots;
+    public int FreeRuneSlots => item == null ? 0 : UnityEngine.Mathf.Max(0, RuneSlots - runes.Count);
 
     // Gasta durabilidad. Devuelve true si el arma se acaba de romper.
     public bool Wear(float amount)

@@ -42,6 +42,7 @@ public class OptionsPanel : MonoBehaviour
 
     // Mientras está abierta, los botones de detrás no se pueden elegir (la cruceta no se escapa del panel).
     private readonly List<Selectable> _muted = new List<Selectable>();
+    private RectTransform _panel;
 
     void Awake()
     {
@@ -49,6 +50,7 @@ public class OptionsPanel : MonoBehaviour
             if (sel != null && sel.interactable) { sel.interactable = false; _muted.Add(sel); }
         Build();
         ShowTab(Tab.Control);
+        AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.6f);
         InputMap.Changed += OnMapChanged;
     }
 
@@ -64,6 +66,7 @@ public class OptionsPanel : MonoBehaviour
     public void Close()
     {
         Action cb = _onClose;
+        UIDissolve.Ghost(_panel);
         foreach (Selectable sel in _muted) if (sel != null) sel.interactable = true;
         _muted.Clear();
         Destroy(gameObject);
@@ -97,6 +100,7 @@ public class OptionsPanel : MonoBehaviour
         dim.raycastTarget = true;
 
         Image panel = FrostUI.Panel(root, "Panel", out _, 18f);
+        _panel = panel.rectTransform;
         FrostUI.Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1440f, 940f));
         panel.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         Transform p = panel.transform;
@@ -147,7 +151,7 @@ public class OptionsPanel : MonoBehaviour
     // General: volumen, modo de pantalla, resolución (de 1280×720 a 4K, con las ultrawide 21:9 y 32:9) y HUD en ultrawide.
     private List<DisplaySettings.Res> _resList;
     private int _resIndex, _modeIndex;
-    private TextMeshProUGUI _resText, _modeText, _hudText;
+    private TextMeshProUGUI _resText, _modeText, _hudText, _textScaleText, _shapesText;
 
     private void BuildGeneral()
     {
@@ -164,9 +168,14 @@ public class OptionsPanel : MonoBehaviour
                                                        () => { _resIndex = Mathf.Min(_resList.Count - 1, _resIndex + 1); RefreshGeneral(); });
         _hudText = Selector(_general, "HUD en ultrawide", 3, () => { DisplaySettings.HudCentered = !DisplaySettings.HudCentered; RefreshGeneral(); },
                                                              () => { DisplaySettings.HudCentered = !DisplaySettings.HudCentered; RefreshGeneral(); });
+        // Accesibilidad: se aplican al momento (no esperan a "Aplicar pantalla").
+        _textScaleText = Selector(_general, "Tamaño del texto", 4, () => { AccessibilitySettings.TextStep--; RefreshGeneral(); },
+                                                                   () => { AccessibilitySettings.TextStep++; RefreshGeneral(); });
+        _shapesText = Selector(_general, "Forma por rareza", 5, () => { AccessibilitySettings.RarityShapes = !AccessibilitySettings.RarityShapes; RefreshGeneral(); },
+                                                                () => { AccessibilitySettings.RarityShapes = !AccessibilitySettings.RarityShapes; RefreshGeneral(); });
 
         FrostButton apply = MakeButton(_general, "Aplicar pantalla", new Vector2(300f, 58f), 24f, FrostButton.Style.Primary);
-        FrostUI.Place((RectTransform)apply.transform, new Vector2(0f, 1f), new Vector2(560f, -4f * 90f - 40f), new Vector2(300f, 58f));
+        FrostUI.Place((RectTransform)apply.transform, new Vector2(0f, 1f), new Vector2(560f, -6f * RowStep - 40f), new Vector2(300f, 58f));
         apply.button.onClick.AddListener(() =>
         {
             DisplaySettings.Res r = _resList[_resIndex];
@@ -177,10 +186,13 @@ public class OptionsPanel : MonoBehaviour
         RefreshGeneral();
     }
 
+    // Alto de cada fila de la pestaña General (seis filas y el botón de aplicar caben en el panel).
+    private const float RowStep = 78f;
+
     // Fila con nombre y un valor entre dos flechas (se maneja con ratón, teclado o mando).
     private TextMeshProUGUI Selector(Transform parent, string label, int row, Action left, Action right)
     {
-        float y = -row * 90f - 40f;
+        float y = -row * RowStep - 40f;
         TextMeshProUGUI l = FrostUI.Text(parent, label, label, 26f, Color.white);
         FrostUI.Place(l.rectTransform, new Vector2(0f, 1f), new Vector2(160f, y), new Vector2(380f, 54f));
         FrostButton minus = MakeButton(parent, "◄ " + label, new Vector2(64f, 54f), 24f);
@@ -206,6 +218,8 @@ public class OptionsPanel : MonoBehaviour
     private void RefreshGeneral()
     {
         _volume.text = Mathf.RoundToInt(GameSettings.Volume * 100f) + " %";
+        _textScaleText.text = Mathf.RoundToInt(AccessibilitySettings.TextScale * 100f) + " %";
+        _shapesText.text = AccessibilitySettings.RarityShapes ? "Sí" : "No";
         if (_resList == null || _resList.Count == 0) return;
         DisplaySettings.Res r = _resList[_resIndex];
         DisplaySettings.Res n = DisplaySettings.Native;
@@ -317,7 +331,10 @@ public class OptionsPanel : MonoBehaviour
             actions.Add(a);
         }
         int perColumn = Mathf.CeilToInt(actions.Count / 2f);
-        float rowH = 50f, gap = 6f, colW = 650f;
+        // La altura de fila se ajusta al hueco de la lista: con 19 acciones las de 50 px se metían bajo los botones.
+        Canvas.ForceUpdateCanvases();
+        float space = _grid.rect.height > 1f ? _grid.rect.height : 452f;
+        float gap = 4f, rowH = Mathf.Min(50f, space / perColumn - gap), colW = 650f;
         for (int i = 0; i < actions.Count; i++)
         {
             GameAction a = actions[i];

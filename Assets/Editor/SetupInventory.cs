@@ -40,6 +40,8 @@ public static class SetupInventory
         ItemDatabase db = CreateDatabase(items);
         // Armas (modelos en la aleta, durabilidad, runas) y runas: se añaden a la base de datos.
         SetupWeapons.Setup(false);
+        // Armaduras de botín (caballero y shinobi) y escudos nuevos: también van a la base de datos.
+        SetupArmors.Setup();
         UISkin skin = CreateSkin(icons);
         AssetDatabase.SaveAssets();
 
@@ -194,7 +196,7 @@ public static class SetupInventory
         return result;
     }
 
-    private static Material ToonMaterial(string path, Color color)
+    internal static Material ToonMaterial(string path, Color color)
     {
         Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
         Shader shader = Shader.Find("Frostbound/Toon");
@@ -216,7 +218,7 @@ public static class SetupInventory
 
     // Bota de 1 × 1 × 1 con el origen abajo en el centro del pie y la punta hacia +Z.
     // Submalla 0: cuerpo. Submalla 1: puño y suela.
-    private static Mesh BuildBootMesh()
+    internal static Mesh BuildBootMesh()
     {
         var v = new List<Vector3>();
         var n = new List<Vector3>();
@@ -603,7 +605,7 @@ public static class SetupInventory
         return asset;
     }
 
-    private static Color Hex(string hex)
+    internal static Color Hex(string hex)
     {
         ColorUtility.TryParseHtmlString(hex, out Color c);
         return c;

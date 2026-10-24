@@ -2,12 +2,13 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// Hover y foco: el borde pasa a hielo y el botón crece a 1.03 en 0,1 s (ratón, teclado y mando).
-public class UIButtonFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
+// Hover y foco: el borde pasa a oro viejo y el botón crece apenas (HoverScale) en 0,1 s (ratón, teclado y mando).
+// También suena al pulsar (clic o A/Intro en el mando y el teclado).
+public class UIButtonFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler, IPointerClickHandler, ISubmitHandler
 {
     public Graphic border;
     public Color normalBorder = new Color(0.165f, 0.239f, 0.361f);
-    public Color activeBorder = new Color(0.749f, 0.918f, 1f);
+    public Color activeBorder = FrostboundUI.OldGoldLight;
     [Tooltip("Mantiene el estado activo (por ejemplo, la tarjeta de la clase elegida).")]
     public bool forceActive;
     public float hoverScale = FrostboundUI.HoverScale;
@@ -40,6 +41,13 @@ public class UIButtonFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         if (_selectable == null || _selectable.IsInteractable()) AudioManager.PlayUI(AudioId.UI_Hover, 0.4f, 0.06f);
     }
     public void OnDeselect(BaseEventData e) => _selected = false;
+    public void OnPointerClick(PointerEventData e) => Pressed();
+    public void OnSubmit(BaseEventData e) => Pressed();
+
+    private void Pressed()
+    {
+        if (_selectable == null || _selectable.IsInteractable()) AudioManager.PlayUI(AudioId.UI_Click, 0.65f, 0.04f);
+    }
 
     void Update()
     {

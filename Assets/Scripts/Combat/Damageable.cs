@@ -28,11 +28,14 @@ public class Damageable : MonoBehaviour
     public Transform visual;
 
     public float Health { get; private set; }
+    private float _weakNoteAt;
     // Jefes: la vida no baja de este valor (para su discurso final) y no recibe daño mientras invulnerable.
     [NonSerialized] public float healthFloor;
     [NonSerialized] public bool invulnerable;
     // Aliados del héroe (gólems de nieve): no reciben daño del héroe ni de otros aliados.
     [NonSerialized] public bool friendly;
+    // Resistencias y debilidades por tipo de daño (los cristalizados de la cumbre): 1 = normal, 0,5 = resiste, 2 = débil.
+    [NonSerialized] public Func<DamageType, float> damageScale;
 
     public static bool IsAlly(GameObject source)
     {
@@ -122,6 +125,8 @@ public class Damageable : MonoBehaviour
     {
         if (IsDead || info.amount <= 0f || invulnerable) return;
         if (friendly && IsAlly(info.source)) return;
+        float scale = damageScale != null ? damageScale(info.type) : 1f;
+        info.amount *= scale;
         Health -= info.amount;
         if (healthFloor > 0f && Health < healthFloor) Health = healthFloor;
         _lastHit = Time.time;
@@ -138,6 +143,16 @@ public class Damageable : MonoBehaviour
             else
                 hud.Popup(PopupPoint + UnityEngine.Random.insideUnitSphere * 0.2f, Mathf.CeilToInt(info.amount).ToString(),
                     WeaponCatalog.DamageColor(info.type), info.periodic ? 0.75f : 1f);
+            if (!info.periodic && scale >= 1.5f && Time.time > _weakNoteAt)
+            {
+                _weakNoteAt = Time.time + 2f;
+                hud.Popup(PopupPoint + Vector3.up * 0.5f, "¡Débil!", WeaponCatalog.DamageColor(info.type), 1f);
+            }
+            else if (!info.periodic && scale <= 0.6f && Time.time > _weakNoteAt)
+            {
+                _weakNoteAt = Time.time + 2f;
+                hud.Popup(PopupPoint + Vector3.up * 0.5f, "Resiste", new Color(0.7f, 0.8f, 0.9f), 0.9f);
+            }
         }
 
         Damaged?.Invoke(info);

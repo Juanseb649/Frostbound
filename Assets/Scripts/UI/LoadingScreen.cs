@@ -24,6 +24,30 @@ public class LoadingScreen : MonoBehaviour
         "Pulsa Esc para pausar la partida."
     };
 
+    // Consejos de cada zona de la campaña (salen la mitad de las veces al viajar a ella).
+    private static readonly string[] ForestTips =
+    {
+        "Los charcos de savia envenenan: no te quedes encima.",
+        "El círculo rojo del leñador avisa de su hachazo: sal de él o rueda.",
+        "El acechador aparece a tu espalda. Date la vuelta cuando oigas «...».",
+        "Las raíces corruptas se arrancan: busca su brillo verde entre los claros."
+    };
+
+    private static readonly string[] SummitTips =
+    {
+        "Los cristalizados resisten los golpes: el fuego los rompe. Graba una runa Ignis.",
+        "El hijo del Frost se parte en dos al morir. Guarda vida para las esquirlas.",
+        "Enciende los tres altares para fundir el muro de hielo de la cámara.",
+        "Los anillos de hielo se cruzan rodando con Espacio."
+    };
+
+    private static string TipFor(string scene, System.Random rng)
+    {
+        string[] zone = scene == SceneIds.Forest ? ForestTips : scene == SceneIds.Summit ? SummitTips : null;
+        if (zone != null && rng.Next(2) == 0) return zone[rng.Next(zone.Length)];
+        return Tips[rng.Next(Tips.Length)];
+    }
+
     private static LoadingScreen _instance;
     public static bool Active => _instance != null;
 
@@ -113,7 +137,7 @@ public class LoadingScreen : MonoBehaviour
         _group.alpha = 0f;
         RectTransform root = (RectTransform)transform;
 
-        Image bg = FrostUI.Img(root, "Fondo", null, FrostUI.Hex("#050A14"));
+        Image bg = FrostUI.Img(root, "Fondo", null, FrostboundUI.LoadingBg);
         FrostUI.Stretch(bg.rectTransform);
         bg.raycastTarget = true;
         Image glow = FrostUI.Img(root, "Brillo", FrostUI.SoftFade, new Color(0.18f, 0.36f, 0.6f, 0.35f), false);
@@ -136,7 +160,6 @@ public class LoadingScreen : MonoBehaviour
         FrostUI.Place(kicker.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 150f), new Vector2(1000f, 36f));
         kicker.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         TextMeshProUGUI title = FrostUI.Title(root, "Titulo", SceneIds.Title(scene).ToUpperInvariant(), 130f, TextAlignmentOptions.Center, 0.24f);
-        title.fontStyle = FontStyles.Italic;
         FrostUI.Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 60f), new Vector2(1600f, 170f));
         title.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         TextMeshProUGUI sub = FrostUI.Text(root, "Subtitulo", SceneIds.Subtitle(scene), 26f, FrostUI.Secondary, TextAlignmentOptions.Center);
@@ -148,16 +171,17 @@ public class LoadingScreen : MonoBehaviour
         diamond.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         _spinner = diamond.rectTransform;
 
-        Image track = FrostUI.Img(root, "Barra", FrostUI.Skin != null ? FrostUI.Skin.pill : null, FrostUI.BorderDim);
+        // Barra recta de oro viejo sobre abismo (estilo /d2r-ui), sin bordes redondeados.
+        Image track = FrostUI.Img(root, "Barra", null, FrostboundUI.Abyss);
         FrostUI.Place(track.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 150f), new Vector2(720f, 10f));
         track.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        _fill = FrostUI.Img(track.transform, "Relleno", null, FrostUI.Ice, false);
+        _fill = FrostUI.Img(track.transform, "Relleno", null, FrostboundUI.OldGold, false);
         FrostUI.Stretch(_fill.rectTransform);
         _fill.type = Image.Type.Filled;
         _fill.fillMethod = Image.FillMethod.Horizontal;
         _fill.fillAmount = 0f;
 
-        string tip = Tips[rng.Next(Tips.Length)];
+        string tip = TipFor(scene, rng);
         TextMeshProUGUI tipText = FrostUI.Text(root, "Consejo", tip, 22f, Color.white, TextAlignmentOptions.Center, FrostUI.BodyLight);
         FrostUI.Place(tipText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(1200f, 36f));
         tipText.rectTransform.pivot = new Vector2(0.5f, 0.5f);

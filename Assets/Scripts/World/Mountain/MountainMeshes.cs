@@ -7,10 +7,14 @@ public static class MountainMeshes
     public const float Cell = 1.5f;
 
     // Terreno con tres submallas: sendero (pisado), nieve y roca (pendientes fuertes).
-    public static Mesh Terrain(MountainLayout.Result r)
+    public static Mesh Terrain(MountainLayout.Result r) =>
+        Terrain(r.Height, r.Edge, -MountainLayout.HalfWidth, MountainLayout.HalfWidth,
+            -MountainLayout.Margin, MountainLayout.Length + MountainLayout.Margin, "Terreno_Faldas");
+
+    // Igual para cualquier zona: altura y borde del sendero (negativo = transitable) en un rectángulo.
+    public static Mesh Terrain(System.Func<float, float, float> height, System.Func<float, float, float> edge,
+        float x0, float x1, float z0, float z1, string name)
     {
-        float x0 = -MountainLayout.HalfWidth, x1 = MountainLayout.HalfWidth;
-        float z0 = -MountainLayout.Margin, z1 = MountainLayout.Length + MountainLayout.Margin;
         int nx = Mathf.CeilToInt((x1 - x0) / Cell) + 1, nz = Mathf.CeilToInt((z1 - z0) / Cell) + 1;
         var verts = new Vector3[nx * nz];
         var uv = new Vector2[nx * nz];
@@ -20,9 +24,9 @@ public static class MountainMeshes
             {
                 float x = x0 + i * Cell, z = z0 + j * Cell;
                 int k = j * nx + i;
-                verts[k] = new Vector3(x, r.Height(x, z), z);
+                verts[k] = new Vector3(x, height(x, z), z);
                 uv[k] = new Vector2(x * 0.1f, z * 0.1f);
-                inside[k] = r.Edge(x, z) < 0.2f;
+                inside[k] = edge(x, z) < 0.2f;
             }
         var path = new List<int>();
         var snow = new List<int>();
@@ -34,7 +38,7 @@ public static class MountainMeshes
                 Add(verts, inside, a, c, b, path, snow, rock);
                 Add(verts, inside, b, c, d, path, snow, rock);
             }
-        var mesh = new Mesh { name = "Terreno_Faldas", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+        var mesh = new Mesh { name = name, indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
         mesh.vertices = verts;
         mesh.uv = uv;
         mesh.subMeshCount = 3;

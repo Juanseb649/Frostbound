@@ -369,7 +369,14 @@ public class MapSystem : MonoBehaviour
         switch (stage)
         {
             case QuestLog.CitadelNone: return _steve != null ? _steve.position : (Vector3?)null;
-            case QuestLog.CitadelTalked: return _layout.castle.TownCenter;
+            case QuestLog.CitadelTalked:
+                // Primero los grupos obligatorios del camino; después, la plaza de la ciudadela.
+                if (CitadelGate.Instance != null && !CitadelGate.CitadelOpen && _player != null)
+                {
+                    Vector3? pending = CitadelGate.Instance.NearestPending(_player.position);
+                    if (pending.HasValue) return pending.Value;
+                }
+                return _layout.castle.TownCenter;
             case QuestLog.CitadelBarbarian: return inside ? CastleInterior.Instance.ThroneCenter : _layout.castle.Door;
             default:
                 int ascent = QuestLog.Stage(QuestLog.Ascent);

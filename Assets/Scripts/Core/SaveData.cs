@@ -14,6 +14,8 @@ public class SaveData
 
     public int worldSeed;
     public string heroName = "";
+    // Dificultad elegida al crear el héroe (Difficulty.Level: 0 fácil, 1 normal, 2 difícil). Las partidas viejas, normal.
+    public int difficulty = 1;
     public string classId = "";
     public string plumageId = "";
 
@@ -31,6 +33,9 @@ public class SaveData
     public List<string> litBonfires = new List<string>();
     public string lastBonfire = "";
     public string zone = "";
+    // Portal de regreso abierto (pergamino, estilo Diablo II): zona del exterior y dónde está. Vacío = cerrado.
+    public string portalZone = "";
+    public float portalX, portalY, portalZ, portalYaw;
 
     public List<SavedQuest> quests = new List<SavedQuest>();
     public int coins;
@@ -72,6 +77,7 @@ public class SavedQuest
 {
     public string id = "";
     public int stage;
+    public int progress;   // Cuánto lleva del objetivo de la etapa (enemigos, pistas...).
 }
 
 // Niebla de guerra de un mapa: bits de las celdas exploradas, en base64.

@@ -8,13 +8,13 @@ using UnityEngine.UI;
 // Todo con piezas de UI (sin texturas nuevas), así sirve igual en el menú, la pausa y el HUD.
 public static class InputGlyph
 {
-    public static readonly Color GreenA = FrostUI.Hex("#5DBB3E");
-    public static readonly Color RedB = FrostUI.Hex("#E2463F");
-    public static readonly Color BlueX = FrostUI.Hex("#3B82E0");
-    public static readonly Color YellowY = FrostUI.Hex("#F2B71F");
-    private static readonly Color Body = FrostUI.Hex("#20283A");
-    private static readonly Color Rim = FrostUI.Hex("#8FA3BF");
-    private static readonly Color Ink = FrostUI.Hex("#05080E");
+    public static Color GreenA => FrostboundUI.PadA;
+    public static Color RedB => FrostboundUI.PadB;
+    public static Color BlueX => FrostboundUI.PadX;
+    public static Color YellowY => FrostboundUI.PadY;
+    private static Color Body => FrostboundUI.PadBody;
+    private static Color Rim => FrostboundUI.PadRim;
+    private static Color Ink => FrostboundUI.PadInk;
 
     private static UISkin Skin => FrostUI.Skin;
 
@@ -117,7 +117,7 @@ public static class InputGlyph
         RectTransform rt = Root(parent, "Stick" + side, size, size);
         Shape(rt, "Borde", Skin != null ? Skin.circle : null, Rim, new Vector2(size, size));
         Shape(rt, "Base", Skin != null ? Skin.circle : null, Body, new Vector2(size * 0.88f, size * 0.88f));
-        Shape(rt, "Seta", Skin != null ? Skin.circle : null, FrostUI.Hex("#2E3950"), new Vector2(size * 0.62f, size * 0.62f));
+        Shape(rt, "Seta", Skin != null ? Skin.circle : null, FrostboundUI.PadStick, new Vector2(size * 0.62f, size * 0.62f));
         Letter(rt, click ? side + "S" : side, size * (click ? 0.34f : 0.44f), Color.white);
         if (click) Shape(rt, "Pulsar", Skin != null ? Skin.circle : null, FrostUI.Ice, new Vector2(size * 0.16f, size * 0.16f), new Vector2(0f, -size * 0.36f));
         return rt;

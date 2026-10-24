@@ -16,7 +16,9 @@ public class EnemyBrain : MonoBehaviour
     [Tooltip("Parte visual (el pingüino): se congela y estalla al morir.")]
     public Transform model;
 
-    public const int MaxMeleeAttackers = 4;
+    // Corruptos cuerpo a cuerpo que golpean a la vez (los demás esperan su turno un poco más lejos): según la dificultad.
+    public static int MaxMeleeAttackers => Difficulty.Now.attackers;
+    public static int MeleeAttackers => _meleeAttackers;
     private const float Leash = 25f;
     private const float AlertRadius = 12f;
 
@@ -34,7 +36,11 @@ public class EnemyBrain : MonoBehaviour
     [System.NonSerialized] public bool paused;
     public event System.Action<EnemyBrain> Killed;
     public event System.Action<CharacterStats> HitPlayerEvent;
-    private float LeashDistance => leashOverride > 0f ? leashOverride : Leash;
+    public event System.Action<EnemyProjectile> Shot;
+    private float LeashDistance => leashOverride > 0f ? leashOverride : Leash * Difficulty.Now.leash;
+    private float Sight => definition.sightRange * Difficulty.Now.sight;
+    // Desde cuándo ve al héroe sin haber dado aún la alarma (tiempo de reacción).
+    private float _spottedAt = -1f;
 
     private static readonly List<EnemyBrain> Active = new List<EnemyBrain>();
     private static int _meleeAttackers;
@@ -93,6 +99,10 @@ public class EnemyBrain : MonoBehaviour
     // El héroe que persigue ahora mismo (puede ser el jugador 2).
     public Transform Target => FindPlayer() ? _player : null;
 
+    // De 0 a 1 mientras prepara el golpe (para avisos en el suelo).
+    public float WindupProgress => Current == State.Windup && _windupLength > 0f ? (Time.time - _windupStart) / _windupLength : 0f;
+    private float _windupStart, _windupLength;
+
     // Teletransporte (el ninja maldito aparece a la espalda del héroe).
     public void Blink(Vector3 to)
     {
@@ -118,7 +128,7 @@ public class EnemyBrain : MonoBehaviour
 
         _dmg = GetComponent<Damageable>();
         _dmg.displayName = def.displayName;
-        _dmg.maxHealth = def.HealthAt(Level) * (champion ? 2.5f : 1f);
+        _dmg.maxHealth = def.HealthAt(Level) * (champion ? 2.5f : 1f) * Difficulty.Now.health;
         _dmg.ResetHealth();
 
         _agent = GetComponent<NavMeshAgent>();
@@ -149,6 +159,8 @@ public class EnemyBrain : MonoBehaviour
             NameTag tag = GetComponent<NameTag>();
             if (tag != null) tag.displayName = "Campeón " + def.displayName.ToLowerInvariant();
         }
+        ForestCreature.Attach(this, def);
+        SummitCreature.Attach(this, def);
     }
 
     // Arquero corrupto: el arco y la flecha del equipo se cambian por un arco de verdad en la aleta,
@@ -267,7 +279,7 @@ public class EnemyBrain : MonoBehaviour
         float frenzy = Time.time < _frenzyUntil ? 1f + 0.15f * _frenzyStacks : 1f;
         if (Time.time >= _frenzyUntil) _frenzyStacks = 0;
         float mult = _dmg.SpeedMultiplier * frenzy;
-        _agent.speed = definition.moveSpeed * mult;
+        _agent.speed = definition.moveSpeed * mult * PursuitBoost();
         _agent.isStopped = _dmg.IsFrozen;
         if (_dmg.IsFrozen) return;
         // Cháchara de caído mientras persigue: gruñidos y chillidos cada pocos segundos (sin amontonarse entre todos).
@@ -278,7 +290,7 @@ public class EnemyBrain : MonoBehaviour
         }
 
         // Los gólems de nieve del mago atraen a los corruptos que pasan cerca.
-        _golem = SnowGolem.PickFor(transform.position, _player.position, definition.sightRange, _golem);
+        _golem = SnowGolem.PickFor(transform.position, _player.position, Sight, _golem);
         Vector3 toPlayer = TargetPos - transform.position;
         toPlayer.y = 0f;
         float dist = toPlayer.magnitude;
@@ -287,12 +299,23 @@ public class EnemyBrain : MonoBehaviour
         switch (Current)
         {
             case State.Idle:
-                if (!playerGone && dist < definition.sightRange) Alert();
-                else Wander();
+                // Lo ve: tras su tiempo de reacción da la alarma (despierta al grupo).
+                if (!playerGone && dist < Sight)
+                {
+                    if (_spottedAt < 0f) _spottedAt = Time.time;
+                    if (Time.time - _spottedAt >= Difficulty.Now.reaction) { _spottedAt = -1f; Alert(); }
+                }
+                else
+                {
+                    _spottedAt = -1f;
+                    Wander();
+                }
                 break;
 
             case State.Chase:
-                if (playerGone || (transform.position - _home).magnitude > LeashDistance || (!ignoreSafeZone && SafeZone.Contains(transform.position, 2f)))
+                float fromHome = (transform.position - _home).magnitude;
+                bool escaped = fromHome > LeashDistance && (dist > Sight * 1.3f || fromHome > LeashDistance * 2f);
+                if (playerGone || escaped || (!ignoreSafeZone && SafeZone.Contains(transform.position, 2f)))
                 {
                     GoHome();
                     break;
@@ -326,11 +349,19 @@ public class EnemyBrain : MonoBehaviour
                     Current = State.Idle;
                     _dmg.Heal(_dmg.maxHealth);
                 }
-                else if (!playerGone && dist < definition.sightRange * 0.7f && !SafeZone.Contains(transform.position, 2f)
+                else if (!playerGone && dist < Sight * 0.7f && !SafeZone.Contains(transform.position, 2f)
                          && (transform.position - _home).magnitude < LeashDistance * 0.6f)
                     Alert();
                 break;
         }
+    }
+
+    // Persiguiendo de lejos corren un 25 % más (y algo más o menos según la dificultad); cerca, su paso normal.
+    private float PursuitBoost()
+    {
+        if (Current != State.Chase || definition.ranged || _player == null) return 1f;
+        float d = (TargetPos - transform.position).magnitude;
+        return d > definition.attackRange + 2.5f ? 1.25f * Difficulty.Now.pursuit : 1f;
     }
 
     private void Wander()
@@ -413,8 +444,10 @@ public class EnemyBrain : MonoBehaviour
         }
         _agent.ResetPath();
         Current = State.Windup;
-        float windup = definition.windup / Mathf.Max(0.5f, speedMult);
+        float windup = definition.windup * Difficulty.Now.windup / Mathf.Max(0.5f, speedMult);
         _stateUntil = Time.time + windup;
+        _windupStart = Time.time;
+        _windupLength = windup;
         _hitsLeft = definition.hitsPerAttack;
         _struck = false;
         if (!definition.ranged && _rig != null) _rig.PlayBruteWindup(windup);
@@ -442,7 +475,7 @@ public class EnemyBrain : MonoBehaviour
             return;
         }
         float frenzy = Time.time < _frenzyUntil ? 1f + 0.15f * _frenzyStacks : 1f;
-        _readyAt = Time.time + definition.cooldown / frenzy;
+        _readyAt = Time.time + definition.cooldown * Difficulty.Now.cooldown / frenzy;
         Current = State.Recover;
         _stateUntil = Time.time + 0.35f;
         SetEyes(EyeIdle);
@@ -479,23 +512,25 @@ public class EnemyBrain : MonoBehaviour
 
     private float RollDamage()
     {
-        return Random.Range(definition.damage.x, definition.damage.y) * definition.DamageScaleAt(Level) * (Champion ? 1.3f : 1f) * damageMultiplier;
+        return Random.Range(definition.damage.x, definition.damage.y) * definition.DamageScaleAt(Level) * (Champion ? 1.3f : 1f) * damageMultiplier * Difficulty.Now.damage;
     }
 
     private void HitPlayer(Vector3 toPlayer)
     {
         if (_playerStats == null || _playerStats.IsDead) return;
         if (_playerDodge != null && _playerDodge.IsRolling) return;
-        DamagePlayer(_playerStats, RollDamage(), toPlayer);
+        DamagePlayer(_playerStats, RollDamage(), toPlayer, gameObject);
         HitPlayerEvent?.Invoke(_playerStats);
     }
 
     // Vuelve a fijar el punto al que regresa (las oleadas lo ponen en la plaza).
     public void SetHome(Vector3 home) => _home = home;
 
-    public static void DamagePlayer(CharacterStats stats, float amount, Vector3 direction = default)
+    // attacker: quien golpea (para las runas del escudo al bloquear). Puede ser null.
+    public static void DamagePlayer(CharacterStats stats, float amount, Vector3 direction = default, GameObject attacker = null)
     {
         if (stats == null || stats.IsDead || stats.invulnerable) return;
+        if (ShieldBlock.TryBlock(stats, amount, attacker)) return;
         if (direction.sqrMagnitude > 0.001f) stats.lastHitDirection = direction.normalized;
         float before = stats.currentHealth;
         stats.TakeDamage(amount);
@@ -517,8 +552,9 @@ public class EnemyBrain : MonoBehaviour
             v.y = 0f;
             aim += v * Mathf.Clamp((aim - origin).magnitude / definition.projectileSpeed, 0f, 0.6f) * 0.6f;
         }
-        EnemyProjectile.Launch(origin, aim - origin, definition.projectileSpeed, definition.attackRange + 4f,
+        EnemyProjectile shot = EnemyProjectile.Launch(origin, aim - origin, definition.projectileSpeed, definition.attackRange + 4f,
             RollDamage(), definition.projectileMaterial, gameObject, _archery != null ? _arrowModel : null);
+        Shot?.Invoke(shot);
     }
 
     private void ReleaseAttackerSlot()
@@ -610,6 +646,9 @@ public class EnemyBrain : MonoBehaviour
                 if (b != this && (b.transform.position - transform.position).sqrMagnitude < 36f) b.Frenzy();
 
         Killed?.Invoke(this);
+        QuestLog.Report(QuestObjective.Matar, definition.id);
+        BossController bossCtl = GetComponent<BossController>();
+        if (bossCtl != null) QuestLog.Report(QuestObjective.Jefe, bossCtl.title);
         if (GetComponent<BossController>() == null) Corpses.Add(new Corpse { def = definition, level = Level, position = transform.position, plumage = _plumage, camp = Camp, time = Time.time, body = gameObject });
         Vector3 center = transform.position + Vector3.up * 0.6f;
         EnemyLoot.Drop(this, center);

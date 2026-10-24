@@ -11,7 +11,7 @@ public class GameHUD : MonoBehaviour
     public UISkin skin;
     public Equipment player;
     public InventoryScreen inventoryScreen;
-    [Tooltip("Muestra las teclas de depuración (X experiencia, G objeto).")]
+    [Tooltip("Ya no se usa: la chuleta de teclas de la esquina se quitó (los controles están en el tutorial).")]
     public bool showDebugHints = true;
     [Tooltip("Tamaño de las estatuas con los orbes respecto al diseño original (1 = grande como en el diseño).")]
     [Range(0.3f, 1f)] public float orbStatueScale = 0.46f;
@@ -43,6 +43,7 @@ public class GameHUD : MonoBehaviour
 
     private PlayerAbility _ability;
     private Image _abilityIcon, _abilityShade, _abilityFrame;
+    private RectTransform _abilityBar;
     private TextMeshProUGUI _abilityCost, _abilityTimer, _abilityName;
     private PlayerAbility.Kind _abilityShown = (PlayerAbility.Kind)(-1);
 
@@ -84,6 +85,7 @@ public class GameHUD : MonoBehaviour
         _orbRoot.anchorMin = _orbRoot.anchorMax = _orbRoot.pivot = a;
         _orbRoot.anchoredPosition = !coop ? Vector2.zero : new Vector2(right ? -12f : 12f, 0f);
         _orbRoot.localScale = Vector3.one * (coop ? CoopScale : 1f);
+        PlaceAbility(!coop && !secondary);
         if (_feed != null)
         {
             var vl = _feed.GetComponent<VerticalLayoutGroup>();
@@ -125,6 +127,10 @@ public class GameHUD : MonoBehaviour
         if (_ability != null) _ability.Failed -= OnAbilityFailed;
     }
 
+    // Últimos valores escritos en los textos del HUD (-1 = aún sin escribir).
+    private int _shownHp = -1, _shownHpMax = -1, _shownMp = -1, _shownMpMax = -1, _shownLevel = -1, _shownXp = -1, _shownXpNext = -2, _shownPoints = -1, _shownTimer = -1, _shownCost = -1;
+    private readonly int[] _shownBelt = { -1, -1, -1, -1, -1, -1, -1, -1 };
+
     void Update()
     {
         if (_stats == null) return;
@@ -145,17 +151,29 @@ public class GameHUD : MonoBehaviour
             UIFactory.SetFill(_mpFill, mp);
         }
         UIFactory.SetFill(_xpFill, _stats.LevelProgress);
-        _hpText.text = Mathf.CeilToInt(_stats.currentHealth) + " / " + Mathf.CeilToInt(_stats.MaxHealth);
-        _mpText.text = Mathf.FloorToInt(_stats.currentMana) + " / " + Mathf.CeilToInt(_stats.MaxMana);
-        _levelText.text = _stats.level.ToString();
-        if (_hpOrb != null) _xpText.text = _stats.IsMaxLevel ? "NIVEL MÁXIMO" : _stats.experience + " / " + _stats.ExperienceToNextLevel() + " XP";
-        if (_hpOrb == null) _xpText.text = _stats.IsMaxLevel ? "NIVEL MÁXIMO" : "EXPERIENCIA  " + _stats.experience + " / " + _stats.ExperienceToNextLevel();
+        // Los textos solo se rearman cuando cambia algún número (si no, cada fotograma crea cadenas nuevas).
+        int hpNow = Mathf.CeilToInt(_stats.currentHealth), hpMax = Mathf.CeilToInt(_stats.MaxHealth);
+        int mpNow = Mathf.FloorToInt(_stats.currentMana), mpMax = Mathf.CeilToInt(_stats.MaxMana);
+        int xpNow = _stats.experience, xpNext = _stats.IsMaxLevel ? -1 : _stats.ExperienceToNextLevel();
+        if (hpNow != _shownHp || hpMax != _shownHpMax) { _shownHp = hpNow; _shownHpMax = hpMax; _hpText.text = hpNow + " / " + hpMax; }
+        if (mpNow != _shownMp || mpMax != _shownMpMax) { _shownMp = mpNow; _shownMpMax = mpMax; _mpText.text = mpNow + " / " + mpMax; }
+        if (_stats.level != _shownLevel) { _shownLevel = _stats.level; _levelText.text = _shownLevel.ToString(); }
+        if (xpNow != _shownXp || xpNext != _shownXpNext)
+        {
+            _shownXp = xpNow; _shownXpNext = xpNext;
+            if (_hpOrb != null) _xpText.text = xpNext < 0 ? "NIVEL MÁXIMO" : xpNow + " / " + xpNext + " XP";
+            else _xpText.text = xpNext < 0 ? "NIVEL MÁXIMO" : "EXPERIENCIA  " + xpNow + " / " + xpNext;
+        }
 
         bool points = _stats.pointsAvailable > 0 && (inventoryScreen == null || !inventoryScreen.IsOpen);
         _pointsChip.gameObject.SetActive(points);
         if (points)
         {
-            _pointsText.text = "+" + _stats.pointsAvailable + (_stats.pointsAvailable == 1 ? " PUNTO" : " PUNTOS") + "  ·  C";
+            if (_stats.pointsAvailable != _shownPoints)
+            {
+                _shownPoints = _stats.pointsAvailable;
+                _pointsText.text = "+" + _shownPoints + (_shownPoints == 1 ? " PUNTO" : " PUNTOS") + "  ·  C";
+            }
             float s = 1f + Mathf.Sin(Time.unscaledTime * 4f) * 0.035f;
             _pointsChip.localScale = new Vector3(s, s, 1f);
         }
@@ -190,8 +208,8 @@ public class GameHUD : MonoBehaviour
     public void ShowMessage(string message, Color color)
     {
         if (_feed == null) return;
-        TextMeshProUGUI t = UIFactory.Text(_feed, "Line", message, skin.nunito800, 16f, color, TextAlignmentOptions.Right);
-        t.rectTransform.sizeDelta = new Vector2(420f, 24f);
+        TextMeshProUGUI t = UIFactory.Text(_feed, "Line", message, skin.nunito800, 16f * AccessibilitySettings.TextScale, color, TextAlignmentOptions.Right);
+        t.rectTransform.sizeDelta = new Vector2(420f, 24f * AccessibilitySettings.TextScale);
         t.outlineWidth = 0.18f;
         t.outlineColor = new Color32(10, 18, 34, 255);
         _feedLines.Add((t, Time.unscaledTime));
@@ -243,7 +261,12 @@ public class GameHUD : MonoBehaviour
             _beltIcons[i].sprite = item != null ? item.icon : null;
             _beltIcons[i].enabled = item != null && item.icon != null;
             _beltIcons[i].color = n > 0 ? Color.white : new Color(1f, 1f, 1f, 0.3f);
-            _beltCounts[i].text = item != null ? n.ToString() : "";
+            int shown = item != null ? n : -1;
+            if (i < _shownBelt.Length && _shownBelt[i] != shown)
+            {
+                _shownBelt[i] = shown;
+                _beltCounts[i].text = shown >= 0 ? shown.ToString() : "";
+            }
             float f = Mathf.Clamp01(1f - (Time.unscaledTime - _beltFlash[i]) / 0.35f);
             float sc = 1f + f * 0.18f;
             _beltIcons[i].rectTransform.localScale = new Vector3(sc, sc, 1f);
@@ -366,15 +389,18 @@ public class GameHUD : MonoBehaviour
         }
 
         BuildAbility(bar);
-        _xpFill = UIFactory.Bar(bar, "Experiencia", skin.pill, new Color(0.03f, 0.04f, 0.05f, 1f), FrostboundUI.XpBar, out RectTransform xp);
-        Anchor(xp, 709f, 192f, 1211f, 202f);
-        _levelText = UIFactory.Text(bar, "Nivel", "1", skin.cinzel800, 14f, FrostboundUI.ChipGoldText, TextAlignmentOptions.Center);
+        // Experiencia: una línea recta de oro viejo sobre abismo, como la de D2R (sin bordes redondeados).
+        _xpFill = UIFactory.Bar(bar, "Experiencia", null, FrostboundUI.Abyss, FrostboundUI.OldGold, out RectTransform xp);
+        Anchor(xp, 709f, 194f, 1211f, 200f);
+        _levelText = UIFactory.Text(bar, "Nivel", "1", skin.cinzel800, 14f, FrostboundUI.OldGoldLight, TextAlignmentOptions.Center);
         Anchor(_levelText.rectTransform, 670f, 186f, 706f, 208f);
         _xpText = UIFactory.Text(bar, "ExperienciaTexto", "", skin.nunito800, 9f, FrostboundUI.Muted, TextAlignmentOptions.Center, 1.5f);
         Anchor(_xpText.rectTransform, 1214f, 186f, 1300f, 208f);
         _xpText.alignment = TextAlignmentOptions.Left;
 
-        Image chip = UIFactory.Frame(bar, "PointsChip", skin.pill, FrostboundUI.ChipGoldBg, FrostboundUI.Gold, out _);
+        Image chip = UIFactory.Img(bar, "PointsChip", FrostFrames.Slot, FrostboundUI.OldGoldLight);
+        Image chipPlate = UIFactory.Img(chip.transform, "Placa", FrostFrames.Plate, FrostboundUI.ChipGoldBg);
+        UIFactory.Stretch(chipPlate.rectTransform, 4f);
         _pointsChip = chip.rectTransform;
         _pointsChip.anchorMin = _pointsChip.anchorMax = new Vector2(0.5f, 1f);
         _pointsChip.pivot = new Vector2(0.5f, 0f);
@@ -386,11 +412,35 @@ public class GameHUD : MonoBehaviour
         chipButton.onClick.AddListener(() => { if (inventoryScreen != null) { if (secondary) inventoryScreen.OpenFor(player, InventoryScreen.Tab.Character); else inventoryScreen.Open(); } });
     }
 
-    // Casilla de la habilidad de clase, encima del extremo izquierdo del cinturón de pociones.
+    // Casilla de la habilidad de clase: abajo a la izquierda, justo encima de las monedas (AdventureHUD).
+    // En co-op vuelve encima del cinturón para moverse con el HUD de cada jugador.
+    private void PlaceAbility(bool corner)
+    {
+        if (_abilityFrame == null) return;
+        RectTransform rt = _abilityFrame.rectTransform;
+        if (corner)
+        {
+            rt.SetParent(transform, false);
+            rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.zero;
+            rt.sizeDelta = Vector2.one * 80f * DesignScale;
+            rt.anchoredPosition = new Vector2(26f, 228f);
+        }
+        else
+        {
+            rt.SetParent(_abilityBar, false);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            Anchor(rt, 709f, -96f, 789f, -16f);
+        }
+    }
+
     private void BuildAbility(RectTransform bar)
     {
         if (_ability == null) return;
-        Image frame = UIFactory.Frame(bar, "Habilidad", skin.round16 != null ? skin.round16 : skin.pill, new Color(0.03f, 0.05f, 0.1f, 0.92f), FrostboundUI.Border, out _);
+        _abilityBar = bar;
+        // Marco de hierro biselado (kit /d2r-ui) con placa de piedra; se tiñe de oro cuando la habilidad está lista.
+        Image frame = UIFactory.Img(bar, "Habilidad", FrostFrames.Button(FrostFrames.Metal.Iron), Color.white);
+        Image plate = UIFactory.Img(frame.transform, "Placa", FrostFrames.Plate, new Color(0.03f, 0.05f, 0.1f, 0.95f));
+        UIFactory.Stretch(plate.rectTransform, 7f);
         _abilityFrame = frame;
         Anchor(frame.rectTransform, 709f, -96f, 789f, -16f);
         _abilityIcon = UIFactory.Img(frame.transform, "Icono", FrostUI.Icon(_ability.Data.icon), new Color(0.75f, 0.92f, 1f));
@@ -410,13 +460,15 @@ public class GameHUD : MonoBehaviour
         _abilityCost = UIFactory.Text(frame.transform, "Coste", "", skin.nunito800, 11f, new Color(0.55f, 0.75f, 1f), TextAlignmentOptions.BottomRight);
         UIFactory.Stretch(_abilityCost.rectTransform, 5f);
         _abilityCost.outlineWidth = 0.25f; _abilityCost.outlineColor = new Color32(5, 6, 8, 255);
-        TextMeshProUGUI name = _abilityName = UIFactory.Text(frame.transform, "Nombre", _ability.Data.name, skin.nunito800, 11f, FrostboundUI.Muted, TextAlignmentOptions.Left);
+        TextMeshProUGUI name = _abilityName = UIFactory.Text(frame.transform, "Nombre", _ability.Data.name, skin.cinzel600, 14f, FrostboundUI.Bone, TextAlignmentOptions.Left, 1f, true);
         name.rectTransform.anchorMin = new Vector2(1f, 0f);
         name.rectTransform.anchorMax = new Vector2(1f, 1f);
         name.rectTransform.pivot = new Vector2(0f, 0.5f);
         name.rectTransform.anchoredPosition = new Vector2(8f, 0f);
         name.rectTransform.sizeDelta = new Vector2(160f, 0f);
-        name.outlineWidth = 0.25f; name.outlineColor = new Color32(5, 6, 8, 255);
+        // Contorno noche de los menús: el nombre queda sobre la nieve, que es muy clara.
+        if (name.font != null) name.fontSharedMaterial = FrostUI.BodyMaterial(name.font);
+        PlaceAbility(!secondary);
     }
 
     // Teclas del cinturón y de la habilidad según Configuración → Control: texto con teclado, iconos de Xbox con mando.
@@ -466,10 +518,13 @@ public class GameHUD : MonoBehaviour
         }
         float left = _ability.CooldownLeft;
         _abilityShade.fillAmount = left > 0f ? _ability.Cooldown01 : 0f;
-        _abilityTimer.text = left > 0f ? Mathf.CeilToInt(left).ToString() : "";
+        int timer = left > 0f ? Mathf.CeilToInt(left) : 0;
+        if (timer != _shownTimer) { _shownTimer = timer; _abilityTimer.text = timer > 0 ? timer.ToString() : ""; }
         bool ready = left <= 0f && _ability.CanAfford;
         _abilityIcon.color = ready ? new Color(0.75f, 0.92f, 1f) : new Color(0.4f, 0.48f, 0.58f);
-        _abilityCost.text = Mathf.CeilToInt(_ability.Data.cost).ToString();
+        if (_abilityFrame != null) _abilityFrame.color = ready ? FrostboundUI.OldGoldLight : Color.white;
+        int cost = Mathf.CeilToInt(_ability.Data.cost);
+        if (cost != _shownCost) { _shownCost = cost; _abilityCost.text = cost.ToString(); }
         _abilityCost.color = _ability.CanAfford ? new Color(0.55f, 0.75f, 1f) : FrostboundUI.Negative;
     }
 
@@ -534,7 +589,7 @@ public class GameHUD : MonoBehaviour
         _toast = toast.gameObject.AddComponent<CanvasGroup>();
         _toast.alpha = 0f;
         _toast.blocksRaycasts = false;
-        _toastTitle = UIFactory.Text(toast, "Title", "", skin.cinzel800, 52f, FrostboundUI.Title, TextAlignmentOptions.Center, 4f);
+        _toastTitle = UIFactory.Text(toast, "Title", "", skin.cinzel800, 52f, FrostboundUI.OldGoldLight, TextAlignmentOptions.Center, 4f);
         UIFactory.TopLeft(_toastTitle.rectTransform, 0f, 0f, 900f, 64f);
         _toastTitle.outlineWidth = 0.15f;
         _toastTitle.outlineColor = new Color32(10, 18, 34, 255);
@@ -553,18 +608,8 @@ public class GameHUD : MonoBehaviour
         vl.childForceExpandHeight = false;
         vl.childForceExpandWidth = false;
 
-        if (secondary)
-        {
-            toast.anchoredPosition = new Vector2(0f, -230f);
-            return;
-        }
-        // Teclas.
-        string hints = "Espacio  Rodar     I  Inventario     C  Personaje     1–6  Pociones     Q  Poción de vida";
-        if (showDebugHints && player.GetComponent<ProgressionDebug>() != null) hints += "\n<color=#5B6F8A>Depuración:  X  +experiencia     Mayús+X  subir nivel     G  objeto al azar</color>";
-        TextMeshProUGUI hint = UIFactory.Text(root, "Hints", hints, skin.nunito700, 13f, FrostboundUI.Muted);
-        UIFactory.Anchored(hint.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -20f), new Vector2(700f, 44f));
-        hint.outlineWidth = 0.2f;
-        hint.outlineColor = new Color32(10, 18, 34, 255);
+        // Sin chuleta de teclas en la esquina: los controles se explican en el tutorial (Pausa → Cómo jugar).
+        if (secondary) toast.anchoredPosition = new Vector2(0f, -230f);
     }
 
     private TextMeshProUGUI BarText(RectTransform bar)

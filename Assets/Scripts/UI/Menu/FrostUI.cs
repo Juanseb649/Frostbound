@@ -3,32 +3,35 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Estilo de los menús de Frostbound (guía "Menús de inicio"): títulos en Lilita One con letra helada
-// (degradado blanco → azul, contorno azul y sombra de contorno noche), texto en Nunito 800, paneles noche
-// con borde azul, botones que se vuelven de hielo al pasar o seleccionarlos y tarjetas con brillo.
+// Estilo de los menús de Frostbound (guía /d2r-ui, "gótico de escarcha"): títulos en Cinzel con letra de oro viejo
+// (degradado, contorno bronce y sombra abismo), etiquetas y botones en Cinzel en mayúsculas espaciadas, texto en
+// Nunito, paneles noche con borde y tarjetas con brillo. La letra helada sigue disponible (IceMaterial).
 public static class FrostUI
 {
-    public static readonly Color IceTop = Color.white;
-    public static readonly Color IceBottom = Hex("#5AA6D6");
-    public static readonly Color Outline = Hex("#04101F");
-    public static readonly Color InnerOutline = Hex("#1B4F86");
-    public static readonly Color PanelColor = new Color(0.043f, 0.075f, 0.133f, 0.9f);
-    public static readonly Color PanelSolid = Hex("#0B1322");
-    public static readonly Color Border = Hex("#5F8FB8");
-    public static readonly Color BorderDim = Hex("#2A3D5C");
-    public static readonly Color Ice = Hex("#BFEAFF");
-    public static readonly Color Secondary = Hex("#9FB3C8");
-    public static readonly Color Gold = Hex("#F3D48A");
-    public static readonly Color Danger = Hex("#C0392B");
-    public static readonly Color TextColor = Color.white;
-    public static readonly Color Disabled = Hex("#56677E");
-    public static readonly Color Label = Hex("#8FC6EA");
+    // Los colores viven en FrostboundUI (un solo origen); aquí solo se les da el nombre que usan los menús.
+    public static Color IceTop => Color.white;
+    public static Color IceBottom => FrostboundUI.IceDeep;
+    public static Color Outline => FrostboundUI.OutlineNight;
+    public static Color InnerOutline => FrostboundUI.InnerOutline;
+    public static Color PanelColor => FrostboundUI.MenuPanel;
+    public static Color PanelSolid => FrostboundUI.MenuPanelSolid;
+    public static Color Border => FrostboundUI.MenuBorder;
+    public static Color BorderDim => FrostboundUI.Border;
+    public static Color Ice => FrostboundUI.Ice;
+    public static Color Secondary => FrostboundUI.Muted;
+    public static Color Gold => FrostboundUI.MenuGold;
+    public static Color Danger => FrostboundUI.Danger;
+    public static Color TextColor => Color.white;
+    public static Color Disabled => FrostboundUI.MenuDisabled;
+    public static Color Label => FrostboundUI.MenuLabel;
 
-    public static Color Hex(string h) { ColorUtility.TryParseHtmlString(h, out Color c); return c; }
+    public static Color Hex(string h) => FrostboundUI.Hex(h);
 
     private static UISkin _skin;
     public static UISkin Skin => _skin != null ? _skin : (_skin = GameDatabase.Instance != null ? GameDatabase.Instance.uiSkin : null);
-    public static TMP_FontAsset Display => Skin != null && Skin.lilita != null ? Skin.lilita : Skin != null ? Skin.nunito800 : null;
+    // Títulos: Cinzel ExtraBold. Etiquetas y botones: Cinzel SemiBold. Si faltan, Lilita o Nunito.
+    public static TMP_FontAsset Display => Skin == null ? null : Skin.cinzel800 != null ? Skin.cinzel800 : Skin.lilita != null ? Skin.lilita : Skin.nunito800;
+    public static TMP_FontAsset Heading => Skin == null ? null : Skin.cinzel600 != null ? Skin.cinzel600 : Display;
     public static TMP_FontAsset Body => Skin != null ? Skin.nunito800 : null;
     public static TMP_FontAsset BodyLight => Skin != null ? Skin.nunito700 : null;
 
@@ -52,6 +55,26 @@ public static class FrostUI
         m.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.15f);
         m.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.55f);
         m.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.05f);
+        Materials[key] = m;
+        return m;
+    }
+
+    // Letra de oro viejo: contorno bronce oscuro por dentro y sombra abismo por fuera (títulos).
+    public static Material GoldMaterial(TMP_FontAsset font, float outline = 0.18f, float shadow = 0.45f)
+    {
+        string key = (font != null ? font.name : "") + "_oro_" + outline + "_" + shadow;
+        if (Materials.TryGetValue(key, out Material m) && m != null) return m;
+        m = new Material(font.material) { name = key };
+        m.EnableKeyword(ShaderUtilities.Keyword_Outline);
+        m.SetFloat(ShaderUtilities.ID_OutlineWidth, outline);
+        m.SetColor(ShaderUtilities.ID_OutlineColor, FrostboundUI.OldGoldDeep);
+        m.SetFloat(ShaderUtilities.ID_FaceDilate, outline * 0.5f);
+        m.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+        m.SetColor(ShaderUtilities.ID_UnderlayColor, FrostboundUI.Abyss);
+        m.SetFloat(ShaderUtilities.ID_UnderlayDilate, Mathf.Min(1f, outline + shadow));
+        m.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.1f);
+        m.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.45f);
+        m.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.25f);
         Materials[key] = m;
         return m;
     }
@@ -128,32 +151,41 @@ public static class FrostUI
         return t;
     }
 
-    // Título con letra helada (degradado vertical).
+    // Título con letra de oro viejo (degradado vertical de oro claro a oro viejo).
     public static TextMeshProUGUI Title(Transform parent, string name, string text, float size, TextAlignmentOptions align = TextAlignmentOptions.Center, float outline = 0.22f)
     {
         TextMeshProUGUI t = Text(parent, name, text, size, Color.white, align, Display);
-        if (t.font != null) t.fontSharedMaterial = IceMaterial(t.font, outline);
+        if (t.font != null) t.fontSharedMaterial = GoldMaterial(t.font, outline * 0.8f);
         t.enableVertexGradient = true;
-        t.colorGradient = new VertexGradient(IceTop, IceTop, IceBottom, IceBottom);
+        t.colorGradient = new VertexGradient(FrostboundUI.OldGoldLight, FrostboundUI.OldGoldLight, FrostboundUI.OldGold, FrostboundUI.OldGold);
+        t.characterSpacing = FrostboundUI.Tracking(size * 0.04f, size);
         return t;
     }
 
     // Etiqueta pequeña en mayúsculas espaciadas ("TÍTULO PEQUEÑO · ETIQUETA").
     public static TextMeshProUGUI Kicker(Transform parent, string name, string text, float size = 15f, Color? color = null)
     {
-        TextMeshProUGUI t = Text(parent, name, text.ToUpperInvariant(), size, color ?? Label, TextAlignmentOptions.MidlineLeft, Display, 22f);
+        TextMeshProUGUI t = Text(parent, name, text.ToUpperInvariant(), size, color ?? FrostboundUI.Ash, TextAlignmentOptions.MidlineLeft, Heading, 22f);
         return t;
     }
 
-    // Panel noche con borde. Devuelve el borde (raíz); "fill" es el relleno.
+    // Panel con marco de hierro forjado (FrostFrames). Devuelve el marco (raíz); "fill" es la placa de dentro, teñida
+    // con el color de relleno. "radius" se conserva por compatibilidad y elige el grosor del marco: grande para
+    // paneles, medio para cajas y fino para chips. Un color de borde tiñe el hierro (oro en chips, sangre en avisos).
     public static Image Panel(Transform parent, string name, out Image fill, float radius = 16f, Color? border = null, Color? fillColor = null)
     {
-        Sprite round = radius >= 18f ? Skin?.round20 : radius >= 14f ? Skin?.round16 : radius >= 11f ? Skin?.round12 : Skin?.round10;
-        Image b = Img(parent, name, round, border ?? Border);
-        fill = Img(b.transform, "Relleno", round, fillColor ?? PanelColor);
-        Stretch(fill.rectTransform, 2f);
+        bool large = radius >= 16f, medium = radius >= 11f;
+        Sprite frame = large ? FrostFrames.Panel : medium ? FrostFrames.Button(FrostFrames.Metal.Iron) : FrostFrames.Slot;
+        float inset = large ? 11f : medium ? 7f : 5f;
+        Image b = Img(parent, name, frame, border.HasValue ? Tint(border.Value) : Color.white);
+        fill = Img(b.transform, "Relleno", FrostFrames.Plate, fillColor ?? PanelColor);
+        Stretch(fill.rectTransform, inset);
+        fill.transform.SetAsFirstSibling();
         return b;
     }
+
+    // Los bordes de antes eran colores planos; sobre el hierro se aclaran para teñirlo sin oscurecerlo del todo.
+    private static Color Tint(Color c) => Color.Lerp(c, Color.white, 0.35f);
 
     // ---------- Sprites generados ----------
 

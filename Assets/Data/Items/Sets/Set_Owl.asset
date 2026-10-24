@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bcb4553d60e9d54fb601fc1879ab796, type: 3}
+  m_Name: Set_Owl
+  m_EditorClassIdentifier: Assembly-CSharp::ArmorSet
+  displayName: "Set del B\xFAho"
+  pieces:
+  - {fileID: 11400000, guid: 22ce96e6239417443b65f9759ef044a7, type: 2}
+  - {fileID: 11400000, guid: 963387d2a4b83984986d4b7b22e85b19, type: 2}
+  - {fileID: 11400000, guid: 4a727c7cdb33c534fb3beff0123c19b3, type: 2}
+  bonuses:
+  - piecesRequired: 2
+    stats:
+    - stat: 2
+      value: 4
+    armor: 0
+  - piecesRequired: 3
+    stats:
+    - stat: 2
+      value: 4
+    - stat: 1
+      value: 3
+    armor: 8

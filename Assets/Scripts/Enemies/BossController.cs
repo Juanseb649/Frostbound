@@ -17,6 +17,9 @@ public class BossController : MonoBehaviour
     [Range(0f, 0.5f)] public float speechAt = 0.1f;
 
     public event Action<BossController> Defeated;
+    [Tooltip("Tras su discurso no muere: se rinde, queda de rodillas y deja de pelear (Bobby).")]
+    public bool spare;
+    public bool Spared { get; private set; }
     public static BossController Active { get; private set; }
 
     public EnemyBrain Brain { get; private set; }
@@ -189,9 +192,33 @@ public class BossController : MonoBehaviour
             if (WorldHUD.Instance != null) WorldHUD.Instance.Say(transform, 1.55f * transform.lossyScale.y, line, seconds);
             yield return new WaitForSeconds(seconds + 0.2f);
         }
+        if (spare)
+        {
+            Surrender();
+            yield break;
+        }
         model.localRotation = start;
         Brain.paused = false;
         Health.Kill(player != null ? player.gameObject : null, -transform.forward);
+    }
+
+    // Se rinde: cuenta como vencido (experiencia, botín y misiones) pero sigue vivo, en paz y sin recibir golpes.
+    private void Surrender()
+    {
+        Spared = true;
+        Health.invulnerable = true;
+        Health.friendly = true;
+        Health.healthFloor = 0f;
+        foreach (PlayerController pc in Players.All)
+        {
+            CharacterStats st = pc != null ? pc.Stats : null;
+            if (st != null) st.AddExperience(Brain.definition.ExperienceAt(Brain.Level));
+        }
+        EnemyLoot.Drop(Brain, transform.position + Vector3.up * 0.6f);
+        if (_glow != null) _glow.enabled = false;
+        QuestLog.Report(QuestObjective.Jefe, title);
+        Defeated?.Invoke(this);
+        if (Active == this) Active = null;
     }
 
     private static Color Uncorrupted(Color c)

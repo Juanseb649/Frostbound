@@ -16,7 +16,7 @@ public static class EnemyLoot
         int world = GameSession.Instance != null ? GameSession.Instance.worldSeed : 12345;
         var rng = new DeterministicRng(SeedUtil.Combine(world, SeedUtil.FromString("loot"), ++_kills));
         bool elite = enemy.definition.elite || enemy.Champion;
-        int picks = enemy.definition.lootPicks * (enemy.Champion ? 2 : 1);
+        int picks = enemy.definition.lootPicks + (enemy.Champion ? Mathf.CeilToInt(enemy.definition.lootPicks * 0.5f) : 0);
         var drops = LootRoller.Roll(dir.database, enemy.Level, picks, elite, dir.PlayerMagicFind, rng, enemy.Champion);
 
         // Monedas: caen mucho más a menudo que las armas, más con las élites, los campeones y los jefes.
@@ -42,7 +42,9 @@ public static class EnemyLoot
             float a = (i / (float)Mathf.Max(1, drops.Count)) * Mathf.PI * 2f + Random.Range(-0.4f, 0.4f);
             Vector3 v = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)) * Random.Range(1.2f, 2.2f) + Vector3.up * Random.Range(3.5f, 4.5f);
             WorldItem.Spawn(drops[i], center + Vector3.up * 0.2f, v);
-            if (LootQualityInfo.HasBeam(drops[i]))
+            if (drops[i].item.IsEquippable)
+                AudioManager.Play3D("SFX/Rune_Celeris_Engrave", center, 0.7f, 0f, 3f, 30f, 0f);
+            if (LootQualityInfo.HasBeam(drops[i]) || drops[i].item.IsWeapon)
                 Notifications.Show("¡" + drops[i].DisplayName + "!", drops[i].DisplayColor);
             else if (drops[i].item.IsRune)
                 Notifications.Show("¡" + drops[i].item.displayName + "!", LootQualityInfo.Rune);

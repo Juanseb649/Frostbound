@@ -49,7 +49,7 @@ public class GameSession : MonoBehaviour
     private Equipment _player;
     private float _playSeconds;
 
-    public void StartNewGame(int slot, CharacterClass cls, string plumageId, string heroName)
+    public void StartNewGame(int slot, CharacterClass cls, string plumageId, string heroName, int difficulty = (int)Difficulty.Level.Normal)
     {
         SetHero(cls, plumageId, heroName);
         NewGame();
@@ -60,7 +60,8 @@ public class GameSession : MonoBehaviour
             heroName = heroName,
             classId = cls != null ? cls.name : "",
             plumageId = plumageId,
-            lastBonfire = ""
+            lastBonfire = "",
+            difficulty = difficulty
         };
         _playSeconds = 0f;
         PendingRestore = false;
@@ -181,6 +182,7 @@ public class GameSession : MonoBehaviour
             d.slot = slot;
             data.equipment.Add(d);
         }
+        eq.CaptureAlt(data.equipment);
 
         data.belt.Clear();
         PotionBelt belt = eq.GetComponent<PotionBelt>();
@@ -210,9 +212,11 @@ public class GameSession : MonoBehaviour
         }
         foreach (SavedStack d in data.equipment)
         {
+            if (Equipment.IsAltEntry(d)) continue;
             ItemStack s = d.ToStack(db);
             if (s != null) eq.SetEquippedStack(d.slot, s);
         }
+        eq.RestoreAlt(data.equipment, db);
         PotionBelt belt = eq.GetComponent<PotionBelt>();
         if (belt != null && db != null)
         {

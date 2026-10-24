@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 // Flecha de hielo de los arqueros corruptos. Solo daña al jugador; se rompe contra cualquier obstáculo.
@@ -6,6 +7,9 @@ public class EnemyProjectile : MonoBehaviour
     private Vector3 _dir;
     private float _speed, _left, _damage;
     private GameObject _owner;
+
+    // Al romperse o acabar su recorrido (el escupesavia deja un charco ahí).
+    public Action<Vector3> Ended;
 
     public static EnemyProjectile Launch(Vector3 origin, Vector3 direction, float speed, float range, float damage, Material material, GameObject owner, GameObject model = null)
     {
@@ -17,8 +21,8 @@ public class EnemyProjectile : MonoBehaviour
         if (model != null)
         {
             // Flecha de verdad (la que llevaba encajada en el arco), helada.
-            GameObject arrow = Object.Instantiate(model, go.transform, false);
-            foreach (Collider c in arrow.GetComponentsInChildren<Collider>(true)) Object.Destroy(c);
+            GameObject arrow = UnityEngine.Object.Instantiate(model, go.transform, false);
+            foreach (Collider c in arrow.GetComponentsInChildren<Collider>(true)) UnityEngine.Object.Destroy(c);
             arrow.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             if (material != null)
                 foreach (Renderer r in arrow.GetComponentsInChildren<Renderer>())
@@ -31,7 +35,7 @@ public class EnemyProjectile : MonoBehaviour
         else
         {
             GameObject shard = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            Object.Destroy(shard.GetComponent<Collider>());
+            UnityEngine.Object.Destroy(shard.GetComponent<Collider>());
             shard.transform.SetParent(go.transform, false);
             shard.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             shard.transform.localScale = new Vector3(0.07f, 0.22f, 0.07f);
@@ -64,7 +68,7 @@ public class EnemyProjectile : MonoBehaviour
                 if (ally != null && ally.friendly)
                 {
                     ally.TakeHit(new DamageInfo { amount = _damage, type = DamageType.Physical, source = _owner, direction = _dir });
-                    Destroy(gameObject);
+                    End();
                     return;
                 }
                 CharacterStats stats = hit.collider.GetComponentInParent<CharacterStats>();
@@ -76,14 +80,20 @@ public class EnemyProjectile : MonoBehaviour
                         transform.position = hit.point + _dir * 0.6f;
                         return;
                     }
-                    EnemyBrain.DamagePlayer(stats, _damage, _dir);
+                    EnemyBrain.DamagePlayer(stats, _damage, _dir, _owner);
                 }
-                Destroy(gameObject);
+                End();
                 return;
             }
         }
         transform.position = from + _dir * step;
         _left -= step;
-        if (_left <= 0f) Destroy(gameObject);
+        if (_left <= 0f) End();
+    }
+
+    private void End()
+    {
+        Ended?.Invoke(transform.position);
+        Destroy(gameObject);
     }
 }

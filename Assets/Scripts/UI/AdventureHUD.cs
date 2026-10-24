@@ -70,10 +70,10 @@ public class AdventureHUD : MonoBehaviour
 
         _poison = UIFactory.Text(transform, "Veneno", "", _skin != null ? _skin.nunito800 : null, 15f, PlayerAfflictions.PoisonColor, TextAlignmentOptions.Center, 1.5f, true);
         UIFactory.Anchored(_poison.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 236f), new Vector2(300f, 22f));
-        _coins = UIFactory.Text(transform, "Monedas", "", _skin != null ? _skin.nunito800 : null, 17f, new Color(1f, 0.82f, 0.32f), TextAlignmentOptions.BottomLeft, 1f);
+        _coins = UIFactory.Text(transform, "Monedas", "", _skin != null ? _skin.cinzel600 : null, 18f, FrostboundUI.OldGoldLight, TextAlignmentOptions.BottomLeft, 1f);
         UIFactory.Anchored(_coins.rectTransform, new Vector2(0f, 0f), new Vector2(26f, 196f), new Vector2(260f, 24f));
-        _coins.outlineWidth = 0.22f;
-        _coins.outlineColor = new Color32(20, 12, 0, 220);
+        // Contorno noche de los menús: Cinzel pequeño sobre la nieve no se leía con un contorno fino.
+        if (_coins.font != null) _coins.fontSharedMaterial = FrostUI.BodyMaterial(_coins.font);
         _poison.outlineWidth = 0.2f;
         _poison.outlineColor = new Color32(0, 0, 0, 200);
     }
@@ -115,12 +115,28 @@ public class AdventureHUD : MonoBehaviour
             GameObject p = GameObject.Find("Player");
             if (p != null) _wallet = Wallet.Of(p);
         }
-        if (_wallet != null) _coins.text = "● " + _wallet.Coins.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES")) + " monedas";
+        // Solo se rearma el texto cuando cambian las monedas.
+        if (_wallet != null && _wallet.Coins != _shownCoins)
+        {
+            _shownCoins = _wallet.Coins;
+            _coins.text = "● " + _shownCoins.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES")) + " monedas";
+        }
     }
+
+    private long _shownCoins = -1;
 
     private void UpdateTracker()
     {
         string quest = QuestLog.Tracked();
+        // Antes de la primera misión: el poblado está cerrado y la pista es ir a ver a Steve.
+        if (quest.Length == 0 && VillageLock.Instance != null && !VillageLock.Open)
+        {
+            _tracker.gameObject.SetActive(true);
+            _questTitle.text = "El poblado";
+            _questObjective.text = "Habla con Steve, en su claro al sur del poblado";
+            _questDetail.text = "La puerta norte está cerrada";
+            return;
+        }
         bool show = quest.Length > 0;
         _tracker.gameObject.SetActive(show);
         if (!show) return;
@@ -128,9 +144,23 @@ public class AdventureHUD : MonoBehaviour
         string objective = QuestLog.Objective(quest, stage);
         _questTitle.text = QuestLog.Title(quest);
         CitadelSiege siege = CitadelSiege.Instance;
-        string detail = "";
+        string detail = QuestLog.Detail(quest);
         if (quest == QuestLog.Citadel && stage == QuestLog.CitadelTalked && siege != null)
         {
+            // Camino de la ciudadela: cuánto falta hasta la plaza mientras no empieza el asedio.
+            Transform hero = Players.Primary != null ? Players.Primary.transform : null;
+            if (siege.Current == CitadelSiege.Phase.Idle && hero != null)
+            {
+                Vector3 d = siege.transform.position - hero.position;
+                d.y = 0f;
+                CitadelGate gate = CitadelGate.Instance;
+                if (gate != null && !CitadelGate.CitadelOpen)
+                {
+                    objective = "Derrota a los corruptos del camino de la Ciudadela Caída";
+                    detail = "Grupos derrotados " + gate.Cleared + "/" + gate.Required;
+                }
+                else detail = d.magnitude > 16f ? "A " + Mathf.RoundToInt(d.magnitude) + " m · sigue los mojones rojos" : "";
+            }
             if (siege.Current == CitadelSiege.Phase.Waves) { objective = "Resiste el asedio en la plaza"; detail = "Oleada " + Mathf.Max(1, siege.Wave) + "/" + siege.WaveCount + " · quedan " + siege.Remaining; }
             else if (siege.Current == CitadelSiege.Phase.Boss) { objective = "Derrota a Gorvald, el bárbaro corrupto"; detail = "Cuidado: su hacha envenena"; }
         }

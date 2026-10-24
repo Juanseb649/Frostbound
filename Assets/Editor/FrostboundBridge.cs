@@ -126,6 +126,7 @@ public static class FrostboundBridge
                 return "";
             case "open":
                 EditorSceneManager.OpenScene(arg, OpenSceneMode.Single);
+                PlayFromMainMenu.SkipNextPlay();
                 return "";
             case "save":
                 EditorSceneManager.SaveOpenScenes();

@@ -1,29 +1,30 @@
 # Auditoría técnica — Frostbound
 
-**Fecha:** 28 de septiembre de 2026
-**Proyecto:** `My project (2)`, Unity 6000.5.7f1, URP, Input System nuevo
-**Alcance:** todo el código de `Assets/`, las escenas, los datos (ScriptableObjects), Build Settings y el historial de git (18 commits)
+**Fecha:** 17 de octubre de 2026 (actualiza la del 28 de septiembre de 2026)
+**Proyecto:** Frostbound 0.1.3, Unity 6000.5.7f1, URP, Input System nuevo
+**Alcance:** todo el código de `Assets/`, las escenas, los datos (ScriptableObjects), Build Settings, paquetes y el historial de git (131 commits; tags `v0.1.0` a `v0.1.3`)
 
 ---
 
 ## 1. Resumen ejecutivo
 
-El proyecto avanzó mucho desde la primera revisión. Ya existen el menú y la selección de clase, un pingüino con esqueleto y ropa por piezas, el poblado con 14 NPC, el inventario, el equipo, 18 armas con runas, un combo cuerpo a cuerpo, la acción de rodar, la progresión por niveles y el HUD. La base de datos del juego está bien pensada.
+En tres semanas el proyecto pasó de "mucho sistema y nada de juego" a **un juego jugable de principio a fin del Capítulo I**. El bucle central de un ARPG ya está cerrado: **poblado → zona → enemigos que te pueden matar → botín y XP → pergamino de regreso → tienda y herrera → volver a salir**. Hay 3 jefes con discurso al caer, 2 misiones, 4 escenas, co-op local, guardado por ranuras, audio y builds para Windows, macOS y Linux.
 
-**Diagnóstico corto:** hay mucho sistema y todavía no hay juego. Todavía no existe el bucle central de un ARPG: **entrar a una zona → pelear contra enemigos que te pueden matar → conseguir loot → volver al poblado a gastarlo**. Faltan cuatro piezas para cerrarlo:
+**Diagnóstico corto:** ya hay juego, pero la deuda técnica creció al mismo ritmo que el contenido. Los cuatro bloqueos de la auditoría anterior (enemigos, daño al jugador, NPC que no hacían nada, zonas sin conectar) están resueltos. Lo que queda pendiente es estructural:
 
-1. **No hay enemigos.** Solo muñecos de práctica. No hay IA, ni spawns, ni tablas de loot.
-2. **El jugador no puede recibir daño.** `CharacterStats.TakeDamage()` existe, pero ningún script lo llama.
-3. **Los NPC muestran "Comprar / Vender / Reparar", pero esas opciones no hacen nada.** Se dispara el evento `NPCInteractable.OptionChosen` y ningún script lo escucha.
-4. **La mazmorra procedural no está conectada al juego.** `DungeonGenerator` no aparece en ninguna escena y la salida del poblado (`ZoneExit`) no lleva a ningún lado.
+1. **Siguen existiendo dos sistemas de vida** (`CharacterStats` para el héroe y `Damageable` para todo lo demás). Ahora el veneno ya está programado dos veces.
+2. **Las clases gigantes crecieron todavía más**, y aparecieron otras nuevas de más de 700 líneas.
+3. **No hay asmdef ni namespaces**: 154 scripts compilan en `Assembly-CSharp`.
+4. **Riesgos de entorno:** un paquete apunta a una ruta local de `Downloads`, el bridge de automatización está activo en los defines de Standalone y hay cambios sin commitear.
 
-| Área | Nota | Comentario |
-|---|---|---|
-| Datos y diseño de sistemas | 8/10 | ScriptableObjects claros para clases, ítems, sets, runas, outfits y mazmorras |
-| Presentación (menú, personaje, UI) | 8/10 | Muy por encima de lo normal para esta etapa |
-| Bucle de juego | 3/10 | Faltan enemigos, daño al jugador, economía y zonas conectadas |
-| Arquitectura del código | 5/10 | Funciona, pero hay clases gigantes, duplicados y dos sistemas de vida |
-| Mantenibilidad y limpieza | 4/10 | Escenas sobrantes, scripts muertos, sin namespaces ni asmdef, tests caseros |
+| Área | Antes | Ahora | Comentario |
+|---|---|---|---|
+| Datos y diseño de sistemas | 8/10 | 8/10 | Se sumaron enemigos, calidades de botín, afijos y precios sin tocar código |
+| Presentación (menú, personaje, UI) | 8/10 | 9/10 | Menús de noche helada, UI adaptable de 4:3 a 32:9, mapa con niebla y HUD de orbes |
+| Bucle de juego | 3/10 | 8/10 | Combate, muerte, botín, economía, misiones y zonas conectadas |
+| Contenido | — | 7/10 | Capítulo I completo: ciudadela, castillo, Las Faldas, La Escalinata y 3 jefes |
+| Arquitectura del código | 5/10 | 4/10 | Creció sin modularizar: más clases gigantes, más `Camera.main` y más búsquedas globales |
+| Mantenibilidad y limpieza | 4/10 | 5/10 | Tests NUnit reales, `Editor/Checks`, `SceneIds` y `ReleaseBuilder`, pero sin asmdef |
 
 ---
 
@@ -33,51 +34,69 @@ El proyecto avanzó mucho desde la primera revisión. Ya existen el menú y la s
 
 | Módulo | Archivos | Líneas | Qué contiene |
 |---|---|---|---|
-| `Scripts/` (raíz) | 9 | 1.365 | Jugador (`PlayerController`, `PlayerDodge`), stats, clases, cámara, menú antiguo |
-| `Scripts/Combat` | 4 | 735 | `PlayerCombat`, `Damageable`, `Projectile`, `LightningArc` |
-| `Scripts/Items` | 11 | 1.584 | Inventario, equipo, definiciones de ítems, armas, runas, sets, loot en el suelo |
-| `Scripts/Outfit` | 6 | 1.481 | Ropa por piezas, animación del rig, tela y huesos elásticos |
-| `Scripts/UI` | 17 | 2.890 | Menú principal, selección de clase, inventario, HUD, preview 3D |
-| `Scripts/World` | 5 | 383 | NPC, interacción, nombres, luces, salida de zona |
-| `Scripts/Game` | 5 | 223 | Apariencia, plumaje, equipo inicial por clase |
-| `Scripts/Procgen` | 7 | 792 | Seeds, sesión de juego y generador de mazmorras |
-| **Total runtime** | **64** | **≈ 9.450** | |
-| `Editor/` | 20 | 6.875 | Herramientas que **construyen** escenas, prefabs, iconos y texturas; tests; bridge |
+| `Scripts/` (raíz) | 6 | 1.137 | `PlayerController`, `PlayerDodge`, `CharacterStats`, `CharacterClass`, `CameraFollow`, `GameplayInput` |
+| `Scripts/UI` | 31 | 6.424 | Menú (`FrostMenu`), HUD, inventario, comercio, pausa, muerte, carga, opciones y controles |
+| `Scripts/World` | 32 | 6.433 | Poblado procedural, castillo, montaña, escalinata, zonas, hogueras, NPC y atmósfera |
+| `Scripts/Items` | 22 | 2.660 | Inventario, equipo, cartera, arcón, pociones, portal, precios y botín (calidad, afijos) |
+| `Scripts/Combat` | 13 | 2.555 | `PlayerCombat`, `Damageable`, habilidades, respawn, aflicciones, gólem y orbes |
+| `Scripts/Outfit` | 6 | 1.771 | Ropa por piezas, `PenguinRigAnimator`, tela y huesos elásticos |
+| `Scripts/Enemies` | 11 | 1.412 | `EnemyBrain`, `BossController`, campamentos, spawner, chamán, proyectiles y muertes |
+| `Scripts/Core` | 9 | 957 | `SaveSystem`, `SaveData`, `AudioManager`, `GameSettings`, `SceneIds`, `GameDatabase` |
+| `Scripts/Procgen` | 7 | 850 | Seeds, `GameSession` y el `DungeonGenerator` (sin uso, ver N3) |
+| `Scripts/Coop` | 1 | 734 | `CoopManager`: jugador 2 con mando o teclado |
+| `Scripts/Map` | 3 | 719 | Mapa por zona con niebla de guerra y marcadores |
+| `Scripts/Input` | 2 | 405 | Mapa de controles reasignable e iconos de Xbox |
+| `Scripts/Characters`, `Game`, `Quests`, `Debug` | 11 | 776 | Balanceo y ragdoll, apariencia, misiones y herramientas de depuración |
+| **Total runtime** | **154** | **≈ 26.800** | (era 64 / ≈ 9.450) |
+| `Editor/` | 51 | ≈ 9.470 | Herramientas de construcción (22), `Checks` (17), `Tests` (7), `Legacy` (3) y `Build` (2) |
 
-Datos: 4 clases, 57 ítems (18 armas, 8 runas, 4 sets de armadura, piezas por clase, pociones y materiales), 2 configuraciones de mazmorra, una paleta de 8 plumajes y un skin de UI.
+Datos: 108 ScriptableObjects. 4 clases, 7 enemigos, 18 armas, 8 runas, 4 sets, piezas por clase, pociones, pergamino de regreso, 2 configuraciones de mazmorra, outfits del héroe y de los corruptos, paleta de plumajes y skin de UI.
 
 ### 2.2 Mapa de sistemas
 
 ```
-               ┌───────────── GameSession (DontDestroyOnLoad) ─────────────┐
-               │  clase elegida · plumaje · nombre · worldSeed             │
-               └───────────────────────────────────────────────────────────┘
-                     ▲ escribe                          ▼ lee
- Main menu.unity ── ClassSelectController ──► SampleScene (poblado) ──► ZoneExit ──► ✗ (no hay escena)
-                                                   │
-       ┌───────────────────────────────────────────┼──────────────────────────────┐
-       ▼                                           ▼                              ▼
- PlayerController ◄──► PlayerCombat ──► Damageable (muñecos)       NPCInteractable ──► OptionChosen ──► ✗ (nadie escucha)
-   │   PlayerDodge        │                                          VillagerNPC (IA ambiental)
-   ▼                      ▼
- CharacterStats ◄── Equipment ◄── Inventory ◄── WorldItem / ItemPickup
-   (vida del jugador,      │
-    nunca recibe daño)     ▼
-                     WeaponHolder · HeroGearEquipper · PenguinOutfit · PenguinRigAnimator
- UI: GameHUD (vida/maná/XP) · WorldHUD (nombres, diálogo, menú NPC) · InventoryScreen
-
- DungeonGenerator + RoomPlacer + CorridorBuilder ──► ✗ (no se usa en ninguna escena)
+        ┌──────────── GameSession (DontDestroyOnLoad) ────────────┐
+        │ SaveData actual · ranura · clase · plumaje · seed       │◄──► SaveSystem (4 ranuras, JSON atómico)
+        │ misiones (QuestLog) · hogueras · niebla del mapa · co-op│
+        └─────────────────────────────────────────────────────────┘
+                 ▲                                   ▼
+ 00_MainMenu ─ FrostMenu ─► 01_Village ──ZoneTravel──► 02_Foothills ──► 03_Escalinata ──► (Bosque Corrupto: pendiente)
+                              │  VillageWorldGenerator (seed)      MountainGenerator      StairsGenerator
+                              │  CastleBuilder / CitadelSiege      EnemyCamp · hordas     RoccoEncounter
+                              │  CastleInterior / ThroneEncounter  guardianes del paso    + ShamanCaster
+                              ▼
+ PlayerController ◄─► PlayerCombat · PlayerAbility · PlayerDodge ──► Damageable (enemigos) ──► EnemyLoot ──► WorldItem
+        │                                                                       ▲
+        ▼                                                                       │
+ CharacterStats (vida del héroe) ◄── EnemyBrain.HitPlayer · EnemyProjectile ── EnemyBrain / BossController
+        │  PlayerAfflictions · PlayerRespawn ──► Bonfire
+        ▼
+ Equipment ◄─ Inventory ◄─ Wallet / Stash ◄─ TradeWindow ◄─ NPCInteractable (Tico: comercio · Brunna: reparar)
+ UI: GameHUD (orbes) · WorldHUD · InventoryScreen · MapUI · PauseMenu · DeathScreen · LoadingScreen
+ Transversal: AudioManager (música por zona, tema de jefe, SFX) · InputMap · CoopManager · Notifications
 ```
 
-### 2.3 Escenas y flujo
+### 2.3 Escenas, flujo y misiones
 
-| Escena | En Build | Estado |
+| Escena | En Build | Contenido |
 |---|---|---|
-| `Main menu.unity` | Sí (0) | Menú nuevo y selección de clase. **Todavía conserva objetos del menú viejo:** 3 `MenuManager`, 3 `Canvas` y un `Player`. |
-| `SampleScene.unity` | Sí (1) | Es el **poblado** (4,9 MB, 14 NPC). El nombre no dice lo que es. |
-| `scene.unity` | No | Escena vieja (menú + jugador). Sobra. |
+| `00_MainMenu.unity` | Sí (0) | Menú de noche helada, ranuras de guardado, selección de clase y plumaje |
+| `01_Village.unity` | Sí (1) | Poblado procedural (3,4 MB), claro de Steve, iglús con escaramuzas, ciudadela, castillo e interior |
+| `02_Foothills.unity` | Sí (2) | Las Faldas: montaña con ventisca, 6 campamentos, hordas, ruinas, 2 hogueras y guardianes del paso |
+| `03_Escalinata.unity` | Sí (3) | Escalera de piedra en S hasta la explanada de Rocco Vendaval |
+| `04_BosqueCorrupto.unity` | Sí (4) | Bosque de pinos negros: pistas de Pipo, raíces corruptas, corazón del bosque con la Madre Savia |
+| `05_Cumbre.unity` | Sí (5) | Grieta de hielo con tres altares, muro de hielo y la cámara del sello (Bobby y el Corazón del Frost) |
 
-Flujo real hoy: **Menú → Selección de clase → Poblado → (se acaba).**
+Las misiones son datos (`Assets/Resources/Quests`, `QuestDefinition`): etapas con objetivo, líneas del NPC y recompensa.
+Diseño completo en `Docs/Campana_Frostbound.md`.
+
+**Capítulo I:**
+- **"La ciudadela caída":** Steve da la misión → asedio de la plaza → **Gorvald, el Bárbaro Corrupto** (rompe el sello del castillo) → interior del castillo → **Smeagol, el Ninja Maldito** en la sala del trono.
+- **"El ascenso":** sendero del norte → Las Faldas → guardianes del paso helado → La Escalinata → **Rocco Vendaval** (3 fases: báculo, arco y mandoble). Al caer revela a Bobby y Pipo, y se despiertan los chamanes.
+
+**Capítulo II · El Bosque Corrupto:** "El rastro de Pipo" (3 pistas) → "Savia negra" (3 raíces) → "La Madre Savia" (jefa en 3 fases; Pipo libre en un capullo de hielo y de vuelta con Steve). Enemigos nuevos: leñador, escupesavia y acechador.
+
+**Capítulo III · La Cumbre:** "La cumbre" (3 altares) → "El sello": **Bobby** se rinde y confiesa → **Corazón del Frost** (oleadas, escudo con 3 cristales, anillos de hielo) → rehacer el sello → "De vuelta a casa" (Bobby y Pipo en el poblado) → créditos. Enemigos nuevos: cristalizado (débil al fuego) e hijo del Frost (se parte en dos).
 
 ---
 
@@ -85,142 +104,144 @@ Flujo real hoy: **Menú → Selección de clase → Poblado → (se acaba).**
 
 | Sistema | Estado | Detalle |
 |---|---|---|
-| Menú principal y selección de clase | ✅ Hecho | Sigue la especificación: tokens, preview 3D, plumaje y `GameSession` |
-| Pingüino con rig y ropa | ✅ Hecho | `Penguin_Rigged.fbx`, shader toon, outfits por pieza, tela y huesos elásticos |
-| Movimiento | 🟡 Parcial | WASD y clic. **Sin NavMesh**: en pasillos y esquinas el pingüino se va a trabar |
-| Rodar | ✅ Hecho | `PlayerDodge` con Espacio |
-| Combate del jugador | 🟡 Parcial | Combo de 3 golpes, proyectiles, runas y durabilidad. Solo se prueba contra muñecos |
-| Enemigos e IA | ❌ No existe | Es el hueco más grande del proyecto |
-| Daño al jugador y muerte | ❌ No existe | `TakeDamage` no se llama; `Die()` solo escribe en consola |
-| Inventario y equipo | ✅ Hecho | Slots, sets con bonus, stats, pantalla de personaje |
-| Loot en el suelo | 🟡 Parcial | `WorldItem` y `ItemPickup` existen, pero no hay tablas de drop porque no hay nada que mate |
-| XP, niveles y puntos | ✅ Hecho | Por ahora solo se prueba con `ProgressionDebug` |
-| NPC y diálogo | 🟡 Parcial | 14 NPC con diálogo ambiental. **Tienda, venta y reparación no están implementadas** |
-| Rocco Vendaval | ❌ Pendiente | Tiene material y modelo, pero no está en la escena (spec §6) |
-| Economía (oro) | ❌ No existe | Sin moneda no puede haber tienda ni reparación |
-| Guardado | ❌ No existe | "Continuar" revisa `frostbound_save`, pero ningún script escribe esa clave |
-| Mazmorra procedural | 🟡 Aislada | Genera salas y pasillos con cubos, pero no está conectada al flujo del juego |
-| Zonas (Foothills…) | ❌ No existe | `ZoneExit` no tiene escena de destino |
-| Audio | ❌ No existe | Sin música ni efectos |
-| Opciones y créditos | ❌ Stub | |
+| Menú, ranuras y selección de clase | ✅ Hecho | 4 ranuras, plumaje, preview 3D y menús de noche helada |
+| Movimiento | ✅ Hecho | WASD, clic y mando. NavMesh horneado en runtime por cada generador. Red de seguridad contra caídas |
+| Combate del héroe | ✅ Hecho | Combo ligero y pesado, rodar, runas, durabilidad, críticos y hitstop |
+| Habilidades de clase | ✅ Hecho | Carga de escudo, gólem de nieve, abanico de kunais y grito de guerra (maná y enfriamiento) |
+| Enemigos e IA | ✅ Hecho | 7 tipos de corruptos. Las clases malditas aparecen tras el primer jefe. Chamanes que reviven |
+| Jefes | ✅ Hecho | `BossController`: barra, arma encantada, teletransporte y discurso sin maldición al caer |
+| Daño al jugador, muerte y reaparición | ✅ Hecho | Reaparece en la hoguera encendida más cercana con el equipo algo desgastado. Veneno estilo Souls |
+| Botín | ✅ Hecho | `LootRoller` con calidad y afijos, haz de luz, monedas y hallazgo mágico |
+| Economía | ✅ Hecho | Cartera, arcón de 60 casillas, tienda de Tico, venta y reparación de pago con afilado |
+| Guardado | ✅ Hecho | JSON por ranura con escritura atómica. Autoguardado al cambiar de zona y de misión |
+| Misiones | ✅ Hecho | `QuestLog` con etapas guardadas y panel de objetivo |
+| Zonas | ✅ Hecho | `ZoneTravel`, `ZoneGate` y `ZoneArrival` entre las 4 escenas, más el pergamino de regreso |
+| Mapa | ✅ Hecho | Foto cenital por zona, niebla de guerra guardada y marcadores |
+| Audio | ✅ Hecho | Música por zona con fundido, tema de jefe, combate, voces de corruptos, runas y UI |
+| Opciones | ✅ Hecho | Pantalla, resolución de 720p a 4K, ultrawide, periférico preferido y reasignación |
+| Co-op local | ✅ Hecho | Jugador 2 con mando o teclado, HUD propio, mochila propia y enemigos reforzados |
+| Builds | ✅ Hecho | `ReleaseBuilder` para Windows, macOS y Linux |
+| NPC | ✅ Hecho | Diálogo ambiental, servicios reales y cháchara del poblado |
+| Mazmorra `DungeonGenerator` | ❌ Sin uso | Lo reemplazaron `CastleInterior` y los generadores de montaña (ver N3) |
+| Bosque Corrupto / Capítulo II | ❌ Pendiente | Solo existe el cartel "Camino del Bosque Corrupto" en La Escalinata |
+| Créditos | ❌ Pendiente | |
 
 ---
 
 ## 4. Hallazgos (ordenados por severidad)
 
-### 🔴 Críticos: bloquean el bucle de juego
+### Resueltos desde la auditoría anterior
 
-**C1. Hay dos sistemas de vida separados.**
-`Damageable` (enemigos y muñecos) tiene su propia `Health`, eventos `Damaged` y `Died`, estados como congelado o envenenado, y regeneración. `CharacterStats` (jugador) tiene `currentHealth`, `TakeDamage` y `Died` por su cuenta. Cuando existan enemigos que ataquen, cada sistema de efectos (veneno, escarcha, empuje, robo de vida) va a tener que implementarse dos veces.
-**Recomendación:** que el jugador también use `Damageable`, alimentado por `CharacterStats` (vida máxima y defensa). Una sola interfaz de daño para todos.
+| ID | Hallazgo | Cómo se resolvió |
+|---|---|---|
+| C2 | No había enemigos | `EnemyBrain`, `EnemyDefinition`, campamentos, spawner y jefes |
+| C3 | Botones de NPC sin efecto | `TradeWindow`, `Wallet` y reparación de pago |
+| C4 | Sin NavMesh | Lo hornean en runtime `VillageWorldGenerator`, `MountainGenerator`, `StairsGenerator` y `CastleInterior` |
+| A3 | Duplicados | Resuelto en la fase 1 de limpieza (`v0.2-limpieza`) |
+| A4 | Persistencia dispersa | `SaveSystem` + `SaveData` único |
+| M2 | Tests caseros | **Parcial:** 32 tests `[Test]` reales en `Editor/Tests` (7 archivos). Los checks por bridge siguen aparte |
+| M4 | Nombres de escena | `00_`…`03_` y `SceneIds` |
+| M7 | Paquetes sin uso | **Parcial:** se quitaron 3. `ai.assistant` y `ai.inference` se mantienen a propósito |
 
-**C2. No hay enemigos.** Sin ellos no se puede validar el combate, el loot, la XP, la durabilidad ni las runas. Todo está "hecho", pero nada está probado en condiciones reales.
-**Recomendación:** hacer un `EnemyBrain` mínimo (idle → perseguir → atacar → morir) sobre `Damageable` + `NavMeshAgent`, con un `EnemyDefinition` (ScriptableObject) para el primer tipo, el *Frostbound Hunter*.
+### 🔴 Críticos
 
-**C3. Botones de NPC que no hacen nada.** Para el jugador, que el menú ofrezca "Comprar" o "Reparar" y no pase nada se ve como un bug.
-**Recomendación:** esconder esas opciones hasta que existan la tienda y la economía, o implementar `ShopService` y `RepairService` que escuchen `OptionChosen`.
+**C1. Siguen los dos sistemas de vida (abierto desde la auditoría anterior, ahora con más costo).**
+El héroe recibe daño por `CharacterStats.TakeDamage` (lo llaman `EnemyBrain.HitPlayer` y `EnemyProjectile`). Enemigos, aliados y gólems usan `Damageable.TakeHit`. Ya pasó lo que se anticipaba: el veneno del héroe vive en `PlayerAfflictions` y el de los enemigos en `Damageable`, con dos implementaciones. Además, `CharacterStats.Die()` todavía escribe un `Debug.Log`.
+**Recomendación:** igual que antes. El héroe usa `Damageable` y `CharacterStats` solo calcula. Hacerlo antes del Capítulo II, porque cada efecto nuevo (quemadura, congelación del héroe) duplicaría trabajo.
 
-**C4. No hay NavMesh.** El paquete `com.unity.ai.navigation` está instalado y no se usa. El movimiento por clic y la futura IA de enemigos dependen de él.
+**N1. Un paquete apunta a una ruta local.** `Packages/manifest.json` (sin commitear) agrega `"com.justinpbarnett.unity-mcp": "file:C:/Users/MAO/Downloads/unity-mcp-master"`. Si se commitea, el proyecto **no abre** en la máquina de otro integrante ni en CI.
+**Recomendación:** no commitear esa línea. Si el MCP hace falta para el equipo, usar una URL de git o mantenerlo fuera del manifest compartido.
 
 ### 🟠 Altos: arquitectura
 
-**A1. Clases gigantes con demasiadas responsabilidades.**
+**A1. Las clases gigantes crecieron.**
 
-| Script | Líneas | Qué mezcla |
+| Script | Antes | Ahora |
 |---|---|---|
-| `PenguinRigAnimator` | 835 | Caminar, correr, idle con 4 acciones, poses de ataque y combo, rodar, armas |
-| `InventoryScreen` | 825 | Construye la UI por código, arrastrar y soltar, tooltips, stats, comparación |
-| `WorldHUD` | 644 | Nombres, globos de diálogo, menú de NPC y avisos |
-| `PlayerController` | 455 | Movimiento, clic, hover, recoger objetos, hablar con NPC, seguir un objetivo para atacar |
+| `PenguinRigAnimator` | 835 | 1.114 |
+| `InventoryScreen` | 825 | 1.022 |
+| `FrostMenu` | — | 882 |
+| `CoopManager` | — | 734 |
+| `CastleBuilder` | — | 719 |
+| `PlayerCombat` | — | 678 |
+| `VillageWorldGenerator` | — | 658 |
+| `WorldHUD` | 644 | 629 |
+| `PlayerController` | 455 | 598 |
 
-`PlayerController` debería mover al jugador y nada más. Recoger objetos y hablar con NPC van en un `PlayerInteractor`, y el hover del cursor en un `CursorTargeting`.
+Hay 15 scripts de juego con más de 500 líneas (antes eran 4). La recomendación de partir `PlayerController` (motor, entrada, apuntado e interacción) sigue vigente, y `CoopManager` es un candidato nuevo.
 
-**A2. Las escenas se construyen con scripts de editor.** `SetupVillage.cs` (1.441 líneas), `FrostboundMenuBuilder.cs` (796) y `SetupInventory.cs` (612) generan escenas y UI enteras desde código.
-- A favor: todo es reproducible.
-- En contra: si editas el poblado a mano en Unity y vuelves a correr la herramienta, **pierdes los cambios**. Además, la UI hecha por código (`UIFactory`) es difícil de ajustar visualmente.
-- **Recomendación:** decidir una fuente de verdad. Lo sano es usar las herramientas una sola vez para crear los prefabs y las escenas base, y desde ahí editar en Unity. Hay que marcar las herramientas de un solo uso como tales o moverlas a `Editor/Legacy`.
+**M1. Sin asmdef ni namespaces (abierto).** Hay 0 namespaces y 0 asmdef. Con 154 scripts, cada cambio recompila casi 27.000 líneas, y los tests de `Editor/Tests` compilan junto a las herramientas de editor.
 
-**A3. Duplicados que confunden.**
-
-| Viejo | Nuevo | Acción |
-|---|---|---|
-| `MenuManager` | `MainMenuController` + `ClassSelectController` | Borrar el viejo y sus 3 instancias en la escena del menú |
-| `PenguinAnimator` | `PenguinRigAnimator` | Borrar el viejo si ya no lo usa ningún prefab |
-| `MenuButtonEffects` | `UIButtonFx` | Dejar uno solo |
-| `FrostboundUI` (tokens estáticos) | `UISkin` (ScriptableObject) | Unificar en uno: hoy hay dos fuentes de colores |
-| `Penguin.obj` (48k caras) | `Penguin_Rigged.fbx` | Archivar el `.obj` si nada lo referencia |
-| `CameraFollow`, `OutfitTester` | — | Revisar si siguen en uso |
-
-**A4. La persistencia está dispersa.** `MenuManager` y `ClassSelectController` escriben `PlayerPrefs["username"]`, `MainMenuController` lee `frostbound_save` y `GameSession` guarda la clase y el plumaje en memoria. No hay un único `SaveSystem`.
-**Recomendación:** un `SaveData` serializable (clase, plumaje, nombre, nivel, stats, inventario, equipo, oro, seed, zona) que se escriba en JSON en `Application.persistentDataPath`. `PlayerPrefs` solo para opciones como volumen y resolución.
+**N2. El bridge está activo en los defines de Standalone.** `FROSTBOUND_BRIDGE` aparece en `scriptingDefineSymbols` de Standalone. El código del bridge está en `Editor/`, así que no entra en la build, pero cualquier `#if FROSTBOUND_BRIDGE` en runtime sí entraría.
+**Recomendación:** que `ReleaseBuilder` quite el símbolo antes de compilar y lo restaure después, o moverlo a un perfil de build de desarrollo.
 
 ### 🟡 Medios: calidad y mantenimiento
 
-- **M1. Sin namespaces ni Assembly Definitions.** Todo compila en `Assembly-CSharp`, así que cada cambio recompila todo el proyecto y es fácil crear dependencias circulares. Conviene agregar `Frostbound.Runtime.asmdef` y `Frostbound.Editor.asmdef`.
-- **M2. Los tests no son tests de Unity.** `FrostboundInventoryTests`, `FrostboundWeaponTests` y `FrostboundPlayTests` son métodos estáticos que se ejecutan a través del bridge; no usan el Test Framework, que está instalado. No salen en el Test Runner ni se pueden automatizar. Conviene migrar al menos inventario, equipo y stats a pruebas EditMode con `[Test]`.
-- **M3. `FrostboundBridge` ejecuta comandos desde un archivo de texto**, incluido `exec Tipo.Metodo`, cada vez que se abre el editor (`InitializeOnLoad`). Sirve para automatizar, pero debería activarse solo con un interruptor (por ejemplo, un símbolo de compilación o una opción en el menú) y no quedar siempre encendido. La carpeta `FrostboundBridge/` sí está en `.gitignore`.
-- **M4. Nombres de escena inconsistentes.** `SampleScene` es el poblado y `Main menu` lleva un espacio. Conviene renombrarlas a `00_MainMenu`, `01_Village`, `02_Foothills`… y referenciarlas desde una sola clase de constantes en vez de strings sueltos (`"SampleScene"` aparece en 2 scripts).
-- **M5. `FindObjectsByType` en la interacción.** Hoy solo se llama al pulsar la tecla, así que no afecta el rendimiento, pero no escala. Lo ideal es que los NPC y los objetos se registren en una lista al activarse, como ya hace `NameTag`.
-- **M6. Siete llamadas a `Camera.main`.** Conviene cachear la referencia en `Awake`.
-- **M7. Paquetes sin uso:** `ai.assistant`, `ai.inference`, `visualscripting`, `multiplayer.center` y `collab-proxy`. Alargan la importación y la compilación.
+- **M5/M6 empeoraron.** `Camera.main` pasó de 7 a 16 usos y hay 29 llamadas a `FindObjectsByType`/`FindAnyObjectByType`. Conviene un `Registry<T>` y una cámara cacheada (plan F2.5).
+- **N3. Código muerto de mazmorra.** `DungeonGenerator`, `RoomPlacer` y `CorridorBuilder` (en `Scripts/Procgen`) no se referencian desde ninguna escena ni script. `Frozen_Castle` y `Castillo_Nuevo` (`DungeonConfig`) quedan huérfanos si nadie los usa. Se pueden borrar o mover a `_Archive`.
+- **N4. Seis scripts sueltos en la raíz de `Scripts/`** (`PlayerController`, `CharacterStats`, etc.). Moverlos a `Player/` y `Characters/` desde Unity.
+- **N5. `SetupVillage.cs` (1.291 líneas) sigue vivo:** lo usan `SetupProceduralVillage`, `SetupSteve`, `SetupWeapons` y `SetupPenguinWardrobe`, aunque el poblado ahora lo genera `VillageWorldGenerator` en runtime. Revisar qué parte sigue haciendo falta.
+- **N6. Cambios locales sin commitear:** las fuentes SDF (≈ 9.500 líneas de diff), `UniversalRenderPipelineGlobalSettings`, `manifest.json` y `packages-lock.json`, además de `.vsconfig` y `Frostbound.slnx` sin seguimiento. Decidir qué se commitea (las fuentes probablemente sí) y qué va al `.gitignore` (`*.slnx`).
+- **`Debug.Log` en runtime:** pasó de 14 a 18. Envolverlo en un `Log` condicional (plan F5.3).
 
 ### 🟢 Bajos
 
-- `SampleScene` pesa 4,9 MB en YAML, porque todo el poblado está desplegado en la escena. Conviene convertir las casas, iglús y NPC en prefabs.
-- `Assets/TutorialInfo` y `Readme.asset` son de la plantilla de URP y se pueden borrar.
-- `scene.unity` se puede borrar.
+- Hay unas 20 ramas remotas `feature/*`, `fix/*` y `fase/*` que ya están mergeadas. Se pueden borrar.
+- `companyName: DefaultCompany` en Player Settings. Esto afecta la ruta de `persistentDataPath` y, por lo tanto, la ubicación de las partidas guardadas. Cambiarlo moverá los guardados existentes.
+- `01_Village.unity` pesa 3,4 MB (antes 4,9 MB). Mejoró, pero todavía conviene usar más prefabs.
+- `Docs/baseline/` (plan F0.2) no existe.
 
 ---
 
 ## 5. Lo que está bien hecho
 
-- **Diseño guiado por datos.** Clases, ítems, sets, runas, outfits y mazmorras son ScriptableObjects. Agregar contenido no exige tocar código.
-- **Eventos en vez de sondeo.** `Inventory.Changed`, `Equipment.Changed`, `CharacterStats.StatsChanged` y `Damageable.Damaged` permiten que la UI se actualice sin revisar el estado en cada frame.
-- **Generación determinista.** `SeedUtil` y `DeterministicRng` con un flujo separado por subsistema es la forma correcta de hacerlo y permite reproducir un mapa a partir de su seed.
-- **`GameplayInput.Block()`.** Los menús bloquean el control del héroe con un contador, y el estado se reinicia en cada Play.
-- **La identidad visual es consistente:** shader toon propio, paleta de plumaje con `MaterialPropertyBlock` (sin duplicar materiales) y tipografías con los caracteres del español.
-- **El combate tiene buen diseño de fondo:** ventana de combo, momento del impacto, crítico en el giro final, durabilidad y runas con probabilidad.
-- **Git con LFS y los `.gitignore` y `.gitattributes` oficiales de Unity.** Los commits son pequeños y están bien descritos.
+- **Diseño guiado por datos.** Clases, ítems, enemigos, sets, runas y outfits son ScriptableObjects. Los jefes copian la definición en vez de modificarla.
+- **Generación determinista por seed** del poblado, el castillo, la montaña y la escalera, con NavMesh horneado al terminar.
+- **Guardado sólido.** Ranuras, escritura atómica (`.tmp` y reemplazo) y estado completo: misiones, hogueras, niebla del mapa, arcón y el héroe del jugador 2.
+- **`Editor/Checks`:** prueba de humo, balance, simulación de botín, co-op, audio, controles, NPC, mundo y comercio, ejecutables por el bridge. Junto con los 32 tests NUnit, forman una red de seguridad real.
+- **`ReleaseBuilder`** con versionado (`bundleVersion` 0.1.3) y tags por versión.
+- **Flujo de git ordenado:** `develop` más ramas `feature/*` y `fix/*` con merges descriptivos en español.
+- **Accesibilidad de control y pantalla:** mando de Xbox con iconos, reasignación y UI de 4:3 a 32:9.
+- **Narrativa integrada en el juego:** jefes que se liberan y hablan al caer, cuerpos congelados que cuentan lo que pasó e iglús con escaramuzas que se guardan.
 
 ---
 
 ## 6. Recomendación: próximos pasos en orden
 
-**Fase A — Limpieza (1–2 días).** Sin esto, cada fase siguiente se hace más lenta.
-1. Borrar `MenuManager`, sus instancias, `scene.unity`, `TutorialInfo`, y los scripts y paquetes que no se usan.
-2. Renombrar las escenas (`00_MainMenu`, `01_Village`) y centralizar sus nombres en una clase `SceneIds`.
-3. Unificar `FrostboundUI` y `UISkin`.
-4. Esconder las opciones de NPC que no están implementadas.
+**Fase A — Higiene inmediata (medio día).**
+1. Revisar los cambios locales: commitear las fuentes SDF y los ajustes de URP, sacar la línea de `unity-mcp` del manifest compartido y agregar `*.slnx` al `.gitignore`.
+2. Hacer que `ReleaseBuilder` quite `FROSTBOUND_BRIDGE` al compilar.
+3. Borrar las ramas remotas mergeadas.
 
-**Fase B — Cerrar el bucle de combate (lo más importante).**
-1. NavMesh en el poblado y en la mazmorra generada (`NavMeshSurface.BuildNavMesh()` al terminar de generar).
-2. Unificar la vida: el jugador usa `Damageable`.
-3. `EnemyDefinition` + `EnemyBrain` → *Frostbound Hunter*.
-4. Muerte del jugador y reaparición en el poblado.
-5. Tabla de loot por enemigo, usando `DeterministicRng`.
-6. Conectar `ZoneExit` → escena `02_Foothills` con `DungeonGenerator` y spawns de enemigos por sala.
+**Fase B — Deuda crítica (antes del Capítulo II).**
+1. Unificar la vida (C1): el héroe usa `Damageable` y `PlayerAfflictions` se fusiona con los estados de `Damageable`.
+2. asmdef (`Frostbound.Runtime`, `Frostbound.Editor`, `Frostbound.Tests`) y namespaces por carpeta. Mover la raíz de `Scripts/`.
+3. Borrar `DungeonGenerator`, `RoomPlacer`, `CorridorBuilder` y sus configuraciones si no se van a usar.
 
-**Fase C — Economía y servicios.**
-Oro, `ShopService` (comprar y vender), `RepairService` (usa la durabilidad que ya existe) y un `SaveSystem` en JSON para que "Continuar" funcione.
+**Fase C — Refactor por partes**, a medida que se toque cada archivo: `PlayerController`, `PenguinRigAnimator`, `InventoryScreen`, `CoopManager` y `FrostMenu`. Agregar `Registry<T>` y una cámara cacheada.
 
-**Fase D — Refactor por partes**, a medida que se toque cada archivo: separar `PlayerController`, `WorldHUD` e `InventoryScreen`; agregar asmdef; migrar los tests a EditMode.
+**Fase D — Contenido.** Capítulo II: el Bosque Corrupto, Bobby (el que liberó el Frost) y Pipo. Pantalla de créditos con las licencias OFL. Prueba con alguien externo (sesión de 20 minutos).
 
-**Fase E — Contenido del vertical slice:** Rocco, un mini-jefe al final de la mazmorra, audio y la pasada de arte a la mazmorra (reemplazar los cubos por un kit modular).
-
-> **Regla para no volver a desviarse:** no agregar más armas, ítems ni ropa hasta que exista un enemigo que pueda matar al jugador. Hoy hay 18 armas y 0 enemigos.
+> **Regla para no volver a desviarse:** no empezar el Capítulo II hasta cerrar C1 y M1. Cada zona nueva sobre dos sistemas de vida y un solo assembly multiplica el costo de arreglarlo después.
 
 ---
 
 ## 7. Métricas
 
-| Métrica | Valor |
-|---|---|
-| Scripts de juego | 64 (≈ 9.450 líneas) |
-| Scripts de editor | 20 (≈ 6.875 líneas) |
-| Scripts con más de 500 líneas | 4 de juego, 5 de editor |
-| ScriptableObjects de datos | ≈ 90 |
-| Escenas | 3 (2 en Build) |
-| NPC en el poblado | 14 |
-| Enemigos | 0 |
-| Tests del Test Framework | 0 |
-| `Debug.Log` en runtime | 14 |
+| Métrica | 28-09-2026 | 17-10-2026 |
+|---|---|---|
+| Versión | — | 0.1.3 |
+| Commits | 18 | 131 |
+| Scripts de juego | 64 (≈ 9.450 líneas) | 154 (≈ 26.800 líneas) |
+| Scripts de editor | 20 (≈ 6.875 líneas) | 51 (≈ 9.470 líneas) |
+| Scripts de juego con más de 500 líneas | 4 | 15 |
+| ScriptableObjects de datos | ≈ 90 | 108 |
+| Escenas en Build | 2 | 4 |
+| Enemigos | 0 | 7 tipos + 3 jefes |
+| Misiones | 0 | 2 |
+| Tests NUnit | 0 | 32 |
+| `Debug.Log` en runtime | 14 | 18 |
+| `Camera.main` en runtime | 7 | 16 |
+| asmdef / namespaces | 0 / 0 | 0 / 0 |
+
+> Nota: `Docs/Plan_Mejora_Frostbound.md` sigue describiendo el estado del 28-09. Su Anexo B solo registra la fase F1, pero gran parte de F3, F4 y F6 ya está hecha por fuera de ese plan.

@@ -13,7 +13,8 @@ public class PauseMenu : MonoBehaviour
     public static bool IsPaused { get; private set; }
 
     private CanvasGroup _group, _confirm;
-    private FrostButton _resume, _quit, _settings;
+    private FrostButton _resume, _quit, _settings, _howTo;
+    private RectTransform _panel;
     private RectTransform _legend;
     private TextMeshProUGUI _hero;
     private bool _leaving;
@@ -56,7 +57,7 @@ public class PauseMenu : MonoBehaviour
         bool cancel = UICancel.Pressed();
         // START pausa desde el mando del jugador 1 o del jugador 2 (un mando libre con START une al jugador 2).
         // Pausa según Configuración → Control (Esc y el botón Menú por defecto), desde el jugador 1 o el 2.
-        if (OptionsPanel.IsOpen) return;
+        if (OptionsPanel.IsOpen || TutorialModal.IsOpen) return;
         bool start = InputMap.KeyPressed(GameAction.Pause);
         GameObject p1 = Players.PrimaryObject;
         UnityEngine.InputSystem.Gamepad mine = p1 != null ? PlayerController.PadOf(p1.transform) : null;
@@ -77,7 +78,7 @@ public class PauseMenu : MonoBehaviour
 
     public static bool OtherMenuOpen()
     {
-        if (GameplayInput.Blocked || LoadingScreen.Active || TradeWindow.IsOpen || SaveSlotsPanel.IsOpen) return true;
+        if (GameplayInput.Blocked || LoadingScreen.Active || TradeWindow.IsOpen || SaveSlotsPanel.IsOpen || TutorialModal.IsOpen) return true;
         if (WorldHUD.Instance != null && WorldHUD.Instance.MenuOpen) return true;
         if (AdventureHUD.Instance != null && AdventureHUD.Instance.Map != null && AdventureHUD.Instance.Map.FullOpen) return true;
         GameObject p = GameObject.Find("Player");
@@ -100,6 +101,7 @@ public class PauseMenu : MonoBehaviour
         string level = stats != null ? "Nivel " + stats.level : "";
         _hero.text = string.Join(" · ", new[] { name, level, SceneIds.Title(SceneManager.GetActiveScene().name) }).Trim(' ', '·');
         BuildLegend();
+        AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.7f);
         SetGroup(_group, true);
         Select(_resume.button);
     }
@@ -136,6 +138,7 @@ public class PauseMenu : MonoBehaviour
     public void Resume()
     {
         if (!IsPaused) return;
+        UIDissolve.Ghost(_panel);
         SetGroup(_confirm, false);
         SetGroup(_group, false);
         Unfreeze();
@@ -148,6 +151,17 @@ public class PauseMenu : MonoBehaviour
         Time.timeScale = 1f;
         AudioListener.pause = false;
         GameplayInput.Unblock();
+    }
+
+    // El tutorial se abre encima de la pausa; al cerrarlo se vuelve aquí con el foco en «Cómo jugar».
+    private void OpenTutorial()
+    {
+        _group.interactable = false;
+        TutorialModal.Open(() =>
+        {
+            _group.interactable = IsPaused;
+            if (IsPaused) Select(_howTo.button);
+        });
     }
 
     private void AskQuit()
@@ -218,13 +232,13 @@ public class PauseMenu : MonoBehaviour
         dim.raycastTarget = true;
 
         Image panel = FrostUI.Panel(main, "Panel", out _, 18f);
-        FrostUI.Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(640f, 640f));
+        _panel = panel.rectTransform;
+        FrostUI.Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(640f, 720f));
         Transform p = panel.transform;
         TextMeshProUGUI kicker = FrostUI.Kicker(p, "Antetitulo", "Partida en pausa", 17f, FrostUI.Ice);
         kicker.alignment = TextAlignmentOptions.Center;
         FrostUI.Place(kicker.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(500f, 26f));
         TextMeshProUGUI title = FrostUI.Title(p, "Titulo", "PAUSA", 84f, TextAlignmentOptions.Center, 0.24f);
-        title.fontStyle = FontStyles.Italic;
         FrostUI.Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -58f), new Vector2(520f, 104f));
         _hero = FrostUI.Text(p, "Heroe", "", 20f, FrostUI.Secondary, TextAlignmentOptions.Center);
         FrostUI.Place(_hero.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -160f), new Vector2(520f, 30f));
@@ -235,8 +249,11 @@ public class PauseMenu : MonoBehaviour
         _settings = FrostButton.Create(p, "Configuracion", "Configuración", new Vector2(400f, 62f), FrostButton.Style.Normal, 28f);
         FrostUI.Place((RectTransform)_settings.transform, new Vector2(0.5f, 1f), new Vector2(0f, -300f), new Vector2(400f, 62f));
         _settings.button.onClick.AddListener(() => OptionsPanel.Open(() => { BuildLegend(); Select(_settings.button); }));
+        _howTo = FrostButton.Create(p, "ComoJugar", "Cómo jugar", new Vector2(400f, 62f), FrostButton.Style.Normal, 28f);
+        FrostUI.Place((RectTransform)_howTo.transform, new Vector2(0.5f, 1f), new Vector2(0f, -382f), new Vector2(400f, 62f));
+        _howTo.button.onClick.AddListener(OpenTutorial);
         _quit = FrostButton.Create(p, "SalirMenu", "Salir al menú", new Vector2(400f, 62f), FrostButton.Style.Normal, 28f);
-        FrostUI.Place((RectTransform)_quit.transform, new Vector2(0.5f, 1f), new Vector2(0f, -382f), new Vector2(400f, 62f));
+        FrostUI.Place((RectTransform)_quit.transform, new Vector2(0.5f, 1f), new Vector2(0f, -464f), new Vector2(400f, 62f));
         _quit.button.onClick.AddListener(AskQuit);
 
         _legend = FrostUI.Node(p, "Controles");

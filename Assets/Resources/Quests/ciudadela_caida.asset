@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ab13e3148463ba40aac3b2106f78791, type: 3}
+  m_Name: ciudadela_caida
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
+  id: ciudadela_caida
+  title: "La ciudadela ca\xEDda"
+  chapter: 1
+  order: 1
+  giver: steve
+  speaker: 
+  requiresQuest: 
+  requiresStage: 0
+  offerLines:
+  - "Eh, t\xFA. S\xED, t\xFA, el de la espada. Desde mi claro se ve el castillo...
+    y no me gusta lo que veo."
+  - "Al pie de sus murallas hab\xEDa un poblado: la ciudadela. Gente buena, guardias
+    valientes."
+  - "Hace unas lunas baj\xF3 de la monta\xF1a una tropa de ping\xFCinos de \xE9lite.
+    Malditos, con los ojos como cristales."
+  - "Los mandaba un ninja. Dicen que corrompi\xF3 a los guardias y que ellos mismos
+    atacaron su poblado."
+  - "Su capit\xE1n, Gorvald, sigue rondando la plaza. Si alguien puede romper ese
+    sello del castillo... eres t\xFA."
+  stages:
+  - objective: "Sigue el camino del norte hasta la Ciudadela Ca\xEDda y l\xEDmpiala
+      de corruptos"
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "Sal por la puerta norte y toma el camino de los mojones rojos: lleva a la
+      ciudadela. Ten cuidado con la plaza: ah\xED se juntan."
+    - Si ves a Gorvald, no dejes que te alcance su hacha. Dicen que ahora gotea veneno.
+    onReach: 
+  - objective: Entra al castillo y derrota al ninja maldito
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "\xBFGorvald habl\xF3 antes de caer? Entonces es verdad: el ninja est\xE1 dentro
+      del castillo."
+    - "El sello se rompi\xF3. Lo que haya ah\xED dentro ya sabe que vas."
+    onReach: 
+  - objective: 
+    type: 0
+    target: 
+    count: 1
+    giverLines:
+    - "La ciudadela ya respira. Pero lo que la atac\xF3 baj\xF3 de la monta\xF1a."
+    onReach: 
+  experience: 0
+  coins: 0

@@ -30,8 +30,8 @@ public class RoccoEncounter : MonoBehaviour
         GameObject go = Instantiate(mage.prefab, transform.position, Quaternion.Euler(0f, 0f, 0f), transform);
         go.name = "Rocco_Vendaval";
         EnemyBrain brain = go.GetComponent<EnemyBrain>();
-        brain.Setup(mage, null, 9, false, RoccoBoss.Plumage);
-        Boss = BossController.Make(brain, "Rocco Vendaval", "Mago corrupto del Frostspire", 9f, 1.4f, 1.7f, def =>
+        brain.Setup(mage, null, BossTuning.RoccoLevel, false, RoccoBoss.Plumage);
+        Boss = BossController.Make(brain, "Rocco Vendaval", "Mago corrupto del Frostspire", BossTuning.RoccoHealth, BossTuning.RoccoDamage, 1.7f, def =>
         {
             def.displayName = "Rocco Vendaval";
             def.sightRange = 20f;

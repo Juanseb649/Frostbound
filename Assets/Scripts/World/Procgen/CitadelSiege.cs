@@ -62,6 +62,8 @@ public class CitadelSiege : MonoBehaviour
         if (Current == Phase.Idle)
         {
             if (QuestLog.Stage(QuestLog.Citadel) != QuestLog.CitadelTalked) return;
+            // Encuentros obligatorios: sin limpiar el camino no hay asedio (y el hielo cierra la plaza).
+            if (!CitadelGate.CitadelOpen) return;
             Vector3 d = _player.position - _center;
             d.y = 0f;
             if (d.magnitude < VillageLayout.CitadelTown.ArenaRadius + 1f && _stats != null && !_stats.IsDead) _run = StartCoroutine(Run());

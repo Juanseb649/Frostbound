@@ -44,13 +44,13 @@ public class RolledAffix
 
 public static class LootQualityInfo
 {
-    public static readonly Color Worn = FrostboundUI.Hex("#8A97A8");
-    public static readonly Color Normal = FrostboundUI.Hex("#E8F1FA");
-    public static readonly Color Magic = FrostboundUI.Hex("#6FA8FF");
-    public static readonly Color Rare = FrostboundUI.Hex("#F3D48A");
-    public static readonly Color Set = FrostboundUI.Hex("#6FD08A");
-    public static readonly Color Unique = FrostboundUI.Hex("#E0B44A");
-    public static readonly Color Rune = FrostboundUI.Hex("#7FD8FF");
+    public static Color Worn => FrostboundUI.QualityWorn;
+    public static Color Normal => FrostboundUI.QualityNormal;
+    public static Color Magic => FrostboundUI.QualityMagic;
+    public static Color Rare => FrostboundUI.QualityRare;
+    public static Color Set => FrostboundUI.QualitySet;
+    public static Color Unique => FrostboundUI.QualityUnique;
+    public static Color Rune => FrostboundUI.QualityRune;
 
     public static Color Color(LootQuality q)
     {

@@ -6,14 +6,20 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Menús de inicio (guía "Frostbound · Menús de inicio"): pantalla de título sobre las ruinas del Frostspire,
-// selección de personaje (las partidas guardadas) y creación del héroe. Todo se construye por código;
-// el decorado 3D (MenuRuins) y el ambiente de noche helada (NightFrostAtmosphere) van detrás.
+// Menús de inicio (guía "Frostbound · Menús de inicio"): pantalla de título, selección de personaje
+// (las partidas guardadas) y creación del héroe. Todo se construye por código; detrás van el decorado 3D
+// (la noche helada de HauntedManor, que ahora muestra el poblado con la cordillera detrás y guarda la mansión
+// para más adelante, o las ruinas del Frostspire, MenuRuins) y el ambiente de noche helada.
 public class FrostMenu : MonoBehaviour
 {
     private enum Screen { Title, Heroes, Create, Options, Credits }
+    public enum Backdrop { Manor, Ruins }
+
+    [Tooltip("Decorado 3D del menú: Manor es la noche helada de HauntedManor (hoy, el poblado y la cordillera; la mansión queda guardada en HauntedManor.Mode). Ruins, las ruinas del Frostspire.")]
+    public Backdrop backdrop = Backdrop.Manor;
 
     public const string Version = "v0.3 · Prealfa";
+    public const string Tagline = "Asciende al Frostspire";
 
     private static readonly Dictionary<string, string> ShortNames = new Dictionary<string, string>
     {
@@ -56,6 +62,10 @@ public class FrostMenu : MonoBehaviour
     private readonly List<(Button button, Image ring, Image halo)> _swatches = new List<(Button, Image, Image)>();
     private TMP_InputField _nameField;
     private int _classIndex, _plumageIndex, _targetSlot = -1;
+    // Dificultad de la partida nueva (Difficulty.Level), con sus tres botones y la explicación.
+    private int _difficulty = (int)Difficulty.Level.Normal;
+    private readonly List<FrostButton> _difficultyButtons = new List<FrostButton>();
+    private TextMeshProUGUI _difficultyKicker;
 
     private GameDatabase Db => GameDatabase.Instance;
 
@@ -67,7 +77,12 @@ public class FrostMenu : MonoBehaviour
         Time.timeScale = 1f;
         _cam = Camera.main;
         if (GetComponent<NightFrostAtmosphere>() == null) gameObject.AddComponent<NightFrostAtmosphere>();
-        if (FindAnyObjectByType<MenuRuins>() == null) new GameObject("Ruinas del Frostspire").AddComponent<MenuRuins>();
+        if (backdrop == Backdrop.Manor)
+        {
+            if (FindAnyObjectByType<HauntedManor>() == null) new GameObject("Decorado del menú").AddComponent<HauntedManor>();
+            if (_cam != null) _cam.orthographic = false;
+        }
+        else if (FindAnyObjectByType<MenuRuins>() == null) new GameObject("Ruinas del Frostspire").AddComponent<MenuRuins>();
         Shot(Screen.Title, true);
         BuildCanvas();
         BuildTitle();
@@ -87,13 +102,21 @@ public class FrostMenu : MonoBehaviour
         if (_cam != null)
         {
             float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 3.2f);
-            _cam.transform.position = Vector3.Lerp(_cam.transform.position, _camPos, k);
+            Vector3 target = _camPos;
+            if (backdrop == Backdrop.Manor)
+            {
+                // Respiración de cámara: un vaivén lento de pocos centímetros para que la escena no parezca una foto.
+                float t = Time.unscaledTime;
+                target += new Vector3(Mathf.PerlinNoise(t * 0.11f, 1.7f) - 0.5f, Mathf.PerlinNoise(t * 0.09f, 8.3f) - 0.5f, 0f) * 0.12f;
+            }
+            _cam.transform.position = Vector3.Lerp(_cam.transform.position, target, k);
             Quaternion look = Quaternion.LookRotation(_camLook - _cam.transform.position);
             _cam.transform.rotation = Quaternion.Slerp(_cam.transform.rotation, look, k);
             _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, _camFov, k);
         }
         if (_busy || SaveSlotsPanel.IsOpen || OptionsPanel.IsOpen) return;
         if (_nameField != null && _nameField.isFocused) return;
+        if (_screen == Screen.Credits) ScrollCredits();
         if (UICancel.Pressed())
         {
             if (_confirm != null && _confirm.interactable) CloseConfirm();
@@ -105,9 +128,19 @@ public class FrostMenu : MonoBehaviour
     private void Shot(Screen s, bool instant = false)
     {
         bool hero = s == Screen.Heroes || s == Screen.Create;
-        _camPos = hero ? new Vector3(0f, 1.55f, -4.7f) : new Vector3(0f, 2.5f, -11.8f);
-        _camLook = hero ? new Vector3(0f, 1.22f, 0f) : new Vector3(0f, 2.3f, 2f);
-        _camFov = hero ? 34f : 38f;
+        if (backdrop == Backdrop.Manor)
+        {
+            _camPos = hero ? HauntedManor.HeroCamPos : HauntedManor.TitleCamPos;
+            _camLook = hero ? HauntedManor.HeroCamLook : HauntedManor.TitleCamLook;
+            _camFov = hero ? HauntedManor.HeroFov : HauntedManor.TitleFov;
+            HauntedManor.FocusHero(hero);
+        }
+        else
+        {
+            _camPos = hero ? new Vector3(0f, 1.55f, -4.7f) : new Vector3(0f, 2.5f, -11.8f);
+            _camLook = hero ? new Vector3(0f, 1.22f, 0f) : new Vector3(0f, 2.3f, 2f);
+            _camFov = hero ? 34f : 38f;
+        }
         if (instant && _cam != null)
         {
             _cam.transform.position = _camPos;
@@ -236,7 +269,17 @@ public class FrostMenu : MonoBehaviour
         k.alignment = TextAlignmentOptions.Center;
         FrostUI.Place(k.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(900f, 30f));
         TextMeshProUGUI t = FrostUI.Title(root, "Titulo", title, 86f);
+        Frozen(t, 0.22f);
         FrostUI.Place(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -66f), new Vector2(1300f, 110f));
+    }
+
+    // Letras heladas: cara de escarcha (blanco arriba, azul hielo abajo) con contorno azul por dentro.
+    private static void Frozen(TextMeshProUGUI t, float outline)
+    {
+        if (t.font != null) t.fontSharedMaterial = FrostUI.IceMaterial(t.font, outline);
+        t.enableVertexGradient = true;
+        Color top = Color.white, bottom = new Color(0.55f, 0.8f, 0.97f);
+        t.colorGradient = new VertexGradient(top, top, bottom, bottom);
     }
 
     // ---------- Título ----------
@@ -244,46 +287,73 @@ public class FrostMenu : MonoBehaviour
     private void BuildTitle()
     {
         RectTransform root = Screenroot(Screen.Title);
-        TextMeshProUGUI title = FrostUI.Title(root, "Frostbound", "FROSTBOUND", 168f, TextAlignmentOptions.Center, 0.24f);
-        title.fontStyle = FontStyles.Italic;
+        // Escarcha: un halo frío detrás del logo.
+        Image rime = FrostUI.Img(root, "Escarcha", FrostUI.Glow, new Color(0.55f, 0.82f, 1f, 0.16f));
+        FrostUI.Place(rime.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(1250f, 230f));
+        TextMeshProUGUI title = FrostUI.Title(root, "Frostbound", "FROSTBOUND", 150f, TextAlignmentOptions.Center, 0.24f);
         FrostUI.Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(1400f, 200f));
-        TextMeshProUGUI sub = FrostUI.Title(root, "Subtitulo", "LAS RUINAS DEL FROSTSPIRE", 30f, TextAlignmentOptions.Center, 0.18f);
-        sub.characterSpacing = 30f;
-        FrostUI.Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(1200f, 44f));
+        Frozen(title, 0.24f);
+        // La meta en pocas palabras: subir al Frostspire (Docs/Campana_Frostbound.md).
+        TextMeshProUGUI sub = FrostUI.Title(root, "Subtitulo", Tagline, 30f, TextAlignmentOptions.Center, 0.18f);
+        Frozen(sub, 0.18f);
+        sub.characterSpacing = 6f;
+        FrostUI.Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(1400f, 44f));
 
-        string[] labels = { "Nueva partida", "Continuar", "Opciones", "Créditos", "Salir" };
-        var buttons = new FrostButton[labels.Length];
+        // Composición de D2R: la escena manda, y abajo al centro el último héroe y un gran "Jugar" de oro;
+        // debajo, una fila de acciones secundarias. Un degradado abismo desde abajo las separa del decorado.
+        Image shade = FrostUI.Img(root, "Sombra inferior", FrostUI.SoftFade, new Color(FrostboundUI.Abyss.r, FrostboundUI.Abyss.g, FrostboundUI.Abyss.b, 0.85f), false);
+        shade.rectTransform.anchorMin = new Vector2(0f, 0f);
+        shade.rectTransform.anchorMax = new Vector2(1f, 0f);
+        shade.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        shade.rectTransform.anchoredPosition = Vector2.zero;
+        shade.rectTransform.sizeDelta = new Vector2(0f, 820f);
+        var heroBlock = FrostUI.Node(root, "UltimoHeroe");
+        FrostUI.Place(heroBlock, new Vector2(0.5f, 0f), new Vector2(0f, 214f), new Vector2(900f, 130f));
+        TextMeshProUGUI k = FrostUI.Kicker(heroBlock, "Etiqueta", "Último héroe", 15f);
+        k.alignment = TextAlignmentOptions.Center;
+        FrostUI.Place(k.rectTransform, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(600f, 22f));
+        _lastHeroName = FrostUI.Title(heroBlock, "Nombre", "", 42f);
+        FrostUI.Place(_lastHeroName.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -22f), new Vector2(800f, 52f));
+        _lastHeroDetail = FrostUI.Text(heroBlock, "Detalle", "", 18f, FrostboundUI.Bone, TextAlignmentOptions.Center);
+        FrostUI.Place(_lastHeroDetail.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -76f), new Vector2(800f, 26f));
+        Image divider = FrostUI.Img(heroBlock, "Separador", FrostFrames.Divider, Color.white);
+        FrostUI.Place(divider.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(520f, 24f));
+        _lastHeroCard = heroBlock.gameObject;
+
+        _play = FrostButton.Create(root, "Jugar", "Jugar", new Vector2(420f, 76f), FrostButton.Style.Primary, 40f);
+        FrostUI.Place((RectTransform)_play.transform, new Vector2(0.5f, 0f), new Vector2(0f, 124f), new Vector2(420f, 76f));
+        _play.button.onClick.AddListener(PlayLast);
+
+        string[] labels = { "Personajes", "Nuevo héroe", "Opciones", "Créditos", "Salir" };
+        var row = new FrostButton[labels.Length];
+        const float w = 230f, gap = 14f;
         for (int i = 0; i < labels.Length; i++)
         {
-            FrostButton b = FrostButton.Create(root, labels[i], labels[i], new Vector2(400f, 62f), FrostButton.Style.Normal, 30f, true);
-            b.iceOnFocus = true;
-            TopLeft((RectTransform)b.transform, 112f, 372f + i * 84f, 400f, 62f);
-            buttons[i] = b;
+            row[i] = FrostButton.Create(root, labels[i], labels[i], new Vector2(w, 52f), FrostButton.Style.Normal, 24f);
+            FrostUI.Place((RectTransform)row[i].transform, new Vector2(0.5f, 0f), new Vector2((i - 2) * (w + gap), 48f), new Vector2(w, 52f));
         }
-        _play = buttons[0]; _continue = buttons[1]; _options = buttons[2]; _credits = buttons[3]; _quit = buttons[4];
-        _play.button.onClick.AddListener(() => { _targetSlot = -1; Go(Screen.Create); });
+        _continue = row[0]; FrostButton newHero = row[1]; _options = row[2]; _credits = row[3]; _quit = row[4];
         _continue.button.onClick.AddListener(() => Go(Screen.Heroes));
+        newHero.button.onClick.AddListener(() => { _targetSlot = -1; Go(Screen.Create); });
         _options.button.onClick.AddListener(() => OptionsPanel.Open(() => Select(_options.button)));
         _credits.button.onClick.AddListener(() => Go(Screen.Credits));
         _quit.button.onClick.AddListener(Quit);
 
-        Image card = FrostUI.Panel(root, "UltimoHeroe", out _, 16f);
-        RectTransform crt = card.rectTransform;
-        crt.anchorMin = crt.anchorMax = crt.pivot = new Vector2(1f, 0f);
-        crt.anchoredPosition = new Vector2(-64f, 52f);
-        crt.sizeDelta = new Vector2(470f, 112f);
-        Image shield = FrostUI.Img(card.transform, "Escudo", FrostUI.Icon("Shield"), FrostUI.Ice);
-        FrostUI.Place(shield.rectTransform, new Vector2(0f, 0.5f), new Vector2(26f, 0f), new Vector2(46f, 46f));
-        TextMeshProUGUI k = FrostUI.Kicker(card.transform, "Etiqueta", "Último héroe", 14f);
-        TopLeft(k.rectTransform, 92f, 16f, 360f, 20f);
-        _lastHeroName = FrostUI.Text(card.transform, "Nombre", "", 28f, Color.white, TextAlignmentOptions.MidlineLeft, FrostUI.Display);
-        TopLeft(_lastHeroName.rectTransform, 92f, 36f, 360f, 36f);
-        _lastHeroDetail = FrostUI.Text(card.transform, "Detalle", "", 17f, FrostUI.Ice, TextAlignmentOptions.MidlineLeft);
-        TopLeft(_lastHeroDetail.rectTransform, 92f, 74f, 370f, 24f);
-        _lastHeroCard = card.gameObject;
-
         TextMeshProUGUI version = FrostUI.Text(root, "Version", Version, 16f, FrostUI.Secondary);
-        FrostUI.Place(version.rectTransform, new Vector2(0f, 0f), new Vector2(112f, 40f), new Vector2(300f, 24f));
+        FrostUI.Place(version.rectTransform, new Vector2(0f, 0f), new Vector2(56f, 18f), new Vector2(300f, 24f));
+    }
+
+    // "Jugar": entra con el último héroe; si aún no hay ninguno, abre la creación.
+    private void PlayLast()
+    {
+        LoadSaves();
+        int last = LastSlot();
+        if (last >= 0) Load(last);
+        else
+        {
+            _targetSlot = -1;
+            Go(Screen.Create);
+        }
     }
 
     private void RefreshTitle()
@@ -384,7 +454,7 @@ public class FrostMenu : MonoBehaviour
         TopLeft(sk.rectTransform, 26f, 26f, 300f, 22f);
         var rows = new (string key, Color color)[]
         {
-            ("Vida", FrostUI.Hex("#F07A6E")), ("Maná", FrostUI.Hex("#7FB0FF")), ("Fuerza", Color.white), ("Agilidad", Color.white),
+            ("Vida", FrostboundUI.StatLife), ("Maná", FrostboundUI.StatMana), ("Fuerza", Color.white), ("Agilidad", Color.white),
             ("", Color.white), ("Oro", FrostUI.Gold), ("Tiempo jugado", Color.white), ("Última hoguera", Color.white)
         };
         float y = 62f;
@@ -399,7 +469,8 @@ public class FrostMenu : MonoBehaviour
             }
             TextMeshProUGUI label = FrostUI.Text(summary.transform, r.key, r.key, 19f, Color.white);
             TopLeft(label.rectTransform, 26f, y, 200f, 30f);
-            TextMeshProUGUI value = FrostUI.Text(summary.transform, r.key + "_Valor", "", 19f, r.color, TextAlignmentOptions.MidlineRight, FrostUI.Display);
+            // Los datos van en Nunito (como las etiquetas): Cinzel es solo para títulos y botones.
+            TextMeshProUGUI value = FrostUI.Text(summary.transform, r.key + "_Valor", "", 19f, r.color, TextAlignmentOptions.MidlineRight, FrostUI.Body);
             TopLeft(value.rectTransform, 140f, y, 178f, 30f);
             _summary[r.key] = value;
             y += 36f;
@@ -498,7 +569,8 @@ public class FrostMenu : MonoBehaviour
         _playHero.button.interactable = sel != null;
         _newHero.button.interactable = FirstFree() >= 0;
         _heroName.text = sel != null ? sel.heroName : "";
-        _heroDetail.text = sel != null ? ClassDisplay(sel) + " · Nivel " + sel.level + " · " + SceneIds.Title(ZoneTravel.ZoneOf(sel)) : "No tienes héroes todavía";
+        _heroDetail.text = sel != null ? ClassDisplay(sel) + " · Nivel " + sel.level + " · " + SceneIds.Title(ZoneTravel.ZoneOf(sel))
+            + " · " + Difficulty.Name((Difficulty.Level)Mathf.Clamp(sel.difficulty, 0, Difficulty.Count - 1)) : "No tienes héroes todavía";
         Summary(sel);
         if (_actor != null) _actor.SetActive(sel != null && _screen != Screen.Create);
         if (sel != null)
@@ -609,12 +681,15 @@ public class FrostMenu : MonoBehaviour
             CharacterClass c = classes[i];
             FrostButton card = FrostButton.Create(root, "Clase_" + c.className, "", new Vector2(432f, 114f), FrostButton.Style.Normal, 1f);
             TopLeft((RectTransform)card.transform, 60f, 222f + i * 134f, 432f, 114f);
-            Image icon = FrostUI.Img(card.border.transform, "Icono", FrostUI.Icon(c.className), FrostUI.Ice);
-            FrostUI.Place(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(26f, 0f), new Vector2(62f, 62f));
+            // Emblema de la clase en un medallón de hierro, centrado en altura con el bloque nombre + rol.
+            Image medal = FrostUI.Img(card.border.transform, "Medallon", FrostEmblems.Medallion, Color.white, false);
+            FrostUI.Place(medal.rectTransform, new Vector2(0f, 0.5f), new Vector2(18f, 0f), new Vector2(84f, 84f));
+            Image icon = FrostUI.Img(medal.transform, "Icono", FrostEmblems.Class(c.className), Color.white, false);
+            FrostUI.Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(72f, 72f));
             TextMeshProUGUI n = FrostUI.Text(card.border.transform, "Nombre", ShortName(c), 32f, Color.white, TextAlignmentOptions.MidlineLeft, FrostUI.Display);
-            TopLeft(n.rectTransform, 106f, 22f, 300f, 40f);
+            TopLeft(n.rectTransform, 118f, 22f, 296f, 40f);
             TextMeshProUGUI r = FrostUI.Text(card.border.transform, "Rol", c.role, 18f, FrostUI.Ice, TextAlignmentOptions.MidlineLeft);
-            TopLeft(r.rectTransform, 106f, 66f, 310f, 26f);
+            TopLeft(r.rectTransform, 118f, 66f, 298f, 26f);
             card.button.onClick.AddListener(() => SelectClass(index));
             _classCards.Add(card);
         }
@@ -625,32 +700,38 @@ public class FrostMenu : MonoBehaviour
         _classKicker = FrostUI.Kicker(p, "Clase", "", 16f);
         TopLeft(_classKicker.rectTransform, 30f, 30f, 400f, 24f);
         _className = FrostUI.Title(p, "Nombre", "", 50f, TextAlignmentOptions.MidlineLeft);
-        TopLeft(_className.rectTransform, 28f, 58f, 410f, 70f);
-        _roleChip = Chip(p, "Rol", 30f, 140f, FrostUI.Ice, FrostUI.Hex("#13284A"), FrostUI.Border);
-        _attrChip = Chip(p, "Atributo", 30f, 140f, FrostUI.Gold, FrostUI.Hex("#3A2E14"), FrostUI.Hex("#B88A2E"));
+        TopLeft(_className.rectTransform, 28f, 58f, 396f, 70f);
+        // Los nombres largos ("Caballero de la Escarcha") se achican en vez de salirse del panel.
+        _className.enableAutoSizing = true;
+        _className.fontSizeMin = 20f;
+        _className.fontSizeMax = 50f;
+        _roleChip = Chip(p, "Rol", 30f, 140f, FrostUI.Ice, FrostboundUI.ChipIceBg, FrostUI.Border);
+        _attrChip = Chip(p, "Atributo", 30f, 140f, FrostUI.Gold, FrostboundUI.ChipGoldBg, FrostboundUI.ChipGoldBorder);
         _description = FrostUI.Text(p, "Descripcion", "", 18f, Color.white, TextAlignmentOptions.TopLeft, FrostUI.BodyLight);
         _description.textWrappingMode = TextWrappingModes.Normal;
         TopLeft(_description.rectTransform, 30f, 194f, 396f, 110f);
         TextMeshProUGUI gk = FrostUI.Kicker(p, "Equipo", "Equipo inicial", 15f);
         TopLeft(gk.rectTransform, 30f, 310f, 400f, 22f);
+        // Una pieza por línea: en dos columnas los nombres largos se pisaban.
         for (int i = 0; i < 4; i++)
         {
-            float gx = 30f + (i % 2) * 204f, gy = 342f + (i / 2) * 30f;
+            float gy = 342f + i * 28f;
             Image dot = FrostUI.Img(p, "Rombo", FrostUI.Diamond(true), Color.white);
-            TopLeft(dot.rectTransform, gx, gy + 8f, 12f, 12f);
+            TopLeft(dot.rectTransform, 30f, gy + 8f, 12f, 12f);
             TextMeshProUGUI g = FrostUI.Text(p, "Pieza", "", 17f, Color.white);
-            TopLeft(g.rectTransform, gx + 20f, gy, 184f, 28f);
+            TopLeft(g.rectTransform, 50f, gy, 376f, 28f);
+            g.overflowMode = TextOverflowModes.Ellipsis;
             _gear.Add(g);
         }
         _colorLabel = FrostUI.Kicker(p, "Color", "", 15f);
-        TopLeft(_colorLabel.rectTransform, 30f, 420f, 400f, 22f);
+        TopLeft(_colorLabel.rectTransform, 30f, 470f, 400f, 22f);
         PlumagePalette palette = Db != null ? Db.palette : null;
         int colors = palette != null ? Mathf.Min(8, palette.entries.Count) : 0;
         for (int i = 0; i < colors; i++)
         {
             int index = i;
             RectTransform sw = FrostUI.Node(p, "Color_" + i);
-            TopLeft(sw, 30f + i * 50f, 452f, 44f, 44f);
+            TopLeft(sw, 30f + i * 50f, 502f, 44f, 44f);
             Image halo = FrostUI.Img(sw, "Halo", FrostUI.Glow, FrostUI.Ice);
             FrostUI.Stretch(halo.rectTransform, -10f);
             Image ring = FrostUI.Img(sw, "Aro", FrostUI.Skin != null ? FrostUI.Skin.circle : null, FrostUI.BorderDim);
@@ -664,11 +745,23 @@ public class FrostMenu : MonoBehaviour
             _swatches.Add((b, ring, halo));
         }
         TextMeshProUGUI nk = FrostUI.Kicker(p, "NombreEtiqueta", "Nombre del héroe", 15f);
-        TopLeft(nk.rectTransform, 30f, 520f, 400f, 22f);
-        _nameField = InputField(p, 30f, 552f, 392f, 58f);
+        TopLeft(nk.rectTransform, 30f, 570f, 400f, 22f);
+        _nameField = InputField(p, 30f, 602f, 392f, 58f);
 
-        FrostButton start = FrostButton.Create(p, "Comenzar", "Comenzar aventura", new Vector2(392f, 70f), FrostButton.Style.Primary, 30f);
-        TopLeft((RectTransform)start.transform, 30f, 748f, 392f, 70f);
+        // Dificultad: tres botones; el elegido se resalta y su nombre va en la etiqueta.
+        _difficultyKicker = FrostUI.Kicker(p, "DificultadEtiqueta", "Dificultad", 15f);
+        TopLeft(_difficultyKicker.rectTransform, 30f, 672f, 400f, 22f);
+        for (int i = 0; i < Difficulty.Count; i++)
+        {
+            int level = i;
+            FrostButton b = FrostButton.Create(p, "Dificultad_" + i, Difficulty.Name((Difficulty.Level)i), new Vector2(124f, 42f), FrostButton.Style.Normal, 19f);
+            TopLeft((RectTransform)b.transform, 30f + i * 134f, 700f, 124f, 42f);
+            b.button.onClick.AddListener(() => SelectDifficulty(level));
+            _difficultyButtons.Add(b);
+        }
+
+        FrostButton start = FrostButton.Create(p, "Comenzar", "Comenzar aventura", new Vector2(392f, 54f), FrostButton.Style.Primary, 28f);
+        TopLeft((RectTransform)start.transform, 30f, 786f, 392f, 54f);
         start.button.onClick.AddListener(StartAdventure);
 
         RectTransform hint = FrostUI.Node(root, "Pista");
@@ -727,7 +820,23 @@ public class FrostMenu : MonoBehaviour
         if (_targetSlot < 0) _targetSlot = FirstFree();
         if (_nameField != null) _nameField.text = "";
         SelectClass(_classIndex);
+        SelectDifficulty(_difficulty);
     }
+
+    private void SelectDifficulty(int level)
+    {
+        _difficulty = Mathf.Clamp(level, 0, Difficulty.Count - 1);
+        for (int i = 0; i < _difficultyButtons.Count; i++)
+        {
+            _difficultyButtons[i].selectedLook = i == _difficulty;
+            _difficultyButtons[i].Refresh();
+        }
+        Difficulty.Tuning t = Difficulty.Of((Difficulty.Level)_difficulty);
+        if (_difficultyKicker != null) _difficultyKicker.text = ("Dificultad · " + t.name).ToUpperInvariant();
+    }
+
+    public int SelectedDifficulty => _difficulty;
+    public void PickDifficulty(int level) => SelectDifficulty(level);
 
     private void SelectClass(int index)
     {
@@ -744,9 +853,16 @@ public class FrostMenu : MonoBehaviour
         _className.text = c.displayName;
         _roleChip.text = c.role;
         _attrChip.text = "Atributo principal: " + c.primaryAttribute;
-        Canvas.ForceUpdateCanvases();
-        FitChip(_roleChip, 30f);
-        FitChip(_attrChip, 30f + ((RectTransform)_roleChip.transform.parent).sizeDelta.x + 10f);
+        // Los dos chips comparten fila: si no caben en el panel, se reduce su letra hasta que entren.
+        for (float size = 16f; size >= 12f; size -= 1f)
+        {
+            _roleChip.fontSize = _attrChip.fontSize = size;
+            Canvas.ForceUpdateCanvases();
+            FitChip(_roleChip, 30f);
+            FitChip(_attrChip, 30f + ((RectTransform)_roleChip.transform.parent).sizeDelta.x + 10f);
+            RectTransform attr = (RectTransform)_attrChip.transform.parent;
+            if (attr.anchoredPosition.x + attr.sizeDelta.x <= 422f) break;
+        }
         _description.text = c.description;
         for (int i = 0; i < _gear.Count; i++)
         {
@@ -785,14 +901,14 @@ public class FrostMenu : MonoBehaviour
         int slot = _targetSlot >= 0 && !SaveSystem.Exists(_targetSlot) ? _targetSlot : FirstFree();
         if (slot >= 0)
         {
-            GameSession.Ensure().StartNewGame(slot, cls, plumage, heroName);
+            GameSession.Ensure().StartNewGame(slot, cls, plumage, heroName, _difficulty);
             StartCoroutine(FadeAndLoad());
             return;
         }
         // Las cuatro ranuras están llenas: hay que elegir cuál sobrescribir.
         SaveSlotsPanel.Open(SaveSlotsPanel.Mode.New, s =>
         {
-            GameSession.Ensure().StartNewGame(s, cls, plumage, heroName);
+            GameSession.Ensure().StartNewGame(s, cls, plumage, heroName, _difficulty);
             StartCoroutine(FadeAndLoad());
         }, null);
     }
@@ -829,15 +945,12 @@ public class FrostMenu : MonoBehaviour
         Header(root, s == Screen.Options ? "Ajustes" : "Frostbound", s == Screen.Options ? "Opciones" : "Créditos");
         BackButton(root, Screen.Title);
         Image box = FrostUI.Panel(root, "Caja", out _, 18f);
-        FrostUI.Place(box.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(760f, 420f));
+        bool credits = s == Screen.Credits;
+        FrostUI.Place(box.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, credits ? -66f : -40f), credits ? new Vector2(820f, 660f) : new Vector2(760f, 420f));
         box.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        if (s == Screen.Credits)
+        if (credits)
         {
-            TextMeshProUGUI t = FrostUI.Text(box.transform, "Texto",
-                "<size=30><font=\"" + (FrostUI.Display != null ? FrostUI.Display.name : "") + "\">Frostbound</font></size>\n\nDiseño y desarrollo: Sebastián\nProgramación asistida: Claude\n\nTipografías: Lilita One, Nunito y Cinzel (SIL Open Font License)\nHecho con Unity",
-                20f, Color.white, TextAlignmentOptions.Center);
-            t.textWrappingMode = TextWrappingModes.Normal;
-            FrostUI.Stretch(t.rectTransform, 40f);
+            BuildCredits(box.transform);
             return;
         }
         TextMeshProUGUI vl = FrostUI.Text(box.transform, "Volumen", "Volumen general", 22f, Color.white);
@@ -855,6 +968,108 @@ public class FrostMenu : MonoBehaviour
             GameSettings.Save();
             full.label.text = GameSettings.Fullscreen ? "Sí" : "No";
         });
+    }
+
+    // Créditos por secciones (GameCredits): título de sección en Cinzel de oro, un filete, los nombres en Nunito y,
+    // si la hay, la licencia en pequeño. Si no caben, la caja se desplaza con la rueda, las flechas o el stick.
+    private ScrollRect _creditsScroll;
+
+    private void BuildCredits(Transform box)
+    {
+        RectTransform viewport = FrostUI.Stretch(FrostUI.Node(box, "Vista"), 30f);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        RectTransform content = FrostUI.Node(viewport, "Contenido");
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = Vector2.zero;
+        var layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(24, 24, 22, 30);
+        layout.spacing = 0f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        for (int i = 0; i < GameCredits.Sections.Length; i++)
+        {
+            GameCredits.Section sec = GameCredits.Sections[i];
+            CreditsHeading(content, sec.title, i > 0);
+            foreach (string n in sec.names) CreditsLine(content, n, 25f, Color.white, FrostUI.Body, 34f);
+            if (!string.IsNullOrEmpty(sec.note)) CreditsLine(content, sec.note, 16f, FrostUI.Secondary, FrostUI.BodyLight, 24f);
+        }
+        CreditsHeading(content, GameCredits.Thanks, true);
+        CreditsLine(content, GameCredits.ThanksLine, 19f, FrostboundUI.Bone, FrostUI.BodyLight, 28f);
+
+        _creditsScroll = viewport.gameObject.AddComponent<ScrollRect>();
+        _creditsScroll.viewport = viewport;
+        _creditsScroll.content = content;
+        _creditsScroll.horizontal = false;
+        _creditsScroll.movementType = ScrollRect.MovementType.Clamped;
+        _creditsScroll.scrollSensitivity = 36f;
+        // La vista recibe la rueda aunque esté sobre el texto.
+        Image hit = viewport.gameObject.AddComponent<Image>();
+        hit.color = Color.clear;
+        // Un velo abajo avisa de que hay más; se va al llegar al final.
+        Color veil = FrostUI.PanelSolid;
+        veil.a = 1f;
+        Image fade = FrostUI.Img(viewport, "Velo", FrostUI.SoftFade, veil, false);
+        fade.rectTransform.anchorMin = Vector2.zero;
+        fade.rectTransform.anchorMax = new Vector2(1f, 0f);
+        fade.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        fade.rectTransform.anchoredPosition = Vector2.zero;
+        fade.rectTransform.sizeDelta = new Vector2(0f, 230f);
+        _creditsScroll.onValueChanged.AddListener(v => fade.enabled = _creditsScroll.verticalNormalizedPosition > 0.01f);
+    }
+
+    private static void CreditsHeading(Transform content, string title, bool gapAbove)
+    {
+        if (gapAbove) Spacer(content, 30f);
+        TextMeshProUGUI t = FrostUI.Text(content, "Seccion", title.ToUpperInvariant(), 17f, FrostboundUI.OldGoldLight, TextAlignmentOptions.Center, FrostUI.Heading, 22f);
+        t.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        RectTransform rule = FrostUI.Node(content, "Filete");
+        rule.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+        Image d = FrostUI.Img(rule, "Linea", FrostFrames.Divider, Color.white);
+        FrostUI.Place(d.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(240f, 16f));
+    }
+
+    private static void CreditsLine(Transform content, string text, float size, Color color, TMP_FontAsset font, float height)
+    {
+        TextMeshProUGUI t = FrostUI.Text(content, "Linea", text, size, color, TextAlignmentOptions.Center, font);
+        t.textWrappingMode = TextWrappingModes.Normal;
+        t.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
+    }
+
+    private static void Spacer(Transform content, float h) => FrostUI.Node(content, "Hueco").gameObject.AddComponent<LayoutElement>().preferredHeight = h;
+
+    private void ScrollCredits()
+    {
+        if (_creditsScroll == null) return;
+        float v = 0f;
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        if (kb != null)
+        {
+            if (kb.upArrowKey.isPressed || kb.wKey.isPressed) v += 1f;
+            if (kb.downArrowKey.isPressed || kb.sKey.isPressed) v -= 1f;
+        }
+        var pad = UnityEngine.InputSystem.Gamepad.current;
+        if (pad != null) v += pad.leftStick.ReadValue().y + pad.rightStick.ReadValue().y;
+        if (Mathf.Abs(v) < 0.2f) return;
+        float range = _creditsScroll.content.rect.height - _creditsScroll.viewport.rect.height;
+        if (range <= 1f) return;
+        _creditsScroll.verticalNormalizedPosition = Mathf.Clamp01(_creditsScroll.verticalNormalizedPosition + Mathf.Clamp(v, -1f, 1f) * 520f * Time.unscaledDeltaTime / range);
+    }
+
+    // Para las comprobaciones: desplaza los créditos (0 arriba, 1 abajo) y dice cuánto ocupan.
+    public string CreditsScrollTo(float t)
+    {
+        Go(Screen.Credits);
+        if (_creditsScroll == null) return "sin créditos";
+        Canvas.ForceUpdateCanvases();
+        _creditsScroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(t);
+        return "contenido " + _creditsScroll.content.rect.height.ToString("F0") + " vista " + _creditsScroll.viewport.rect.height.ToString("F0");
     }
 
     private Slider MakeSlider(Transform parent, float x, float y, float w)
@@ -878,12 +1093,12 @@ public class FrostMenu : MonoBehaviour
         return s;
     }
 
-    // ---------- Héroe en el pedestal ----------
+    // ---------- Héroe en el decorado ----------
 
     private void BuildActor()
     {
-        _pivot = new GameObject("Héroe en el pedestal").transform;
-        _pivot.position = MenuRuins.PedestalTop;
+        _pivot = new GameObject("Héroe en el menú").transform;
+        _pivot.position = backdrop == Backdrop.Manor ? HauntedManor.HeroSpot : MenuRuins.PedestalTop;
         _pivot.rotation = Quaternion.Euler(0f, 180f, 0f);
         GameObject prefab = Db != null ? Db.penguinPrefab : null;
         _actor = prefab != null ? Instantiate(prefab, _pivot, false) : new GameObject("Sin pingüino");

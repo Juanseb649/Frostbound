@@ -18,6 +18,7 @@ public class TradeWindow : MonoBehaviour
     private bool _open;
     private UISkin _skin;
     private CanvasGroup _group;
+    private RectTransform _window;
     private RectTransform _leftGrid, _rightGrid;
     private TextMeshProUGUI _title, _leftLabel, _leftCoins, _rightCoins, _infoName, _infoText;
     private RectTransform _coinButtons;
@@ -89,7 +90,11 @@ public class TradeWindow : MonoBehaviour
         _player.Inventory.Changed += MarkDirty;
         _wallet.Changed += OnCoins;
         Stash.Changed += MarkDirty;
-        if (!_open) GameplayInput.Block();
+        if (!_open)
+        {
+            GameplayInput.Block();
+            AudioManager.PlayUI(AudioId.UI_OpenMenu, 0.7f);
+        }
         _open = true;
         _group.alpha = 1f;
         _group.blocksRaycasts = true;
@@ -116,6 +121,7 @@ public class TradeWindow : MonoBehaviour
     private void Close()
     {
         if (!_open) return;
+        UIDissolve.Ghost(_window);
         _open = false;
         _group.alpha = 0f;
         _group.blocksRaycasts = false;
@@ -226,7 +232,13 @@ public class TradeWindow : MonoBehaviour
         SetInfo(NameOf(v), text, color);
     }
 
-    private void Toast(string text, Color color) => Notifications.Show(text, color);
+    // Aviso de la tienda con su sonido: comprar, vender o guardar suenan a metal; un fallo (sin dinero, sin sitio), a error.
+    private void Toast(string text, Color color)
+    {
+        Notifications.Show(text, color);
+        if (color == FrostboundUI.Negative) AudioManager.PlayUI(AudioId.UI_Error, 0.7f);
+        else if (color == FrostboundUI.Positive) AudioManager.PlayUI(AudioId.UI_Equip, 0.75f);
+    }
 
     private void Coins(bool deposit, int amount)
     {
@@ -323,14 +335,14 @@ public class TradeWindow : MonoBehaviour
 
         float panelW = Cols * Cell + (Cols - 1) * Gap + 40f, panelH = 6 * Cell + 5 * Gap + 110f;
         float w = panelW * 2f + 60f, h = panelH + 170f;
-        RectTransform win = UIFactory.Node(transform, "Ventana");
+        RectTransform win = _window = UIFactory.Node(transform, "Ventana");
         UIFactory.Anchored(win, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(w, h));
         win.pivot = new Vector2(0.5f, 0.5f);
         Image frame = UIFactory.Frame(win, "Marco", Round(20), FrostboundUI.Bg, FrostboundUI.Border, out _);
         UIFactory.Stretch(frame.rectTransform);
         frame.raycastTarget = true;
 
-        _title = UIFactory.Text(win, "Titulo", "", Font(0), 28f, FrostboundUI.Title, TextAlignmentOptions.TopLeft, 3f);
+        _title = UIFactory.Text(win, "Titulo", "", Font(0), 28f, FrostboundUI.OldGoldLight, TextAlignmentOptions.TopLeft, 3f);
         UIFactory.TopLeft(_title.rectTransform, 28f, 18f, 700f, 40f);
         Button close = UIFactory.FramedButton(win, "Cerrar", _skin, Round(10), "Cerrar  ·  Esc", 14f, FrostboundUI.Surface, FrostboundUI.Border, FrostboundUI.Text, out _, out _);
         UIFactory.TopLeft((RectTransform)close.transform, w - 28f - 160f, 18f, 160f, 40f);

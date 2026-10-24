@@ -335,8 +335,17 @@ public class AudioManager : MonoBehaviour
         Instance.DoPlayUI(id, volumeScale, pitchVariance);
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // Últimos sonidos de UI (para las comprobaciones del bridge: exec SmokeTest.UISounds).
+    public static readonly System.Collections.Generic.List<AudioId> RecentUI = new System.Collections.Generic.List<AudioId>();
+#endif
+
     private void DoPlayUI(AudioId id, float volumeScale, float pitchVariance)
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        RecentUI.Add(id);
+        if (RecentUI.Count > 16) RecentUI.RemoveAt(0);
+#endif
         AudioClip clip = ResolveClip(id);
         if (clip == null) return;
 

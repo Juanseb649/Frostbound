@@ -15,6 +15,8 @@ public class NPCInteractable : MonoBehaviour
     [Tooltip("Altura de la cabeza para el globo de diálogo.")]
     public float headHeight = 1.35f;
     [TextArea(2, 4)] public string[] lines = new string[0];
+    [Tooltip("Texto del botón de Hablar (vacío = «Hablar»). Las pistas dicen «Examinar», las raíces «Arrancar».")]
+    public string talkLabel = "";
 
     // Otros sistemas (tienda, reparación, diálogos) se suscriben aquí.
     public static event Action<NPCInteractable, NPCOption> OptionChosen;
@@ -119,6 +121,7 @@ public class NPCInteractable : MonoBehaviour
     // Texto del botón; "Reparar" muestra lo que cuesta.
     public string LabelFor(NPCOption o)
     {
+        if (o == NPCOption.Hablar && !string.IsNullOrEmpty(talkLabel)) return talkLabel;
         if (o != NPCOption.Reparar) return Label(o);
         Equipment eq = Customer();
         int cost = eq != null ? eq.RepairCostAll() : 0;

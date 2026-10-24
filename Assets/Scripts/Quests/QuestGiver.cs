@@ -1,76 +1,43 @@
 using System.Collections;
 using UnityEngine;
 
-// Steve cuenta lo de la ciudadela caída y activa la misión. Según la etapa, da pistas o agradece.
+// Un NPC que da misiones y las comenta. Todo sale de los QuestDefinition: si hay una misión suya por dar, la cuenta
+// línea a línea y la empieza; si no, dice las líneas de la etapa en la que va la misión que comenta.
 [RequireComponent(typeof(NPCInteractable))]
 public class QuestGiver : MonoBehaviour
 {
-    public static readonly string[] Intro =
-    {
-        "Eh, tú. Sí, tú, el de la espada. Desde mi claro se ve el castillo... y no me gusta lo que veo.",
-        "Al pie de sus murallas había un poblado: la ciudadela. Gente buena, guardias valientes.",
-        "Hace unas lunas bajó de la montaña una tropa de pingüinos de élite. Malditos, con los ojos como cristales.",
-        "Los mandaba un ninja. Dicen que corrompió a los guardias y que ellos mismos atacaron su poblado.",
-        "Su capitán, Gorvald, sigue rondando la plaza. Si alguien puede romper ese sello del castillo... eres tú."
-    };
-
-    private static readonly string[] Waiting =
-    {
-        "La ciudadela está al pie del castillo. Ten cuidado con la plaza: ahí se juntan.",
-        "Si ves a Gorvald, no dejes que te alcance su hacha. Dicen que ahora gotea veneno."
-    };
-
-    private static readonly string[] AfterBarbarian =
-    {
-        "¿Gorvald habló antes de caer? Entonces es verdad: el ninja está dentro del castillo.",
-        "El sello se rompió. Lo que haya ahí dentro ya sabe que vas."
-    };
-
-    private static readonly string[] Done =
-    {
-        "¿Llegaste al paso helado? Más allá está el Bosque Corrupto... nadie ha vuelto de ahí.",
-        "Descansa junto al fuego, héroe. La montaña seguirá latiendo mañana."
-    };
-
-    public static readonly string[] Mountain =
-    {
-        "Lo hiciste. La ciudadela ya respira... pero esto no ha terminado.",
-        "Esa tropa de élite no salió de la nada: bajó de la montaña. Del Frostspire.",
-        "Allí arriba algo late bajo el hielo. Lo siento en el suelo cada noche.",
-        "Los que suben y vuelven ya no son pingüinos: son cascarones de cristal.",
-        "Toma el sendero del norte, al final del camino. Lleva a Las Faldas.",
-        "Enciende las hogueras que encuentres. Y héroe... no mires mucho rato al cristal."
-    };
-
-    private static readonly string[] MountainWaiting =
-    {
-        "El sendero de la montaña empieza al final del camino del norte, pasado el bosque.",
-        "En Las Faldas la ventisca esconde a los corruptos. Avanza de hoguera en hoguera."
-    };
-
-    private static readonly string[] MountainClimbing =
-    {
-        "¿Ya pisaste Las Faldas? Sigue subiendo: el paso helado está en lo alto del sendero.",
-        "Si la montaña late más fuerte, es que vas por buen camino."
-    };
+    [Tooltip("Id con el que las misiones nombran a este NPC (giver / speaker).")]
+    public string giverId = "steve";
+    public string idleRole = "Explorador";
 
     private NPCInteractable _npc;
     private NameTag _tag;
     private int _line;
     private bool _telling;
+    private Coroutine _tell;
+    private QuestDefinition _told;
+    private float _tellStart;
+
+    // El que está contando ahora una misión (solo hay una charla de misión a la vez).
+    public static QuestGiver Telling { get; private set; }
+    public NPCInteractable Npc => _npc;
 
     void Awake()
     {
         _npc = GetComponent<NPCInteractable>();
         _tag = GetComponent<NameTag>();
         _npc.talkOverride = Talk;
-        _npc.role = "Explorador";
+        _npc.role = idleRole;
         VillagerNPC v = GetComponent<VillagerNPC>();
-        if (v != null) v.role = "Explorador";
+        if (v != null) v.role = idleRole;
     }
 
     void OnEnable() => QuestLog.Changed += OnQuest;
-    void OnDisable() => QuestLog.Changed -= OnQuest;
+    void OnDisable()
+    {
+        QuestLog.Changed -= OnQuest;
+        if (Telling == this) Telling = null;
+    }
     void Start() => RefreshTag();
 
     private void OnQuest(string id, int stage) => RefreshTag();
@@ -78,34 +45,48 @@ public class QuestGiver : MonoBehaviour
     private void RefreshTag()
     {
         if (_tag == null) return;
-        _tag.subtitle = HasNews ? "¡Tiene algo que contarte!" : "Explorador";
+        _tag.SetName(_tag.displayName, HasNews ? "¡Tiene algo que contarte!" : idleRole);
     }
 
-    public bool HasNews => QuestLog.Stage(QuestLog.Citadel) == QuestLog.CitadelNone
-        || (QuestLog.Stage(QuestLog.Citadel) >= QuestLog.CitadelDone && QuestLog.Stage(QuestLog.Ascent) == QuestLog.AscentNone);
+    public bool HasNews => Offer() != null;
+
+    // La primera misión suya que ya se puede dar.
+    private QuestDefinition Offer()
+    {
+        foreach (QuestDefinition q in QuestLog.All)
+            if (q.giver == giverId && QuestLog.Stage(q.id) == 0 && q.Unlocked) return q;
+        return null;
+    }
+
+    // Las líneas que tocan ahora: las de la misión en curso que comenta; si no hay, las de la última que avanzó.
+    private string[] CurrentLines()
+    {
+        string[] last = null;
+        foreach (QuestDefinition q in QuestLog.All)
+        {
+            if (q.Speaker != giverId) continue;
+            int stage = QuestLog.Stage(q.id);
+            QuestStage st = q.Stage(stage);
+            if (st == null || st.giverLines == null || st.giverLines.Length == 0) continue;
+            if (QuestLog.Active(q.id)) return st.giverLines;
+            last = st.giverLines;
+        }
+        return last;
+    }
 
     private bool Talk()
     {
-        if (_telling) return true;
-        int stage = QuestLog.Stage(QuestLog.Citadel);
-        if (stage == QuestLog.CitadelNone)
+        if (_telling) { SkipTell(); return true; }
+        // Las misiones que esperaban que hablaras con él avanzan antes de que conteste.
+        QuestLog.Report(QuestObjective.Hablar, giverId);
+        QuestDefinition offer = Offer();
+        if (offer != null)
         {
-            StartCoroutine(Tell());
+            _tell = StartCoroutine(Tell(offer));
             return true;
         }
-        if (stage >= QuestLog.CitadelDone)
-        {
-            int ascent = QuestLog.Stage(QuestLog.Ascent);
-            if (ascent == QuestLog.AscentNone)
-            {
-                StartCoroutine(TellMountain());
-                return true;
-            }
-            string[] climb = ascent == QuestLog.AscentTold ? MountainWaiting : ascent == QuestLog.AscentFoothills ? MountainClimbing : Done;
-            Say(climb[_line++ % climb.Length]);
-            return true;
-        }
-        string[] pool = stage == QuestLog.CitadelTalked ? Waiting : AfterBarbarian;
+        string[] pool = CurrentLines();
+        if (pool == null) return false;
         Say(pool[_line++ % pool.Length]);
         return true;
     }
@@ -118,39 +99,66 @@ public class QuestGiver : MonoBehaviour
         return seconds;
     }
 
-    private IEnumerator Tell()
+    private IEnumerator Tell(QuestDefinition quest)
     {
         _telling = true;
-        foreach (string line in Intro)
+        _told = quest;
+        _tellStart = Time.time;
+        Telling = this;
+        foreach (string line in quest.offerLines)
         {
             float s = Say(line);
             yield return new WaitForSeconds(s + 0.15f);
         }
-        _telling = false;
-        QuestLog.SetStage(QuestLog.Citadel, QuestLog.CitadelTalked);
-        BonfireBanner.Show("NUEVA MISIÓN", BonfireBanner.Victory);
-        Notifications.Show("Nueva misión: " + QuestLog.Title(QuestLog.Citadel), FrostboundUI.Gold);
+        FinishTell();
     }
 
-    private IEnumerator TellMountain()
+    // Igual al final de la charla, se llegue leyendo todo o saltándola: empieza la misión una sola vez.
+    private void FinishTell()
     {
-        _telling = true;
-        foreach (string line in Mountain)
-        {
-            float s = Say(line);
-            yield return new WaitForSeconds(s + 0.15f);
-        }
+        QuestDefinition quest = _told;
         _telling = false;
-        QuestLog.SetStage(QuestLog.Ascent, QuestLog.AscentTold);
-        BonfireBanner.Show("NUEVA MISIÓN", BonfireBanner.Victory);
-        Notifications.Show("Nueva misión: " + QuestLog.Title(QuestLog.Ascent), FrostboundUI.Gold);
+        _told = null;
+        _tell = null;
+        _line = 0;
+        if (Telling == this) Telling = null;
+        if (quest != null) QuestLog.Begin(quest.id);
     }
 
-    // Para las comprobaciones: activa la misión sin esperar la charla.
+    // Corta la charla de misión: quita el globo y da la misión como si hubiera terminado.
+    public void SkipTell()
+    {
+        if (!_telling) return;
+        if (_tell != null) StopCoroutine(_tell);
+        _npc.TalkUntil = 0f;
+        if (WorldHUD.Instance != null) WorldHUD.Instance.HideSay(transform);
+        FinishTell();
+    }
+
+    // Para el héroe: salta la charla en curso si está lo bastante cerca para oírla.
+    public static bool TrySkip(Vector3 listener)
+    {
+        QuestGiver g = Telling;
+        // La misma pulsación que eligió «Hablar» no puede saltar la charla que acaba de abrir.
+        if (g == null || !g._telling || Time.time - g._tellStart < 0.3f) return false;
+        Vector3 d = g.transform.position - listener;
+        d.y = 0f;
+        if (d.sqrMagnitude > SkipRange * SkipRange) return false;
+        g.SkipTell();
+        return true;
+    }
+
+    public const float SkipRange = 12f;
+
+    // Para las comprobaciones: da la misión que toque sin esperar la charla.
     public void SkipIntro()
     {
         StopAllCoroutines();
         _telling = false;
-        QuestLog.SetStage(QuestLog.Citadel, QuestLog.CitadelTalked);
+        _told = null;
+        _tell = null;
+        if (Telling == this) Telling = null;
+        QuestDefinition offer = Offer();
+        if (offer != null) QuestLog.SetStage(offer.id, 1);
     }
 }
