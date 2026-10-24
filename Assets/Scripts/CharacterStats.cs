@@ -74,10 +74,12 @@ public class CharacterStats : MonoBehaviour
     [Tooltip("Puntos de atributo que da cada nivel.")]
     [Min(0)] public int pointsPerLevel = 5;
     [Min(1)] public int maxLevel = 50;
+    // Campos con nombre nuevo a propósito: las escenas guardaban la curva vieja (100 × nivel^1,3), demasiado rápida,
+    // y así no la pisan. Nivel 2: 150 XP, nivel 5: ~2.700, nivel 10: ~9.500.
     [Tooltip("XP para pasar del nivel 1 al 2.")]
-    [Min(1)] public int levelXpBase = 100;
-    [Tooltip("Curva: XP necesaria = levelXpBase × nivel ^ levelXpGrowth.")]
-    [Range(1f, 3f)] public float levelXpGrowth = 1.3f;
+    [Min(1)] public int xpCurveBase = 150;
+    [Tooltip("Curva: XP necesaria = xpCurveBase × nivel ^ xpCurveGrowth.")]
+    [Range(1f, 3f)] public float xpCurveGrowth = 1.8f;
 
     [Header("Atributos")]
     [Tooltip("Valores de la clase.")]
@@ -211,7 +213,7 @@ public class CharacterStats : MonoBehaviour
 
     public bool IsMaxLevel => level >= maxLevel;
 
-    public int ExperienceToNextLevel() => IsMaxLevel ? 0 : Mathf.RoundToInt(levelXpBase * Mathf.Pow(level, levelXpGrowth));
+    public int ExperienceToNextLevel() => IsMaxLevel ? 0 : Mathf.RoundToInt(xpCurveBase * Mathf.Pow(level, xpCurveGrowth));
 
     public float LevelProgress => IsMaxLevel ? 1f : experience / (float)Mathf.Max(1, ExperienceToNextLevel());
 

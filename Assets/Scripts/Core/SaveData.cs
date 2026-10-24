@@ -33,6 +33,9 @@ public class SaveData
     public List<string> litBonfires = new List<string>();
     public string lastBonfire = "";
     public string zone = "";
+    // Portal de regreso abierto (pergamino, estilo Diablo II): zona del exterior y dónde está. Vacío = cerrado.
+    public string portalZone = "";
+    public float portalX, portalY, portalZ, portalYaw;
 
     public List<SavedQuest> quests = new List<SavedQuest>();
     public int coins;

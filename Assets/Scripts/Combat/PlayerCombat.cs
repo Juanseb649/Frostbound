@@ -120,6 +120,21 @@ public class PlayerCombat : MonoBehaviour
         if (lootSpriteMaterial != null) WorldItem.DefaultSpriteMaterial = lootSpriteMaterial;
     }
 
+    // Tras reaparecer: ningún golpe pendiente ni combo a medias, y el tiempo a velocidad normal
+    // (una pausa de impacto cortada por la muerte podía dejarlo ralentizado).
+    public void ResetState()
+    {
+        _pending = false;
+        _readyAt = 0f;
+        _queued = false;
+        _comboStep = 0;
+        _heavyStep = 0;
+        _poleStep = 0;
+        _trailOn = _trailOff = 0f;
+        StopAllCoroutines();
+        Time.timeScale = 1f;
+    }
+
     void OnEnable()
     {
         if (_eq != null) _eq.WeaponBroke += OnWeaponBroke;
@@ -347,34 +362,42 @@ public class PlayerCombat : MonoBehaviour
         return true;
     }
 
-    // Tres golpes pesados: 1) tajo vertical contra el suelo, 2) barrido horizontal con todo el cuerpo, 3) salto y aplastamiento.
+    // Tres golpes a dos manos: 1) tajo derecha→izquierda y 2) tajo de vuelta, como la espada pero con más peso,
+    // y 3) el remate: salto y aplastamiento. Antes los dos primeros eran golpes pesados con doble anticipación,
+    // que no se veían naturales; ahora solo el remate carga por encima de la cabeza.
     private bool StartHeavyStep(float baseDuration)
     {
         int step = Time.time <= _comboDeadline && _heavyStep > 0 && _heavyStep < 3 ? _heavyStep + 1 : 1;
         _heavyStep = step;
         _comboStep = 0;
         int i = step - 1;
-        float[] minimum = { 0.95f, 1.0f, 1.25f };
-        float duration = Mathf.Max(minimum[i], baseDuration * heavyTiming[i]);
-        float[] hit = { 0.65f, 0.7f, 0.68f };
-        float[] stepMeters = { 0.4f, 0.45f, 1.3f };
-        float[] stepDelay = { 0.5f, 0.55f, 0.22f };
+        bool finisher = step == 3;
+        // Los tajos usan el ritmo de la espada, un 20 % más lento por el peso del arma.
+        float duration = finisher ? Mathf.Max(1.25f, baseDuration * heavyTiming[2])
+            : Mathf.Max(i == 0 ? 0.55f : 0.6f, baseDuration * comboTiming[i] * 1.2f);
+        float[] hit = { 0.5f, 0.47f, 0.68f };
+        float[] stepMeters = { 0.45f, 0.3f, 1.3f };
 
         _attackMultiplier = heavyDamage[i];
         _spinAttack = false;
         _pending = true;
         _hitAt = Time.time + duration * hit[i];
-        _readyAt = Time.time + duration * (step == 3 ? 1f : 0.92f);
-        _comboDeadline = step == 3 ? 0f : Time.time + duration + heavyComboWindow;
-        _trailOn = Time.time + duration * (step == 2 ? 0.56f : 0.5f);
-        _trailOff = Time.time + duration * (step == 2 ? 0.74f : 0.7f);
+        _readyAt = Time.time + duration * (finisher ? 1f : 0.9f);
+        _comboDeadline = finisher ? 0f : Time.time + duration + heavyComboWindow;
+        _trailOn = Time.time + duration * (finisher ? 0.5f : 0.28f);
+        _trailOff = Time.time + duration * (finisher ? 0.7f : 0.64f);
 
         if (_pc != null)
         {
-            _pc.FaceAndHold(_aimDir, duration * 0.95f);
-            _pc.Lunge(_aimDir, stepMeters[i], duration * stepDelay[i], duration * (step == 3 ? 0.42f : 0.2f));
+            _pc.FaceAndHold(_aimDir, duration * (finisher ? 0.95f : 0.9f));
+            if (finisher) _pc.Lunge(_aimDir, stepMeters[i], duration * 0.22f, duration * 0.42f);
+            else _pc.Lunge(_aimDir, stepMeters[i], duration * 0.2f, duration * 0.35f);
         }
-        if (_rig != null) _rig.PlayHeavyCombo(step, duration);
+        if (_rig != null)
+        {
+            if (finisher) _rig.PlayHeavyCombo(3, duration);
+            else _rig.PlaySwordCombo(step, duration);
+        }
         return true;
     }
 
@@ -554,9 +577,10 @@ public class PlayerCombat : MonoBehaviour
     {
         float range = Range;
         int step = Mathf.Clamp(_heavyStep, 1, 3);
-        float[] arcs = { 32f, 50f, 181f };
-        float[] reach = { range + 0.6f, range + 0.3f, range + 1.1f };
-        float[] shake = { 0.22f, 0.2f, 0.36f };
+        // 1 y 2 son tajos horizontales (arco ancho, como la espada); 3 es el aplastamiento alrededor del impacto.
+        float[] arcs = { 85f, 85f, 181f };
+        float[] reach = { range + 0.4f, range + 0.4f, range + 1.1f };
+        float[] shake = { 0.12f, 0.12f, 0.36f };
         float arc = arcs[step - 1], maxDist = reach[step - 1];
         Vector3 right = Vector3.Cross(Vector3.up, _aimDir);
         Vector3 impact = step == 2 ? transform.position + _aimDir * range * 0.75f + right * 0.35f : transform.position + _aimDir * (step == 3 ? 1.2f : range * 0.85f);
@@ -569,13 +593,7 @@ public class PlayerCombat : MonoBehaviour
             Vector3 to = d.transform.position - transform.position;
             to.y = 0f;
             if (to.magnitude > maxDist + 0.4f) continue;
-            if (step == 1)
-            {
-                // Línea estrecha delante: lo que queda bajo el arma al caer.
-                float along = Vector3.Dot(to, _aimDir), side = Vector3.Cross(_aimDir, to).magnitude;
-                if (along < -0.3f || side > 0.95f) continue;
-            }
-            else if (step == 3)
+            if (step == 3)
             {
                 if ((d.transform.position - impact).magnitude > maxDist) continue;
             }
@@ -594,7 +612,7 @@ public class PlayerCombat : MonoBehaviour
                 agent.Move(push.normalized * (step == 3 ? 1.1f : 0.6f));
             }
         }
-        GroundImpact.Spawn(new Vector3(impact.x, transform.position.y, impact.z), step == 3 ? 2.6f : 1.4f, step == 3 ? 1.5f : 1f);
+        if (step == 3) GroundImpact.Spawn(new Vector3(impact.x, transform.position.y, impact.z), 2.6f, 1.5f);
         CameraFollow.Shake(shake[step - 1] + (_scratch.Count > 0 ? 0.08f : 0f), step == 3 ? 0.4f : 0.28f);
         if (_scratch.Count > 0)
         {
@@ -681,7 +699,7 @@ public class PlayerCombat : MonoBehaviour
     }
 
     // Rayo que salta del objetivo a los 3 enemigos más cercanos.
-    private void Chain(Damageable from, float damage)
+    public void Chain(Damageable from, float damage)
     {
         int n = Physics.OverlapSphereNonAlloc(from.transform.position, 6f, _overlap, ~0, QueryTriggerInteraction.Ignore);
         var targets = new List<Damageable>();

@@ -92,6 +92,8 @@ public class WorldItem : MonoBehaviour
 
         if (LootQualityInfo.HasBeam(stack)) AddBeam(stack.DisplayColor, 3.2f, 0f);
         else if (Glow(stack.item, out Color glow, out float height, out float light)) AddBeam(glow, height, light);
+        // El equipo es escaso: aunque sea normal o mágico, un haz corto lo marca en el suelo.
+        else if (stack.item.IsEquippable) AddBeam(stack.DisplayColor, 1.8f, 0.8f);
 
         _rb = gameObject.AddComponent<Rigidbody>();
         _rb.mass = 1f;

@@ -159,6 +159,21 @@ public class PlayerController : MonoBehaviour
         _inventory = GetComponent<Inventory>();
     }
 
+    // Tras reaparecer: olvida objetivos, pausas de golpe y diálogos que quedaron a medias al morir.
+    public void ResetControl(Quaternion facing)
+    {
+        _holdUntil = 0f;
+        dialogueUntil = 0f;
+        _lungeFrom = _lungeUntil = 0f;
+        _clickTarget = null;
+        _interactTarget = null;
+        _pickupTarget = null;
+        _attackTarget = null;
+        _moveDirection = Vector3.zero;
+        _pressStartedOnUI = false;
+        _targetRotation = facing;
+    }
+
     // El héroe mira hacia dir y se queda quieto un momento (golpes y disparos).
     public void FaceAndHold(Vector3 dir, float seconds)
     {

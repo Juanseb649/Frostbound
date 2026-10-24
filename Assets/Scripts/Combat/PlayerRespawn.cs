@@ -183,6 +183,7 @@ public class PlayerRespawn : MonoBehaviour
         if (_blocked) GameplayInput.Unblock();
         _blocked = false;
         _dying = false;
+        ReleaseInput();
         if (GameSession.Instance != null) GameSession.Instance.SaveNow();
         Notifications.Show(bonfire != null ? "Despiertas junto a la hoguera con todo tu equipo (algo desgastado)." : "Despiertas en el poblado con todo tu equipo (algo desgastado).", FrostboundUI.Muted);
     }
@@ -271,5 +272,22 @@ public class PlayerRespawn : MonoBehaviour
     {
         foreach (Behaviour b in _paused) if (b != null) b.enabled = true;
         _paused.Clear();
+        // Todo lo que da el control al héroe vuelve encendido y limpio, aunque algo lo apagara durante la muerte.
+        foreach (Behaviour b in new Behaviour[] { GetComponent<PlayerController>(), GetComponent<PlayerCombat>(), GetComponent<PlayerDodge>(), GetComponent<PlayerAbility>() })
+            if (b != null) b.enabled = true;
+        PlayerController pc = GetComponent<PlayerController>();
+        if (pc != null) pc.ResetControl(transform.rotation);
+        PlayerCombat combat = GetComponent<PlayerCombat>();
+        if (combat != null) combat.ResetState();
+        if (UnityEngine.EventSystems.EventSystem.current != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+    }
+
+    // Al terminar de reaparecer el grupo entero no hay menús abiertos: suelta cualquier bloqueo que quedara colgado.
+    private static void ReleaseInput()
+    {
+        if (PauseMenu.IsPaused || TradeWindow.IsOpen || LoadingScreen.Active) return;
+        InventoryScreen inv = FindAnyObjectByType<InventoryScreen>();
+        if (inv != null && inv.IsOpen) return;
+        GameplayInput.Clear();
     }
 }

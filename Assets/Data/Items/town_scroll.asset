@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
   id: town_scroll
   displayName: Pergamino de regreso
-  description: Un viento antiguo te devuelve a la plaza del poblado. Se lee en un
-    instante.
+  description: Abre un portal a la plaza del poblado. El portal sigue abierto y te
+    devuelve al mismo sitio.
   icon: {fileID: 21300000, guid: ed69c6a57633ba244a8f03cab3ff5450, type: 3}
   category: 2
   rarity: 0

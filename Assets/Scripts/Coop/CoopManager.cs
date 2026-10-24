@@ -409,6 +409,7 @@ public class CoopManager : MonoBehaviour
             d.slot = slot;
             c.equipment.Add(d);
         }
+        eq.CaptureAlt(c.equipment);
         c.belt.Clear();
         PotionBelt belt = eq.GetComponent<PotionBelt>();
         if (belt != null) foreach (ItemDefinition item in belt.slots) c.belt.Add(item != null ? item.id : "");
@@ -431,9 +432,11 @@ public class CoopManager : MonoBehaviour
         }
         foreach (SavedStack d in c.equipment)
         {
+            if (Equipment.IsAltEntry(d)) continue;
             ItemStack s = d.ToStack(db);
             if (s != null) eq.SetEquippedStack(d.slot, s);
         }
+        eq.RestoreAlt(c.equipment, db);
         PotionBelt belt = eq.GetComponent<PotionBelt>();
         if (belt != null)
         {

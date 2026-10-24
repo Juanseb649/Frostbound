@@ -519,16 +519,18 @@ public class EnemyBrain : MonoBehaviour
     {
         if (_playerStats == null || _playerStats.IsDead) return;
         if (_playerDodge != null && _playerDodge.IsRolling) return;
-        DamagePlayer(_playerStats, RollDamage(), toPlayer);
+        DamagePlayer(_playerStats, RollDamage(), toPlayer, gameObject);
         HitPlayerEvent?.Invoke(_playerStats);
     }
 
     // Vuelve a fijar el punto al que regresa (las oleadas lo ponen en la plaza).
     public void SetHome(Vector3 home) => _home = home;
 
-    public static void DamagePlayer(CharacterStats stats, float amount, Vector3 direction = default)
+    // attacker: quien golpea (para las runas del escudo al bloquear). Puede ser null.
+    public static void DamagePlayer(CharacterStats stats, float amount, Vector3 direction = default, GameObject attacker = null)
     {
         if (stats == null || stats.IsDead || stats.invulnerable) return;
+        if (ShieldBlock.TryBlock(stats, amount, attacker)) return;
         if (direction.sqrMagnitude > 0.001f) stats.lastHitDirection = direction.normalized;
         float before = stats.currentHealth;
         stats.TakeDamage(amount);

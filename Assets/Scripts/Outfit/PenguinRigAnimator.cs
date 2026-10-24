@@ -1089,7 +1089,7 @@ public class PenguinRigAnimator : MonoBehaviour
     // Si la hoja entra en el cuerpo o en la cabeza, la muñeca la gira lo justo para que pase rozando por fuera.
     private void AvoidBody()
     {
-        if (_wrist == null || !_hasBody || _bladeLength <= 0.05f) return;
+        if (_wrist == null || !_hasBody || _hips == null || _bladeLength <= 0.05f) return;
         Vector3 up = transform.up;
         Vector3 c = _hips.t.TransformPoint(_bodyCenterLocal);
         Vector3 a = c - up * _bodyHalf, b = c + up * _bodyHalf;
@@ -1113,7 +1113,7 @@ public class PenguinRigAnimator : MonoBehaviour
     // La mano del arma tampoco entra en el cuerpo ni en la cabeza: la aleta se abre lo justo.
     private void AvoidHand()
     {
-        if (_wrist == null || _flipR == null || !_hasBody || _comboArmWeight <= 0.001f) return;
+        if (_wrist == null || _flipR == null || !_hasBody || _hips == null || _comboArmWeight <= 0.001f) return;
         Vector3 up = transform.up;
         Vector3 c = _hips.t.TransformPoint(_bodyCenterLocal);
         Vector3 a = c - up * _bodyHalf, b = c + up * _bodyHalf;

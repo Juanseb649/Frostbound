@@ -45,6 +45,10 @@ public class InventoryScreen : MonoBehaviour
     private readonly Dictionary<EquipSlot, ItemSlotView> _equipViews = new Dictionary<EquipSlot, ItemSlotView>();
     private TextMeshProUGUI _setText, _dName, _dMeta, _dBody, _dEmpty, _dPrimaryLabel, _dSecondaryLabel;
     private Button _dPrimary, _dSecondary;
+    // Pestañas I y II de los perfiles de armas.
+    private readonly Button[] _profileTabs = new Button[2];
+    private readonly TextMeshProUGUI[] _profileLabels = new TextMeshProUGUI[2];
+    private readonly UnityEngine.UI.Image[] _profileFills = new UnityEngine.UI.Image[2];
     private Image _dPrimaryFill;
 
     // Mochila
@@ -456,6 +460,14 @@ public class InventoryScreen : MonoBehaviour
             foreach (ArmorSet.Bonus b in set.bonuses)
                 if (n >= b.piecesRequired) sb.Append("  ·  ").Append(ArmorSet.Describe(b));
         }
+        for (int i = 0; i < 2; i++)
+        {
+            if (_profileTabs[i] == null) continue;
+            bool on = player.ActiveProfile == i;
+            _profileFills[i].color = on ? FrostboundUI.Ice : FrostUI.PanelSolid;
+            _profileLabels[i].color = on ? FrostboundUI.Bg : FrostboundUI.Text;
+        }
+
         _setText.text = sb.Length > 0 ? sb.ToString() : "<color=" + FrostboundUI.RichHex(FrostboundUI.Version) + ">Combina piezas del mismo set para ganar bonos.</color>";
     }
 
@@ -562,11 +574,15 @@ public class InventoryScreen : MonoBehaviour
             _dPrimary.gameObject.SetActive(primary.Length > 0);
             _dPrimaryLabel.text = primary;
             bool ok = equipped || !item.IsEquippable || item.CanBeEquippedBy(_stats, out _);
-            if (item.IsRune) ok = player.MainWeapon != null && player.MainWeapon.FreeRuneSlots > 0 && !player.MainWeapon.IsBroken;
+            if (item.IsRune)
+            {
+                ok = player.MainWeapon != null && player.MainWeapon.FreeRuneSlots > 0 && !player.MainWeapon.IsBroken;
+                _dPrimaryLabel.text = "Grabar en arma";
+            }
             _dPrimary.interactable = ok;
             _dPrimaryFill.color = ok ? FrostboundUI.Ice : FrostboundUI.Surface;
             _dPrimaryLabel.color = ok ? FrostboundUI.Bg : FrostboundUI.Disabled;
-            _dSecondaryLabel.text = _confirmDiscard ? "¿Seguro?" : "Tirar";
+            _dSecondaryLabel.text = RuneFitsShield(item) ? "En escudo" : _confirmDiscard ? "¿Seguro?" : "Tirar";
             _dSecondaryLabel.color = _confirmDiscard ? FrostboundUI.Negative : FrostboundUI.Text;
         }
     }
@@ -590,6 +606,9 @@ public class InventoryScreen : MonoBehaviour
             if (w == null) sb.Append("<size=13><color=").Append(neg).Append(">No tienes un arma equipada</color></size>\n");
             else sb.Append("<size=13><color=").Append(w.FreeRuneSlots > 0 ? muted : neg).Append(">").Append(w.item.displayName)
                    .Append(": ").Append(w.FreeRuneSlots).Append(" ranura(s) libre(s)</color></size>\n");
+            ItemStack sh = ShieldBlock.ShieldOf(player);
+            if (sh != null) sb.Append("<size=13><color=").Append(sh.FreeRuneSlots > 0 ? muted : neg).Append(">").Append(sh.item.displayName)
+                   .Append(": ").Append(sh.FreeRuneSlots).Append(" ranura(s) libre(s) · en escudo: ").Append(ShieldBlock.RuneOnShield(item)).Append("</color></size>\n");
         }
 
         if (item.damage > 0f)
@@ -619,6 +638,7 @@ public class InventoryScreen : MonoBehaviour
                 sb.Append("<color=").Append(a.value < 0f ? neg : ac).Append(">").Append(a.Describe()).Append("</color>\n");
         }
         if (item.IsWeapon) DescribeWeapon(sb, item, stack, pos, neg, muted, gold);
+        if (item.IsShield) DescribeShield(sb, item, stack, muted, gold);
         if (item.heal > 0f) sb.Append("Cura <b>").Append(item.heal.ToString("0")).Append("</b> de vida\n");
         if (item.restoreMana > 0f) sb.Append("Recupera <b>").Append(item.restoreMana.ToString("0")).Append("</b> de maná\n");
 
@@ -685,6 +705,31 @@ public class InventoryScreen : MonoBehaviour
             }
             sb.Append("\n");
         }
+    }
+
+    private void DescribeShield(StringBuilder sb, ItemDefinition item, ItemStack stack, string muted, string gold)
+    {
+        sb.Append("Bloqueo  <b>").Append(item.blockChance.ToString("0")).Append(" %</b>");
+        if (stack != null && player != null && player.GetStack(EquipSlot.Offhand) == stack)
+            sb.Append("  <color=").Append(muted).Append(">(con tu Agilidad: ").Append(Mathf.RoundToInt(ShieldBlock.Chance(player) * 100f)).Append(" %, menos al correr)</color>");
+        sb.Append("\n");
+        int slots = stack != null ? stack.RuneSlots : ShieldBlock.RuneSlots(new ItemStack(item, 1));
+        if (slots <= 0)
+        {
+            sb.Append("<size=13><color=").Append(muted).Append(">Sin ranuras de runa (los escudos poco comunes o mejores las tienen)</color></size>\n");
+            return;
+        }
+        sb.Append("<color=").Append(gold).Append(">Runas</color> ");
+        for (int i = 0; i < slots; i++)
+        {
+            ItemDefinition rune = stack != null && i < stack.runes.Count ? stack.runes[i] : null;
+            if (i > 0) sb.Append("  ");
+            if (rune != null)
+                sb.Append("<color=").Append(FrostboundUI.RichHex(WeaponCatalog.RuneColor(rune.runeEffect))).Append(">• ")
+                  .Append(WeaponCatalog.RuneName(rune.runeEffect)).Append("</color> <size=12>").Append(ShieldBlock.RuneOnShield(rune)).Append("</size>");
+            else sb.Append("<color=").Append(muted).Append(">• vacía</color>");
+        }
+        sb.Append("\n");
     }
 
     private static string RuneShort(ItemDefinition r)
@@ -769,9 +814,26 @@ public class InventoryScreen : MonoBehaviour
         if (_selected != null) DoAction(_selected);
     }
 
+    // Con una runa seleccionada y un escudo con ranuras libres, el segundo botón la graba en el escudo.
+    private bool RuneFitsShield(ItemDefinition item)
+    {
+        if (item == null || !item.IsRune || player == null) return false;
+        ItemStack shield = ShieldBlock.ShieldOf(player);
+        return shield != null && shield.FreeRuneSlots > 0;
+    }
+
     private void OnSecondary()
     {
         if (_selected == null || _selected.IsEquipmentSlot) return;
+        if (RuneFitsShield(ItemOf(_selected)))
+        {
+            bool ok = player.EngraveRune(_selected.index, true, out string msg);
+            Notifications.Show(msg, ok ? FrostboundUI.Positive : FrostboundUI.Negative);
+            AudioManager.PlayUI(ok ? AudioId.UI_Equip : AudioId.UI_Error, 0.8f);
+            if (ok) Select(_equipViews[EquipSlot.Offhand]);
+            _dirty = true;
+            return;
+        }
         if (!_confirmDiscard)
         {
             _confirmDiscard = true;
@@ -1040,6 +1102,8 @@ public class InventoryScreen : MonoBehaviour
         AddEquipSlot(p, EquipSlot.Chest, 146f, 148f);
         AddEquipSlot(p, EquipSlot.Offhand, 262f, 148f);
         AddEquipSlot(p, EquipSlot.Feet, 146f, 244f);
+        AddProfileTab(p, 0, 30f, 114f);
+        AddProfileTab(p, 1, 76f, 114f);
 
         _setText = UIFactory.Text(p, "SetBonus", "", skin.nunito700, 12f, FrostboundUI.Body);
         UIFactory.TopLeft(_setText.rectTransform, 24f, 340f, 332f, 34f);
@@ -1056,6 +1120,29 @@ public class InventoryScreen : MonoBehaviour
         v.caption = UIFactory.Text(v.transform, "Caption", ItemDefinition.SlotName(slot), skin.nunito800, 9f, FrostboundUI.Version, TextAlignmentOptions.Bottom, 1.5f, true);
         UIFactory.TopLeft(v.caption.rectTransform, 0f, 68f, 88f, 14f);
         _equipViews[slot] = v;
+    }
+
+    private void AddProfileTab(RectTransform parent, int profile, float x, float y)
+    {
+        Button b = UIFactory.FramedButton(parent, "Perfil_" + (profile + 1), skin, skin.round12, profile == 0 ? "I" : "II", 13f,
+            FrostUI.PanelSolid, FrostUI.BorderDim, FrostboundUI.Text, out TextMeshProUGUI label, out UnityEngine.UI.Image fill);
+        UIFactory.TopLeft((RectTransform)b.transform, x, y, 42f, 28f);
+        b.onClick.AddListener(() => OnProfileTab(profile));
+        _profileTabs[profile] = b;
+        _profileLabels[profile] = label;
+        _profileFills[profile] = fill;
+    }
+
+    private void OnProfileTab(int profile)
+    {
+        if (player == null || player.ActiveProfile == profile) return;
+        if (!player.SwapProfiles(out string message))
+        {
+            if (!string.IsNullOrEmpty(message)) Notifications.Show(message, FrostboundUI.Negative);
+            return;
+        }
+        Select(null);
+        _dirty = true;
     }
 
     private void BuildDetail()

@@ -9,7 +9,8 @@ public enum GameAction
     MoveUp, MoveDown, MoveLeft, MoveRight,
     Attack, Ability, Dodge, Interact, QuickPotion,
     Belt1, Belt2, Belt3, Belt4, Belt5, Belt6,
-    Inventory, Character, Map, Pause
+    Inventory, Character, Map, Pause,
+    SwapWeapons
 }
 
 // Mapa de controles: qué tecla/botón del ratón y qué botón del mando hace cada acción.
@@ -69,6 +70,7 @@ public static class InputMap
             case GameAction.Character: return (int)Key.C;
             case GameAction.Map: return (int)Key.M;
             case GameAction.Pause: return (int)Key.Escape;
+            case GameAction.SwapWeapons: return (int)Key.R;
             default: return None;
         }
     }
@@ -93,6 +95,7 @@ public static class InputMap
             case GameAction.Character: return (int)GamepadButton.RightStick;
             case GameAction.Map: return (int)GamepadButton.Select;
             case GameAction.Pause: return (int)GamepadButton.Start;
+            case GameAction.SwapWeapons: return (int)GamepadButton.LeftStick;
             default: return NoPad;
         }
     }
@@ -117,6 +120,7 @@ public static class InputMap
             case GameAction.Character: return "Personaje";
             case GameAction.Map: return "Mapa";
             case GameAction.Pause: return "Pausa";
+            case GameAction.SwapWeapons: return "Cambiar de armas (I / II)";
             default: return "Cinturón " + ((int)a - (int)GameAction.Belt1 + 1);
         }
     }

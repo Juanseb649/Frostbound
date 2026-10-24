@@ -80,7 +80,7 @@ public class EnemyProjectile : MonoBehaviour
                         transform.position = hit.point + _dir * 0.6f;
                         return;
                     }
-                    EnemyBrain.DamagePlayer(stats, _damage, _dir);
+                    EnemyBrain.DamagePlayer(stats, _damage, _dir, _owner);
                 }
                 End();
                 return;

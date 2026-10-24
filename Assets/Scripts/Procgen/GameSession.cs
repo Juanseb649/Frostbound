@@ -182,6 +182,7 @@ public class GameSession : MonoBehaviour
             d.slot = slot;
             data.equipment.Add(d);
         }
+        eq.CaptureAlt(data.equipment);
 
         data.belt.Clear();
         PotionBelt belt = eq.GetComponent<PotionBelt>();
@@ -211,9 +212,11 @@ public class GameSession : MonoBehaviour
         }
         foreach (SavedStack d in data.equipment)
         {
+            if (Equipment.IsAltEntry(d)) continue;
             ItemStack s = d.ToStack(db);
             if (s != null) eq.SetEquippedStack(d.slot, s);
         }
+        eq.RestoreAlt(data.equipment, db);
         PotionBelt belt = eq.GetComponent<PotionBelt>();
         if (belt != null && db != null)
         {

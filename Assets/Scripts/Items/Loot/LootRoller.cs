@@ -10,17 +10,19 @@ public static class LootRoller
         public float noDrop, potions, weapons, armor, jewelry, runes, scrolls;
     }
 
-    // El equipo es escaso (cada arma o armadura debe sentirse como un hallazgo); pociones y runas son el botín habitual.
-    public static readonly Table Trooper = new Table { noDrop = 52f, potions = 30f, weapons = 4f, armor = 4f, jewelry = 1f, runes = 6f, scrolls = 3f };
-    public static readonly Table Elite = new Table { noDrop = 14f, potions = 32f, weapons = 9f, armor = 9f, jewelry = 3f, runes = 13f, scrolls = 5f };
+    // El equipo es escaso (cada arma o armadura debe sentirse como un hallazgo); pociones y monedas son el botín habitual.
+    // La tropa casi nunca suelta equipo; las élites, de vez en cuando.
+    public static readonly Table Trooper = new Table { noDrop = 70f, potions = 20f, weapons = 2f, armor = 2f, jewelry = 0.5f, runes = 3.5f, scrolls = 2f };
+    public static readonly Table Elite = new Table { noDrop = 35f, potions = 30f, weapons = 5f, armor = 5f, jewelry = 2f, runes = 8f, scrolls = 4f };
 
     private struct QualityOdds
     {
         public float unique, set, rare, magic, superior, worn;
     }
 
-    private static readonly QualityOdds TrooperOdds = new QualityOdds { unique = 0.0025f, set = 0.005f, rare = 0.03f, magic = 0.30f, superior = 0.08f, worn = 0.06f };
-    private static readonly QualityOdds EliteOdds = new QualityOdds { unique = 0.008f, set = 0.015f, rare = 0.09f, magic = 0.45f, superior = 0.10f, worn = 0f };
+    // Como cae menos equipo, lo que cae vale más: algo más de mágico y raro, menos normal.
+    private static readonly QualityOdds TrooperOdds = new QualityOdds { unique = 0.003f, set = 0.006f, rare = 0.05f, magic = 0.40f, superior = 0.12f, worn = 0.04f };
+    private static readonly QualityOdds EliteOdds = new QualityOdds { unique = 0.01f, set = 0.02f, rare = 0.12f, magic = 0.55f, superior = 0.12f, worn = 0f };
 
     private class AffixDef
     {
@@ -146,8 +148,10 @@ public static class LootRoller
             q = LootQuality.Rare;
         }
 
-        ItemDefinition b = PickBase(db, ilvl + 2, rng, it => filter(it) && it.rarity != ItemRarity.Unique && it.armorSet == null);
-        if (b == null) b = PickBase(db, 99, rng, it => filter(it) && it.rarity != ItemRarity.Unique && it.armorSet == null);
+        // Las piezas de las armaduras de clase (caballero, mago, shinobi, vikingo) también caen como base normal o mágica:
+        // antes solo salían con calidad de set (menos del 1 %) y en la práctica nunca se veían.
+        ItemDefinition b = PickBase(db, ilvl + 2, rng, it => filter(it) && it.rarity != ItemRarity.Unique);
+        if (b == null) b = PickBase(db, 99, rng, it => filter(it) && it.rarity != ItemRarity.Unique);
         if (b == null) return null;
 
         var stack = new ItemStack(b, 1) { quality = q };
