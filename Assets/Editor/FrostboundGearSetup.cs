@@ -41,7 +41,7 @@ public static class FrostboundGearSetup
 
     // ---------- Materiales ----------
 
-    private static Dictionary<string, Material> CreateMaterials()
+    internal static Dictionary<string, Material> CreateMaterials()
     {
         EnsureFolder(GearMatDir);
         var result = new Dictionary<string, Material>();

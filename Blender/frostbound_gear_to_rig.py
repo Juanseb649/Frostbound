@@ -39,6 +39,11 @@ GEAR_FILES = [
     "Frostbound_Ninja_Gear.obj",
     "Frostbound_Viking_Gear.obj",
     os.path.join("NPC", "Frostbound_NPC_Rocker_Gear.obj"),
+    # Armaduras de botín (frostbound_armors.py)
+    "Frostbound_BlackWolf_Gear.obj",
+    "Frostbound_Silver_Gear.obj",
+    "Frostbound_Owl_Gear.obj",
+    "Frostbound_LoneWolf_Gear.obj",
 ]
 
 HEAD = {"Helm", "Hat", "Hood", "Hair", "Glasses", "Beard", "Eyes"}
